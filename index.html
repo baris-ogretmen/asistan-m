@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Barış Öğretmen - Eğitim & Gelişim Asistanı V7 Ultimate</title>
+    <title>Barış Öğretmen - Eğitim & Gelişim Asistanı V8 Ultimate</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -18,7 +18,7 @@
     <!-- Babel -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-    <!-- YENİ: Gerçek PDF Çıktısı İçin Kütüphane -->
+    <!-- PDF Çıktısı İçin Kütüphane -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
     <!-- Firebase Modules -->
@@ -37,55 +37,26 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
         
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6;
-            color: #1f2937;
-            -webkit-tap-highlight-color: transparent;
-        }
-
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; color: #1f2937; -webkit-tap-highlight-color: transparent; }
         .textarea-auto { display: block; width: 100%; overflow: hidden; resize: none; min-height: 40px; line-height: 1.5; }
 
-        /* YAZDIRMA MOTORU - Yüksek Kontrastlı Renkli Çıktı ve Kesin Okunabilirlik */
+        /* YAZDIRMA MOTORU - Kesin Okunabilirlik ve Yüksek Kontrast */
         @media print {
             body { background-color: white !important; color: black !important; }
             .no-print { display: none !important; }
             .print-only { display: block !important; }
-            
-            /* Arka plan renklerini yazıcıda zorunlu çıkar */
             * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-            
             .print-container { box-shadow: none !important; padding: 0 !important; margin: 0 !important; border: none !important; }
             .print-card { border: 1px solid #d1d5db !important; box-shadow: none !important; break-inside: avoid; margin-bottom: 1rem !important; page-break-inside: avoid; }
-            
-            /* YENİ: Renkli arka planların üzerindeki tüm metinleri okunabilir simsiyah renge zorla! */
             .print-container h1, .print-container h2, .print-container h3, .print-container h4, .print-container h5,
-            .print-container p, .print-container span, .print-container div, .print-container li,
-            .print-high-contrast {
-                color: #000000 !important;
-            }
-            
-            textarea, input { 
-                border: none !important; 
-                background: transparent !important; 
-                resize: none !important; 
-                padding: 0 !important; 
-                box-shadow: none !important; 
-                color: #000000 !important; 
-                outline: none !important; 
-                font-weight: 600 !important; 
-            }
-            
-            @page { margin: 1.5cm; }
+            .print-container p, .print-container span, .print-container div, .print-container li, .print-high-contrast { color: #000000 !important; }
+            textarea, input { border: none !important; background: transparent !important; resize: none !important; padding: 0 !important; box-shadow: none !important; color: #000000 !important; outline: none !important; font-weight: 600 !important; }
+            @page { margin: 1cm; }
             h1, h2, h3, h4, h5 { page-break-after: avoid; }
             .break-inside-avoid { break-inside: avoid; page-break-inside: avoid; }
-            
-            /* Cevap anahtarı her zaman yeni sayfadan başlasın */
             .page-break-before { page-break-before: always !important; break-before: page !important; }
         }
-
         @media screen { .print-only { display: none !important; } }
-        
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
         ::-webkit-scrollbar-thumb { background: #c7c7cc; border-radius: 4px; }
@@ -151,7 +122,6 @@
             const [observation, setObservation] = useState('');
             const [editableResult, setEditableResult] = useState(null);
             const [loading, setLoading] = useState(false);
-            const [error, setError] = useState('');
             const [isExpanding, setIsExpanding] = useState(false);
             
             // --- ARCHIVE STATES ---
@@ -179,7 +149,7 @@
             const [matInterests, setMatInterests] = useState('');
             const [matDifficulty, setMatDifficulty] = useState('Orta Seviye'); 
             const [matQuestionCount, setMatQuestionCount] = useState(5); 
-            const [showAnswerKey, setShowAnswerKey] = useState(true); // YENİ: Cevap anahtarını gizleme toggle'ı
+            const [showAnswerKey, setShowAnswerKey] = useState(true); 
 
             // Veli Asistanı
             const [parentMessage, setParentMessage] = useState('');
@@ -216,7 +186,7 @@
 
             // --- TIMER (POMODORO) STATES ---
             const [timerActive, setTimerActive] = useState(false);
-            const [timeLeft, setTimeLeft] = useState(2400); // 40 mins default
+            const [timeLeft, setTimeLeft] = useState(2400);
 
             // Settings effect
             useEffect(() => {
@@ -269,7 +239,7 @@
                             await signInAnonymously(auth);
                         }
                         onAuthStateChanged(auth, (u) => { setUser(u); setIsFbReady(true); });
-                    } catch (err) { setError("Veritabanı bağlantısı kurulamadı."); }
+                    } catch (err) { showToast("Veritabanı bağlantısı kurulamadı."); }
                 };
                 
                 if (window.FirebaseSDK) setupFirebase();
@@ -302,9 +272,19 @@
                 return () => { unsubReports(); unsubContacts(); unsubNotes(); };
             }, [isFbReady, user, db, appId]);
 
-            const showToast = (msg) => { setToastMessage(msg); setTimeout(() => setToastMessage(''), 3000); };
+            const showToast = (msg) => { setToastMessage(msg); setTimeout(() => setToastMessage(''), 4000); };
 
-            // --- YENİ: GERÇEK PDF İNDİRME MOTORU ---
+            // YENİ: Gelişmiş API Hata Yönetimi
+            const handleApiError = (err) => {
+                console.error(err);
+                if (err.message && err.message.includes('429')) {
+                    showToast("🛑 API limitine ulaştınız. Lütfen 1 dakika bekleyip tekrar deneyin.");
+                } else {
+                    showToast("❌ Yapay zeka iletişim hatası. Lütfen API anahtarınızı kontrol edin.");
+                }
+            };
+
+            // --- GERÇEK PDF İNDİRME MOTORU ---
             const downloadAsPDF = async (elementId, filename) => {
                 const element = document.getElementById(elementId);
                 if (!element) return;
@@ -312,7 +292,6 @@
                 setIsDownloadingPdf(true);
                 showToast("PDF hazırlanıyor, lütfen bekleyin...");
 
-                // Printte gizlenen butonları PDF'te de gizle
                 const noPrintElements = element.querySelectorAll('.no-print');
                 noPrintElements.forEach(el => el.style.display = 'none');
 
@@ -320,7 +299,7 @@
                     margin:       10,
                     filename:     `${filename.replace(/[^a-z0-9ğüşöçİĞÜŞÖÇ]/gi, '_')}.pdf`,
                     image:        { type: 'jpeg', quality: 0.98 },
-                    html2canvas:  { scale: 2, useCORS: true, letterRendering: true },
+                    html2canvas:  { scale: 2, useCORS: true, letterRendering: true, backgroundColor: '#ffffff' },
                     jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
                 };
 
@@ -330,7 +309,6 @@
                 } catch(e) {
                     showToast("PDF oluşturulurken bir hata oluştu.");
                 } finally {
-                    // Gizlenenleri geri getir
                     noPrintElements.forEach(el => el.style.display = '');
                     setIsDownloadingPdf(false);
                 }
@@ -373,6 +351,15 @@
                 } catch (err) { showToast("Silme başarısız."); }
             };
 
+            // --- ARŞİV RAPOR SİLME (YENİ) ---
+            const deleteReport = async (id) => {
+                if (!isFbReady || !user || !db || !window.confirm("Bu raporu arşivden kalıcı olarak silmek istediğinize emin misiniz?")) return;
+                try {
+                    await window.FirebaseSDK.deleteDoc(window.FirebaseSDK.doc(db, 'artifacts', appId, 'users', user.uid, 'reports', id));
+                    showToast("Rapor başarıyla silindi. 🗑️");
+                } catch (err) { showToast("Rapor silinemedi."); }
+            };
+
             // --- NOT DEFTERİ FONKSİYONLARI ---
             const saveNote = async () => {
                 if (!isFbReady || !user || !db) return;
@@ -395,14 +382,18 @@
 
             // --- RAPOR ÜRETİMİ (AI) ---
             const generateReport = async () => {
-                if (!apiKey) { setActiveTab('settings'); return; }
-                if (!studentName.trim() || !observation.trim()) { setError('Ad ve gözlem boş olamaz.'); return; }
-                setLoading(true); setError(''); setEditableResult(null);
+                if (!apiKey) { setActiveTab('settings'); showToast("Önce API anahtarınızı girin."); return; }
+                if (!studentName.trim() || !observation.trim()) { showToast('Ad ve gözlem boş olamaz.'); return; }
+                setLoading(true); setEditableResult(null);
                 
                 const hitapPrompt = parentName.trim() ? `Veli Adı/Hitap: ${parentName}` : "Veli Adı/Hitap: Genel";
                 const hitapKurali = parentName.trim() ? `veli_mesaji doğrudan "${parentName}" ismiyle nazik bir hitapla başlasın.` : `veli_mesaji "Kıymetli Velimiz" hitabıyla başlasın.`;
-                const systemInstruction = `Sen Barış Öğretmen'sin. Eğitim teknoloğu, uzman öğretici ve koçsun. Profesyonel ve şefkatli bir dil kullanırsın. DİKKAT: Türkçe karakterleri (ç, ğ, ı, ö, ş, ü) kusursuz kullan. "sayilar" gibi bozuk kelimeler kullanma.`;
-                const userPrompt = `Öğrenci Adı: ${studentName}\n${hitapPrompt}\nTarih: ${date}\nKademe: ${category}\nGözlem: ${observation}\nKurallar:\n1) ${hitapKurali}\n2) Özel eğitimde test boş olmalı.\n3) gelisim_puani 1-10 arası olmalı.`;
+                
+                // YENİ: Gözleme göre dinamik ödev kuralı
+                const dinamikOdevKurali = "DİKKAT: Öğretmenin gözlem notundaki duygu durumuna (berbat, fena değil, harika vb.) göre 'hayatin_icinden_odev' ve 'akademik_odev' kısımlarını ayarla. Kötü geçmişse motive edici telafiler ver, çok iyi geçmişse zenginleştirici ve zorlayıcı görevler ver.";
+
+                const systemInstruction = `Sen Barış Öğretmen'sin. Eğitim teknoloğu, uzman öğretici ve koçsun. Profesyonel ve şefkatli bir dil kullanırsın. Türkçe karakterleri kusursuz kullan.`;
+                const userPrompt = `Öğrenci Adı: ${studentName}\n${hitapPrompt}\nTarih: ${date}\nKademe: ${category}\nGözlem: ${observation}\nKurallar:\n1) ${hitapKurali}\n2) Özel eğitimde test boş olmalı.\n3) gelisim_puani 1-10 arası olmalı.\n4) ${dinamikOdevKurali}`;
 
                 try {
                     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
@@ -423,12 +414,13 @@
                             }
                         })
                     });
+                    if (!response.ok) throw new Error(response.status === 429 ? '429' : 'API Error');
                     const data = await response.json();
                     if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
                         setEditableResult(JSON.parse(data.candidates[0].content.parts[0].text));
-                        showToast("Kişiselleştirilmiş rapor üretildi! ✨");
+                        showToast("Rapor başarıyla üretildi! ✨");
                     }
-                } catch (err) { setError("Yapay zeka iletişim hatası."); }
+                } catch (err) { handleApiError(err); }
                 setLoading(false);
             };
 
@@ -438,19 +430,22 @@
                     await window.FirebaseSDK.addDoc(window.FirebaseSDK.collection(db, 'artifacts', appId, 'users', user.uid, 'reports'), {
                         studentName: studentName.trim(), parentName: parentName.trim(), date, category, observation, result: editableResult, timestamp: new Date().toISOString()
                     });
-                    showToast("Rapor veritabanına kaydedildi!");
-                } catch (err) { setError("Kaydedilirken hata oluştu."); }
+                    showToast("Rapor arşive kaydedildi!");
+                } catch (err) { showToast("Kaydedilirken hata oluştu."); }
             };
 
+            // YENİ: WHATSAPP LİNK ONARIMI
             const sendViaWhatsApp = (text, phone) => {
-                if (!phone) {
-                    const textArea = document.createElement("textarea");
-                    textArea.value = text; document.body.appendChild(textArea); textArea.select();
-                    try { document.execCommand('copy'); showToast("Kopyalandı! Lütfen yapıştırın."); } catch (e) {}
-                    document.body.removeChild(textArea); window.open('https://web.whatsapp.com/', '_blank');
-                    return;
+                const encodedText = encodeURIComponent(text);
+                let url;
+                if (phone) {
+                    const cleanPhone = phone.replace(/\D/g, '');
+                    const finalPhone = cleanPhone.startsWith('90') ? cleanPhone : `90${cleanPhone}`;
+                    url = `https://wa.me/${finalPhone}?text=${encodedText}`;
+                } else {
+                    url = `https://wa.me/?text=${encodedText}`;
                 }
-                window.open(`https://api.whatsapp.com/send?phone=${phone.replace(/\D/g, '')}&text=${encodeURIComponent(text)}`, '_blank');
+                window.open(url, '_blank');
             };
 
             const formatReportText = (r) => {
@@ -490,6 +485,9 @@
                 else if (materialType === 'karma') kuralMetni = `Önce konuyu anlatan RENKLİ BİR KONU ÖZETİ hazırla. Ardından HEMEN ALTINA ${soruKurali} içeren bir ÇOKTAN SEÇMELİ TEST ekle.`;
                 else if (materialType === 'bosluk') kuralMetni = `${soruKurali} Tamamı BOŞLUK DOLDURMA formatında olsun. Soru metinlerinde boş bırakılan yerleri "_________" şeklinde göster. Cevap anahtarına o boşluğa gelmesi gereken kelimeyi yaz.`;
                 else if (materialType === 'dogru_yanlis') kuralMetni = `${soruKurali} Tamamı DOĞRU/YANLIŞ formatında olsun. Cümlenin başına veya sonuna öğrencinin (D) veya (Y) işaretleyeceği bir parantez (   ) ekle.`;
+                // Yeni Özel Eğitim Modları
+                else if (materialType === 'gorsel_eslestirme') kuralMetni = "Özel eğitim / Okul öncesi için kavram, nesne veya şekil eşleştirme yönergeleri hazırla. Eğlenceli ve basit oyunlaştırmalar ekle.";
+                else if (materialType === 'duyusal_motor') kuralMetni = "İnce motor becerileri veya duyusal bütünleme aktiviteleri içeren, evde/sınıfta yapılabilecek 5 aşamalı bir çalışma kağıdı/etkinlik listesi hazırla.";
 
                 let kisisellestirme = matStudentName ? `\nÖNEMLİ BİLGİ: Öğrencimin adı ${matStudentName}. İlgi alanları: ${matInterests || 'Belirtilmedi'}. Metinlerde veya hikaye/problem durumlarında bizzat bu öğrencinin adını kullan ki mutlu olsun!` : "";
 
@@ -497,7 +495,7 @@
                     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
                         method: 'POST', headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                            systemInstruction: { parts: [{ text: "Sen profesyonel bir eğitim materyali tasarımcısısın. DİKKAT: Türkçe karakterleri (ç, ğ, ı, ö, ş, ü) her zaman kusursuz ve doğru kullan. Yazım kurallarına %100 uy. Kesinlikle İngilizce karakterlerle Türkçe yazma (örn: sayilar yazma, sayılar yaz)." }] },
+                            systemInstruction: { parts: [{ text: "Sen profesyonel bir eğitim materyali tasarımcısısın. DİKKAT: Türkçe karakterleri (ç, ğ, ı, ö, ş, ü) her zaman kusursuz ve doğru kullan." }] },
                             contents: [{ parts: [{ text: `Hedef Kitle: ${activityCategory}\nKonu: ${materialTopic}\nİstenen Format: ${kuralMetni}${kisisellestirme}` }] }],
                             generationConfig: {
                                 responseMimeType: "application/json",
@@ -512,40 +510,41 @@
                             }
                         })
                     });
+                    if (!response.ok) throw new Error(response.status === 429 ? '429' : 'API Error');
                     const data = await response.json();
                     if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
                         setMaterialResult(JSON.parse(data.candidates[0].content.parts[0].text));
-                        setShowAnswerKey(true); // Yeni üretildiğinde varsayılan olarak göster
+                        setShowAnswerKey(true);
                         showToast("Materyal başarıyla hazırlandı! ✨");
                     }
-                } catch (err) { showToast("Materyal oluşturulamadı."); }
+                } catch (err) { handleApiError(err); }
                 setIsGeneratingMaterial(false);
             };
 
-            // --- AI ARAÇLARI (GÖZLEM, VELİ, ETKİNLİK, DAVRANIŞ, vb.) ---
+            // --- AI ARAÇLARI (GÖZLEM, VELİ, vb.) ---
             const pickRandomStudent = () => {
                 if(contacts.length === 0) { showToast("Önce rehbere öğrenci eklemelisiniz!"); return; }
                 const randomIndex = Math.floor(Math.random() * contacts.length);
                 setPickedStudent(contacts[randomIndex].studentName);
-                // Konfeti efekti hissi vermek için kısa süreli toast
                 showToast("🎉 Şanslı Öğrenci Seçildi!");
-                setTimeout(() => setPickedStudent(null), 5000); // 5 saniye sonra gizle
+                setTimeout(() => setPickedStudent(null), 5000);
             }
 
             const expandObservation = async () => {
-                if (!apiKey || !observation.trim()) return;
+                if (!apiKey || !observation.trim()) { showToast("API veya gözlem alanı boş."); return; }
                 setIsExpanding(true);
                 try {
                     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
                         method: 'POST', headers: { 'Content-Type': 'application/json' }, 
-                        body: JSON.stringify({ contents: [{ parts: [{ text: `Aşağıdaki kısa öğretmen notunu profesyonel, akıcı ve bilimsel bir gözlem metnine dönüştür (max 3 cümle):\n\nKısa Not: ${observation}` }] }] })
+                        body: JSON.stringify({ contents: [{ parts: [{ text: `Aşağıdaki kısa ve belki bozuk yazılmış öğretmen notunu, veli raporunda kullanılabilecek, durumu özetleyen, profesyonel, akıcı ve bilimsel bir gözlem metnine dönüştür (max 3 cümle). Not: "${observation}"` }] }] })
                     });
+                    if (!response.ok) throw new Error(response.status === 429 ? '429' : 'API Error');
                     const data = await response.json();
                     if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
                         setObservation(data.candidates[0].content.parts[0].text.trim());
                         showToast("Gözlem profesyonelleştirildi! ✨");
                     }
-                } catch (err) { showToast("Sihirbaz çalışmıyor."); }
+                } catch (err) { handleApiError(err); }
                 setIsExpanding(false);
             };
 
@@ -565,12 +564,13 @@
                             contents: [{ parts: [{ text: `Veli'nin mesajı:\n"${parentMessage}"\n\n${studentContext}\n\nLütfen bu veliye verilecek uygun, nazik ve profesyonel bir yanıt metni oluştur.` }] }]
                         })
                     });
+                    if (!response.ok) throw new Error(response.status === 429 ? '429' : 'API Error');
                     const data = await response.json();
                     if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
                         setParentReply(data.candidates[0].content.parts[0].text.trim());
                         showToast("Yanıt başarıyla oluşturuldu! ✨");
                     }
-                } catch (err) { showToast("Yanıt oluşturulamadı."); }
+                } catch (err) { handleApiError(err); }
                 setIsGeneratingReply(false);
             };
 
@@ -581,22 +581,18 @@
                     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
                         method: 'POST', headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                            systemInstruction: { parts: [{ text: "Sen yaratıcı bir eğitim uzmanısın. Öğretmenler için harika sınıf içi etkinlikler tasarlarsın." }] },
-                            contents: [{ parts: [{ text: `Hedef Kitle: ${activityCategory}\nİşlenecek Konu: ${activityTopic}\n\nLütfen bu konuyu öğretmek için 3 farklı, yaratıcı, oyunlaştırılmış etkinlik planı oluştur.` }] }],
-                            generationConfig: {
-                                responseMimeType: "application/json",
-                                responseSchema: {
-                                    type: "OBJECT", properties: { etkinlikler: { type: "ARRAY", items: { type: "OBJECT", properties: { baslik: { type: "STRING" }, sure: { type: "STRING" }, materyaller: { type: "STRING" }, nasil_oynanir: { type: "STRING" }, kazanim: { type: "STRING" } }, required: ["baslik", "sure", "materyaller", "nasil_oynanir", "kazanim"] } } }, required: ["etkinlikler"]
-                                }
-                            }
+                            systemInstruction: { parts: [{ text: "Sen yaratıcı bir eğitim uzmanısın." }] },
+                            contents: [{ parts: [{ text: `Hedef Kitle: ${activityCategory}\nİşlenecek Konu: ${activityTopic}\n\nLütfen 3 farklı, yaratıcı, oyunlaştırılmış etkinlik planı oluştur.` }] }],
+                            generationConfig: { responseMimeType: "application/json", responseSchema: { type: "OBJECT", properties: { etkinlikler: { type: "ARRAY", items: { type: "OBJECT", properties: { baslik: { type: "STRING" }, sure: { type: "STRING" }, materyaller: { type: "STRING" }, nasil_oynanir: { type: "STRING" }, kazanim: { type: "STRING" } }, required: ["baslik", "sure", "materyaller", "nasil_oynanir", "kazanim"] } } }, required: ["etkinlikler"] } }
                         })
                     });
+                    if (!response.ok) throw new Error(response.status === 429 ? '429' : 'API Error');
                     const data = await response.json();
                     if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
                         setActivityResult(JSON.parse(data.candidates[0].content.parts[0].text));
                         showToast("Etkinlik fikirleri hazır! ✨");
                     }
-                } catch (err) { showToast("Etkinlikler oluşturulamadı."); }
+                } catch (err) { handleApiError(err); }
                 setIsGeneratingActivity(false);
             };
 
@@ -611,12 +607,13 @@
                             contents: [{ parts: [{ text: `Yaş Grubu/Kademe: ${activityCategory}\nZorlayıcı Davranış: ${behaviorIssue}\n\nLütfen bu davranışı çözmek için öğretmene ve veliye yönelik 3 pratik, empatik ve pedagojik strateji öner.` }] }]
                         })
                     });
+                    if (!response.ok) throw new Error(response.status === 429 ? '429' : 'API Error');
                     const data = await response.json();
                     if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
                         setBehaviorResult(data.candidates[0].content.parts[0].text.trim());
                         showToast("Pedagojik tavsiyeler hazır! ✨");
                     }
-                } catch (err) { showToast("Tavsiye oluşturulamadı."); }
+                } catch (err) { handleApiError(err); }
                 setIsGeneratingBehavior(false);
             };
 
@@ -627,16 +624,17 @@
                     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
                         method: 'POST', headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                            systemInstruction: { parts: [{ text: "Sen uzman bir eğitim materyali geliştiricisi ve dilbilimcisin. Verilen metinleri öğrencilerin seviyesine uygun olarak pedagojik bir dille sadeleştirir, bilinmeyen kelimeleri somutlaştırır ve cümleleri kısa tutarsın." }] },
-                            contents: [{ parts: [{ text: `Hedef Kitle / Kademe: ${activityCategory}\nOrijinal Karmaşık Metin: ${complexText}\n\nLütfen bu metni hedef kitlenin kolayca okuyup kavrayabileceği şekilde basitleştir, uyarla.` }] }]
+                            systemInstruction: { parts: [{ text: "Sen uzman bir dilbilimcisin. Verilen metinleri öğrencilerin seviyesine uygun olarak sadeleştirirsin." }] },
+                            contents: [{ parts: [{ text: `Hedef Kitle: ${activityCategory}\nKarmaşık Metin: ${complexText}\n\nLütfen bu metni hedef kitlenin kolayca okuyup kavrayabileceği şekilde basitleştir.` }] }]
                         })
                     });
+                    if (!response.ok) throw new Error(response.status === 429 ? '429' : 'API Error');
                     const data = await response.json();
                     if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
                         setSimplifiedResult(data.candidates[0].content.parts[0].text.trim());
                         showToast("Metin başarıyla sadeleştirildi! ✨");
                     }
-                } catch (err) { showToast("Sadeleştirme yapılamadı."); }
+                } catch (err) { handleApiError(err); }
                 setIsGeneratingSimplification(false);
             };
 
@@ -647,16 +645,17 @@
                     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
                         method: 'POST', headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                            systemInstruction: { parts: [{ text: "Sen uzman bir özel eğitim öğretmeni ve BEP (Bireyselleştirilmiş Eğitim Programı) danışmanısın." }] },
-                            contents: [{ parts: [{ text: `Öğrencinin Mevcut Performansı/Durumu: ${studentCurrentLevel}\nKazandırılmak İstenen Hedef Beceri: ${targetSkill}\n\nLütfen bu öğrenci için SMART (Spesifik, Ölçülebilir, Ulaşılabilir, Gerçekçi, Zaman Sınırlı) kriterlerine tam uygun, pedagojik olarak sağlam 3 adet kısa dönemli hedef ve 1 adet uzun dönemli hedef içeren bir BEP taslağı hazırla.` }] }]
+                            systemInstruction: { parts: [{ text: "Sen uzman bir özel eğitim öğretmeni ve BEP danışmanısın." }] },
+                            contents: [{ parts: [{ text: `Mevcut Durum: ${studentCurrentLevel}\nHedef Beceri: ${targetSkill}\n\nLütfen SMART kriterlerine uygun 3 kısa, 1 uzun dönemli hedef içeren BEP taslağı hazırla.` }] }]
                         })
                     });
+                    if (!response.ok) throw new Error(response.status === 429 ? '429' : 'API Error');
                     const data = await response.json();
                     if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
                         setBepResult(data.candidates[0].content.parts[0].text.trim());
                         showToast("BEP hedefleri oluşturuldu! ✨");
                     }
-                } catch (err) { showToast("BEP hedefleri oluşturulamadı."); }
+                } catch (err) { handleApiError(err); }
                 setIsGeneratingBep(false);
             };
 
@@ -673,72 +672,38 @@
                             contents: [{ parts: [{ text: `Öğrenci: ${selectedStudent}\nSon Dersler:\n${studentData}\n\nBu gidişata göre analiz ve yol haritası çıkar.` }] }],
                             generationConfig: {
                                 responseMimeType: "application/json",
-                                responseSchema: {
-                                    type: "OBJECT", properties: { genel_degerlendirme: { type: "STRING" }, guclu_yonler: { type: "ARRAY", items: { type: "STRING" } }, gelisim_alanlari: { type: "ARRAY", items: { type: "STRING" } }, yol_haritasi: { type: "STRING" } }, required: ["genel_degerlendirme", "guclu_yonler", "gelisim_alanlari", "yol_haritasi"]
-                                }
+                                responseSchema: { type: "OBJECT", properties: { genel_degerlendirme: { type: "STRING" }, guclu_yonler: { type: "ARRAY", items: { type: "STRING" } }, gelisim_alanlari: { type: "ARRAY", items: { type: "STRING" } }, yol_haritasi: { type: "STRING" } }, required: ["genel_degerlendirme", "guclu_yonler", "gelisim_alanlari", "yol_haritasi"] }
                             }
                         })
                     });
+                    if (!response.ok) throw new Error(response.status === 429 ? '429' : 'API Error');
                     const data = await response.json();
                     if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
                         setAiAnalysisResult(JSON.parse(data.candidates[0].content.parts[0].text));
                         showToast("Yapay zeka analizi tamamlandı! ✨");
                     }
-                } catch (err) { showToast("Analiz yapılamadı."); }
+                } catch (err) { handleApiError(err); }
                 setIsAnalyzing(false);
             };
-
-            // --- HELPER COMPONENTS ---
-            const ProgressChart = ({ reports }) => {
-                if (!reports || reports.length < 2) return <div className="text-gray-500 italic text-sm p-4 text-center">Grafik için en az 2 rapor gerekiyor.</div>;
-                const sorted = [...reports].sort((a, b) => new Date(a.date) - new Date(b.date));
-                const width = 1000, height = 300, padding = 40;
-                const getX = (index) => padding + (index * ((width - padding * 2) / (sorted.length - 1)));
-                const getY = (score) => height - padding - ((score / 10) * (height - padding * 2));
-                const points = sorted.map((r, i) => `${getX(i)},${getY(r.result.gelisim_puani || 5)}`).join(' ');
-
-                return (
-                    <div className="w-full overflow-x-auto bg-white rounded-xl border border-gray-200 p-4">
-                        <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto min-w-[500px]" style={{ maxHeight: '250px' }}>
-                            {[2, 4, 6, 8, 10].map(score => (
-                                <g key={score}>
-                                    <line x1={padding} y1={getY(score)} x2={width-padding} y2={getY(score)} stroke="#f3f4f6" strokeWidth="2" />
-                                    <text x={padding - 10} y={getY(score) + 4} fontSize="14" fill="#9ca3af" textAnchor="end">{score}</text>
-                                </g>
-                            ))}
-                            <polyline points={points} fill="none" stroke="#6366f1" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
-                            {sorted.map((r, i) => (
-                                <g key={i}>
-                                    <circle cx={getX(i)} cy={getY(r.result.gelisim_puani || 5)} r="6" fill="#4f46e5" stroke="white" strokeWidth="2" />
-                                    <text x={getX(i)} y={height - 10} fontSize="12" fill="#6b7280" textAnchor="middle">{r.date.split('-').slice(1).reverse().join('/')}</text>
-                                    <text x={getX(i)} y={getY(r.result.gelisim_puani || 5) - 15} fontSize="14" fontWeight="bold" fill="#4f46e5" textAnchor="middle">{r.result.gelisim_puani}</text>
-                                </g>
-                            ))}
-                        </svg>
-                    </div>
-                );
-            };
-
-            const selectedCategoryObj = CATEGORIES.find(c => c.name === category) || CATEGORIES[0];
 
             return (
                 <div className="min-h-screen flex flex-col bg-gray-50 pb-20 md:pb-0">
                     
-                    {/* Rastgele Seçilen Öğrenci Animasyonu */}
+                    {/* Rastgele Seçilen Öğrenci */}
                     {pickedStudent && (
-                        <div className="fixed inset-0 flex items-center justify-center bg-black/60 z-[100] animate-fade-in no-print">
+                        <div className="fixed inset-0 flex items-center justify-center bg-black/80 z-[100] animate-fade-in no-print">
                             <div className="bg-white rounded-3xl p-10 text-center transform scale-100 shadow-2xl animate-bounce">
                                 <div className="text-6xl mb-4">🎉</div>
                                 <h2 className="text-gray-500 text-lg font-bold uppercase tracking-widest mb-2">Şanslı Öğrenci</h2>
                                 <h1 className="text-5xl font-black text-indigo-600 mb-6">{pickedStudent}</h1>
+                                <button onClick={() => setPickedStudent(null)} className="text-sm bg-gray-100 px-4 py-2 rounded-lg text-gray-600">Kapat</button>
                             </div>
                         </div>
                     )}
 
-                    {/* Toast Message */}
                     {toastMessage && (
                         <div className="fixed top-5 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white px-6 py-3 rounded-full shadow-2xl z-50 flex items-center space-x-2 animate-fade-in no-print font-medium text-sm w-max">
-                            <i className="fa-solid fa-check text-green-400"></i><span>{toastMessage}</span>
+                            <i className="fa-solid fa-bell text-green-400"></i><span>{toastMessage}</span>
                         </div>
                     )}
 
@@ -749,19 +714,18 @@
                                 <div className="w-10 h-10 bg-gradient-to-br from-indigo-600 to-purple-700 text-white rounded-xl flex items-center justify-center text-lg font-extrabold shadow-md">Bİ</div>
                                 <div>
                                     <h1 className="text-lg md:text-xl font-bold text-gray-900 leading-tight">Barış Öğretmen</h1>
-                                    <p className="text-[10px] md:text-xs text-indigo-600 font-semibold uppercase tracking-wider">Eğitim & Gelişim Asistanı V7</p>
+                                    <p className="text-[10px] md:text-xs text-indigo-600 font-semibold uppercase tracking-wider">Eğitim & Gelişim Asistanı V8</p>
                                 </div>
                             </div>
                             
                             <div className="flex items-center space-x-4">
-                                {/* Pomodoro / Ders Sayacı */}
                                 <div className="hidden sm:flex items-center bg-gray-100 rounded-full px-3 py-1 shadow-inner border border-gray-200">
                                     <i className="fa-solid fa-stopwatch text-indigo-500 mr-2"></i>
                                     <span className="font-mono font-bold text-gray-800 mr-3 text-sm">{formatTime(timeLeft)}</span>
                                     <button onClick={() => setTimerActive(!timerActive)} className={`text-xs px-2 py-0.5 rounded font-bold transition ${timerActive ? 'bg-red-100 text-red-600 hover:bg-red-200' : 'bg-green-100 text-green-600 hover:bg-green-200'}`}>
                                         {timerActive ? 'Durdur' : 'Başlat'}
                                     </button>
-                                    <button onClick={() => {setTimerActive(false); setTimeLeft(2400);}} className="text-gray-400 hover:text-gray-600 ml-2" title="Sıfırla (40 Dk)"><i className="fa-solid fa-rotate-right"></i></button>
+                                    <button onClick={() => {setTimerActive(false); setTimeLeft(2400);}} className="text-gray-400 hover:text-gray-600 ml-2" title="Sıfırla"><i className="fa-solid fa-rotate-right"></i></button>
                                 </div>
 
                                 <div className="hidden md:flex space-x-1 bg-gray-100 p-1 rounded-lg">
@@ -783,15 +747,13 @@
                             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                                 <div className={`lg:col-span-4 space-y-6 no-print ${editableResult ? 'hidden lg:block' : ''}`}>
                                     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-                                        <h2 className="text-xl font-bold text-gray-800 mb-4 border-b pb-2 flex items-center justify-between">
-                                            <span>Rapor Formu</span>
-                                        </h2>
+                                        <h2 className="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Rapor Formu</h2>
                                         
                                         {contacts.length > 0 && (
                                             <div className="mb-4 bg-blue-50 p-3 rounded-lg border border-blue-100">
-                                                <label className="block text-xs font-bold text-blue-800 uppercase mb-1"><i className="fa-solid fa-address-book mr-1"></i> Rehberden Hızlı Seç</label>
+                                                <label className="block text-xs font-bold text-blue-800 uppercase mb-1"><i className="fa-solid fa-address-book mr-1"></i> Rehberden Seç</label>
                                                 <select onChange={handleContactSelect} className="w-full px-3 py-2 bg-white border border-blue-200 rounded text-sm outline-none focus:ring-2 focus:ring-blue-400">
-                                                    <option value="">(Yeni Öğrenci Girişi Yap)</option>
+                                                    <option value="">(Yeni Öğrenci)</option>
                                                     {contacts.map(c => <option key={c.id} value={c.id}>{c.studentName} - {c.parentName}</option>)}
                                                 </select>
                                             </div>
@@ -800,7 +762,7 @@
                                         <div className="space-y-4 mb-5">
                                             <div><label className="block text-xs font-bold text-gray-600 uppercase mb-1">Öğrenci Adı</label><input type="text" value={studentName} onChange={(e) => setStudentName(e.target.value)} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg outline-none font-medium" /></div>
                                             <div className="grid grid-cols-2 gap-2">
-                                                <div><label className="block text-xs font-bold text-gray-600 uppercase mb-1">Veli Adı/Hitap</label><input type="text" value={parentName} onChange={(e) => setParentName(e.target.value)} placeholder="Örn: Ayşe Hanım" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg outline-none font-medium text-sm text-indigo-700" /></div>
+                                                <div><label className="block text-xs font-bold text-gray-600 uppercase mb-1">Veli Hitap</label><input type="text" value={parentName} onChange={(e) => setParentName(e.target.value)} placeholder="Ayşe Hanım" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg outline-none font-medium text-sm text-indigo-700" /></div>
                                                 <div><label className="block text-xs font-bold text-gray-600 uppercase mb-1">Telefon</label><input type="text" value={parentPhone} onChange={(e) => setParentPhone(e.target.value)} placeholder="05..." className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg outline-none font-medium text-sm" /></div>
                                             </div>
                                             <div><label className="block text-xs font-bold text-gray-600 uppercase mb-1">Tarih</label><input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg outline-none font-medium text-gray-700" /></div>
@@ -813,9 +775,9 @@
                                             </div>
                                         </div>
                                         <div className="mb-6">
-                                            <label className="block text-xs font-bold text-gray-600 uppercase mb-1">Gözlem</label>
-                                            <textarea value={observation} onChange={(e) => setObservation(e.target.value)} rows="3" className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg outline-none font-medium text-sm resize-y" placeholder="Gözlemlerinizi yazın..."></textarea>
-                                            <div className="flex justify-end mt-2"><button onClick={expandObservation} disabled={isExpanding || !observation.trim()} className="text-xs font-bold bg-purple-100 text-purple-700 hover:bg-purple-200 px-3 py-1.5 rounded-md transition disabled:opacity-50 flex items-center shadow-sm">{isExpanding ? <i className="fa-solid fa-spinner fa-spin mr-1"></i> : <i className="fa-solid fa-wand-magic-sparkles mr-1"></i>}{isExpanding ? 'Sihirbaz Yazıyor...' : 'AI ile Gözlemi Genişlet ✨'}</button></div>
+                                            <label className="block text-xs font-bold text-gray-600 uppercase mb-1">Gözlem & Performans</label>
+                                            <textarea value={observation} onChange={(e) => setObservation(e.target.value)} rows="3" className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg outline-none font-medium text-sm resize-y" placeholder="Gidişata göre ödevler ayarlanacaktır..."></textarea>
+                                            <div className="flex justify-end mt-2"><button onClick={expandObservation} disabled={isExpanding || !observation.trim()} className="text-xs font-bold bg-purple-100 text-purple-700 hover:bg-purple-200 px-3 py-1.5 rounded-md transition disabled:opacity-50 flex items-center shadow-sm">{isExpanding ? <i className="fa-solid fa-spinner fa-spin mr-1"></i> : <i className="fa-solid fa-wand-magic-sparkles mr-1"></i>}{isExpanding ? 'Yazılıyor...' : 'AI ile Genişlet ✨'}</button></div>
                                         </div>
                                         <div className="flex gap-2">
                                             <button onClick={generateReport} disabled={loading} className={`flex-1 py-3 rounded-xl font-bold text-white transition-all shadow-md flex items-center justify-center ${loading ? 'bg-indigo-400' : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:shadow-lg hover:-translate-y-0.5'}`}>{loading ? <i className="fa-solid fa-spinner fa-spin mr-2"></i> : <i className="fa-solid fa-wand-magic-sparkles mr-2"></i>}Rapor Üret</button>
@@ -840,11 +802,10 @@
                                                     <button onClick={() => downloadAsPDF('printable-report', `${studentName}_Raporu`)} disabled={isDownloadingPdf} className="bg-indigo-500 text-white hover:bg-indigo-600 px-4 py-2 rounded-lg font-bold text-sm flex items-center transition shadow-md disabled:opacity-50">
                                                         {isDownloadingPdf ? <i className="fa-solid fa-spinner fa-spin mr-2"></i> : <i className="fa-solid fa-file-pdf mr-2"></i>} İndir
                                                     </button>
-                                                    <button onClick={() => window.print()} className="bg-gray-800 text-white hover:bg-black px-4 py-2 rounded-lg font-bold text-sm flex items-center transition"><i className="fa-solid fa-print"></i></button>
+                                                    <button onClick={() => { setTimeout(() => window.print(), 100); }} className="bg-gray-800 text-white hover:bg-black px-4 py-2 rounded-lg font-bold text-sm flex items-center transition"><i className="fa-solid fa-print"></i></button>
                                                 </div>
                                             </div>
                                             
-                                            {/* Rapor İçeriği */}
                                             <div id="printable-report">
                                                 <div className="text-center mb-8 pb-4 border-b-2 border-gray-800 print-only">
                                                     <h1 className="text-2xl font-extrabold uppercase tracking-widest text-gray-900 mb-2">{selectedCategoryObj.reportTitle}</h1>
@@ -1027,10 +988,13 @@
                                                 <div key={report.id} className="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md transition">
                                                     <div className="flex justify-between items-start mb-3">
                                                         <div><span className="text-xs font-bold bg-gray-100 text-gray-600 px-2 py-1 rounded uppercase tracking-wider">{report.category}</span><h4 className="font-bold text-lg text-gray-800 mt-2">{report.date.split('-').reverse().join('.')}</h4></div>
-                                                        <div className="w-10 h-10 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold border border-indigo-100" title="Gelişim Puanı">{report.result?.gelisim_puani || '-'}</div>
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="w-10 h-10 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold border border-indigo-100" title="Gelişim Puanı">{report.result?.gelisim_puani || '-'}</div>
+                                                            <button onClick={() => deleteReport(report.id)} className="text-red-400 hover:text-red-600" title="Bu Raporu Sil"><i className="fa-solid fa-trash-can"></i></button>
+                                                        </div>
                                                     </div>
                                                     <p className="text-sm text-gray-600 mb-4 italic border-l-2 border-gray-300 pl-3">"{report.observation}"</p>
-                                                    <div className="flex gap-2"><button onClick={() => {setStudentName(report.studentName); setDate(report.date); setCategory(report.category); setObservation(report.observation); setEditableResult(report.result); setActiveTab('new_report');}} className="text-sm font-medium text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg transition"><i className="fa-solid fa-eye mr-1"></i> Raporu Aç / Yazdır</button></div>
+                                                    <div className="flex gap-2"><button onClick={() => {setStudentName(report.studentName); setDate(report.date); setCategory(report.category); setObservation(report.observation); setEditableResult(report.result); setActiveTab('new_report');}} className="text-sm font-medium text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg transition"><i className="fa-solid fa-eye mr-1"></i> Raporu Aç / Yazdır / PDF İndir</button></div>
                                                 </div>
                                             ))}
                                         </div>
@@ -1065,13 +1029,13 @@
                                         <div className="p-6 md:p-8 flex-1 flex flex-col gap-5 relative z-10 text-white">
                                             <div>
                                                 <h3 className="font-black text-2xl flex items-center mb-2"><i className="fa-solid fa-palette text-yellow-400 mr-3"></i> Akademi Matbaası (Materyal Üretici)</h3>
-                                                <p className="text-teal-100 text-sm">Konuyu girin, formatı seçin. Sistem renkli özetler, deneme sınavları ve pekiştirme kağıtlarını saniyeler içinde yazdırılmaya hazır hale getirsin.</p>
+                                                <p className="text-teal-100 text-sm">Konuyu girin, formatı seçin. Sistem renkli özetler, deneme sınavları ve pekiştirme kağıtlarını saniyeler içinde yazdırılmaya/PDF indirmeye hazır hale getirsin.</p>
                                             </div>
                                             
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-2">
+                                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-2">
                                                 <div>
                                                     <label className="block text-xs font-bold text-teal-200 uppercase mb-2">Materyal Formatı Nedir?</label>
-                                                    <div className="grid grid-cols-2 gap-3 mb-4">
+                                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
                                                         <label className={`cursor-pointer p-3 rounded-lg border-2 flex flex-col items-center justify-center text-center transition ${materialType==='ozet' ? 'bg-white text-teal-900 border-white' : 'bg-teal-800/50 border-teal-500 text-teal-100 hover:bg-teal-700'}`}>
                                                             <input type="radio" name="matType" value="ozet" checked={materialType==='ozet'} onChange={e=>setMaterialType(e.target.value)} className="hidden"/>
                                                             <i className="fa-solid fa-highlighter text-xl mb-1"></i> <span className="text-[11px] font-bold leading-tight">Renkli Konu Özeti</span>
@@ -1099,6 +1063,18 @@
                                                         <label className={`col-span-2 cursor-pointer p-3 rounded-lg border-2 flex items-center justify-center text-center transition ${materialType==='karma' ? 'bg-yellow-400 text-teal-900 border-yellow-400' : 'bg-teal-800/50 border-teal-500 text-teal-100 hover:bg-teal-700'}`}>
                                                             <input type="radio" name="matType" value="karma" checked={materialType==='karma'} onChange={e=>setMaterialType(e.target.value)} className="hidden"/>
                                                             <i className="fa-solid fa-layer-group text-lg mr-2"></i> <span className="text-sm font-bold">Hem Özet Hem Test (Karma)</span>
+                                                        </label>
+                                                    </div>
+
+                                                    {/* ÖZEL EĞİTİM EKSTRALARI */}
+                                                    <div className="grid grid-cols-2 gap-3 mb-4">
+                                                        <label className={`cursor-pointer p-3 rounded-lg border-2 flex flex-col items-center justify-center text-center transition ${materialType==='gorsel_eslestirme' ? 'bg-white text-teal-900 border-white' : 'bg-teal-800/50 border-teal-500 text-teal-100 hover:bg-teal-700'}`}>
+                                                            <input type="radio" name="matType" value="gorsel_eslestirme" checked={materialType==='gorsel_eslestirme'} onChange={e=>setMaterialType(e.target.value)} className="hidden"/>
+                                                            <i className="fa-solid fa-shapes text-xl mb-1"></i> <span className="text-[11px] font-bold leading-tight">Özel Eğt: Kavram Eşleştirme</span>
+                                                        </label>
+                                                        <label className={`cursor-pointer p-3 rounded-lg border-2 flex flex-col items-center justify-center text-center transition ${materialType==='duyusal_motor' ? 'bg-white text-teal-900 border-white' : 'bg-teal-800/50 border-teal-500 text-teal-100 hover:bg-teal-700'}`}>
+                                                            <input type="radio" name="matType" value="duyusal_motor" checked={materialType==='duyusal_motor'} onChange={e=>setMaterialType(e.target.value)} className="hidden"/>
+                                                            <i className="fa-solid fa-hand-sparkles text-xl mb-1"></i> <span className="text-[11px] font-bold leading-tight">Özel Eğt: Duyusal & Motor</span>
                                                         </label>
                                                     </div>
 
@@ -1135,11 +1111,11 @@
                                                 <div className="flex flex-col justify-between">
                                                     <div>
                                                         <label className="block text-xs font-bold text-teal-200 uppercase mb-2">Hangi Konuyu / Kazanımı İşliyoruz?</label>
-                                                        <textarea value={materialTopic} onChange={(e) => setMaterialTopic(e.target.value)} rows="5" placeholder="Örn: Öğrenme güçlüğünü kısaca anlat, sonra Güneş Sistemi ile ilgili test hazırlayalım..." className="w-full px-4 py-3 bg-white/10 border border-teal-400/50 rounded-xl outline-none text-white placeholder-teal-200/50 resize-y focus:bg-white focus:text-teal-900 transition"></textarea>
+                                                        <textarea value={materialTopic} onChange={(e) => setMaterialTopic(e.target.value)} rows="6" placeholder="Örn: Otizmli öğrencim için nesne eşleştirme etkinliği, Güneş Sistemi testi, ya da disleksi dostu okuma parçası..." className="w-full px-4 py-3 bg-white/10 border border-teal-400/50 rounded-xl outline-none text-white placeholder-teal-200/50 resize-y focus:bg-white focus:text-teal-900 transition"></textarea>
                                                     </div>
                                                     <button onClick={generateMaterial} disabled={isGeneratingMaterial || !materialTopic.trim()} className="mt-4 w-full bg-yellow-400 text-teal-900 hover:bg-yellow-300 py-3.5 rounded-xl font-extrabold text-lg transition shadow-lg disabled:opacity-50 flex justify-center items-center">
                                                         {isGeneratingMaterial ? <i className="fa-solid fa-spinner fa-spin mr-2"></i> : <i className="fa-solid fa-print mr-2"></i>} 
-                                                        {isGeneratingMaterial ? 'Matbaa Hazırlıyor...' : 'Dökümanı Oluştur & Yazdır ✨'}
+                                                        {isGeneratingMaterial ? 'Matbaa Hazırlıyor...' : 'Dökümanı Üret & PDF Al ✨'}
                                                     </button>
                                                 </div>
                                             </div>
@@ -1196,7 +1172,7 @@
                                         </div>
                                     </div>
 
-                                    {/* MİNİ ARAÇLAR: Metin Sadeleştirici (YENİ) */}
+                                    {/* MİNİ ARAÇLAR: Metin Sadeleştirici */}
                                     <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
                                         <div className="bg-cyan-600 p-4 text-white flex items-center"><i className="fa-solid fa-compress text-3xl mr-3"></i><div><h3 className="font-bold text-lg">Metin Sadeleştirici</h3><p className="text-cyan-100 text-xs">Karmaşık metinleri öğrenci seviyesine indirgeyin.</p></div></div>
                                         <div className="p-5 flex-1 flex flex-col gap-4">
@@ -1213,13 +1189,13 @@
                                         </div>
                                     </div>
 
-                                    {/* MİNİ ARAÇLAR: BEP Hedef Üretici (YENİ) */}
+                                    {/* MİNİ ARAÇLAR: BEP Hedef Üretici */}
                                     <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
                                         <div className="bg-emerald-600 p-4 text-white flex items-center"><i className="fa-solid fa-bullseye text-3xl mr-3"></i><div><h3 className="font-bold text-lg">BEP Hedef Üretici</h3><p className="text-emerald-100 text-xs">Akıllı (SMART) eğitim planı hedefleri tasarlayın.</p></div></div>
                                         <div className="p-5 flex-1 flex flex-col gap-4">
                                             <div>
                                                 <input type="text" value={targetSkill} onChange={(e) => setTargetSkill(e.target.value)} placeholder="Hedef Beceri (Örn: Toplama işlemi)" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg outline-none text-sm mb-3 font-medium" />
-                                                <textarea value={studentCurrentLevel} onChange={(e) => setStudentCurrentLevel(e.target.value)} rows="2" placeholder="Mevcut Durumu Nedir? (Örn: Sadece rakamları tanıyor)" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg outline-none text-sm resize-y"></textarea>
+                                                <textarea value={studentCurrentLevel} onChange={(e) => setStudentCurrentLevel(e.target.value)} rows="2" placeholder="Mevcut Durumu (Örn: Rakamları tanıyor)" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg outline-none text-sm resize-y"></textarea>
                                             </div>
                                             <button onClick={generateBepGoals} disabled={isGeneratingBep || !targetSkill.trim() || !studentCurrentLevel.trim()} className="w-full bg-emerald-100 text-emerald-700 hover:bg-emerald-200 py-2.5 rounded-lg font-bold text-sm transition disabled:opacity-50 flex justify-center items-center">
                                                 {isGeneratingBep ? <i className="fa-solid fa-spinner fa-spin mr-2"></i> : <i className="fa-solid fa-wand-magic-sparkles mr-2"></i>} Hedefleri Tasarla ✨
@@ -1271,7 +1247,7 @@
                                                 <button onClick={() => downloadAsPDF('printable-material', materialResult.dokuman_basligi)} disabled={isDownloadingPdf} className="bg-indigo-500 text-white hover:bg-indigo-600 px-4 py-2 rounded-lg font-bold transition flex items-center shadow text-sm disabled:opacity-50">
                                                     {isDownloadingPdf ? <i className="fa-solid fa-spinner fa-spin mr-2"></i> : <i className="fa-solid fa-file-pdf mr-2"></i>} PDF İndir
                                                 </button>
-                                                <button onClick={() => window.print()} className="bg-green-500 hover:bg-green-600 px-6 py-2 rounded-lg font-bold transition flex items-center shadow text-white">
+                                                <button onClick={() => { setTimeout(() => window.print(), 100); }} className="bg-green-500 hover:bg-green-600 px-6 py-2 rounded-lg font-bold transition flex items-center shadow text-white">
                                                     <i className="fa-solid fa-print text-xl mr-2"></i> Yazdır
                                                 </button>
                                             </div>
@@ -1292,7 +1268,7 @@
 
                                             {materialResult.okuma_metni && (
                                                 <div className="mb-8 p-6 bg-yellow-50/50 border border-yellow-200 rounded-xl print:bg-yellow-50 print:border-yellow-200 break-inside-avoid">
-                                                    <h3 className="font-bold text-yellow-800 mb-3 flex items-center print-high-contrast"><i className="fa-solid fa-book-open text-xl mr-2"></i> Okuma Parçası</h3>
+                                                    <h3 className="font-bold text-yellow-800 mb-3 flex items-center print-high-contrast"><i className="fa-solid fa-book-open text-xl mr-2"></i> Okuma Parçası / Yönerge</h3>
                                                     <p className="text-gray-800 leading-relaxed font-medium text-justify print-high-contrast">{materialResult.okuma_metni}</p>
                                                 </div>
                                             )}
@@ -1349,7 +1325,7 @@
                                                         {materialResult.sorular.map((soru, idx) => (
                                                             <div key={idx} className="bg-gray-50 border border-gray-200 p-3 rounded-lg text-center shadow-sm">
                                                                 <span className="font-bold text-gray-500 block mb-1">Soru {idx + 1}</span>
-                                                                <span className="font-black text-lg text-green-600 print-high-contrast">{soru.cevap || 'Açık Uçlu'}</span>
+                                                                <span className="font-black text-lg text-green-600 print-high-contrast">{soru.cevap || 'Açık Uçlu / Etkinlik'}</span>
                                                             </div>
                                                         ))}
                                                     </div>
@@ -1456,3 +1432,5 @@
     </script>
 </body>
 </html>
+
+
