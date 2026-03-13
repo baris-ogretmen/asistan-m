@@ -1,0 +1,2 @@
+# asistan-m
+kendim için 
