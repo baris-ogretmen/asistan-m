@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Barış Öğretmen - Eğitim & Gelişim Asistanı V10 YZ Ekosistemi</title>
+    <title>Barış Öğretmen - Eğitim & Gelişim Asistanı V11 Ultra</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -104,7 +104,7 @@
             <div className="brand-footer mt-10 pt-4 border-t-2 border-gray-300 text-center text-xs text-gray-500 print-only">
                 <p className="font-bold text-sm mb-1 text-black">Barış Öğretmen - Eğitim & Gelişim Asistanı</p>
                 <p>Bu döküman yapay zeka destekli eğitim asistanı ile hazırlanmıştır.</p>
-                <p className="font-bold mt-1 text-black">Daha fazlası için: https://baris-ogretmen.github.io/site-1/</p>
+                <p className="font-bold mt-1 text-indigo-700">Daha fazlası için: https://baris-ogretmen.github.io/site-1/</p>
             </div>
         );
 
@@ -126,7 +126,7 @@
             const [notes, setNotes] = useState([]);
 
             // --- REPORT STATES ---
-            const [editingReportId, setEditingReportId] = useState(null); // Düzenleme Modu
+            const [editingReportId, setEditingReportId] = useState(null);
             const [studentName, setStudentName] = useState('');
             const [parentName, setParentName] = useState('');
             const [parentPhone, setParentPhone] = useState('');
@@ -155,7 +155,7 @@
             
             // Matbaa
             const [materialTopic, setMaterialTopic] = useState('');
-            const [materialType, setMaterialType] = useState('karma'); 
+            const [materialType, setMaterialType] = useState('yeni_nesil_test'); 
             const [materialResult, setMaterialResult] = useState(null);
             const [isGeneratingMaterial, setIsGeneratingMaterial] = useState(false);
             const [matStudentName, setMatStudentName] = useState('');
@@ -189,13 +189,13 @@
             const [bepResult, setBepResult] = useState(null);
             const [isGeneratingBep, setIsGeneratingBep] = useState(false);
 
-            // YENİ: Sınav Okuyucu / Dönüt Verici
+            // Sınav Okuyucu / Dönüt Verici
             const [graderQuestion, setGraderQuestion] = useState('');
             const [graderAnswer, setGraderAnswer] = useState('');
             const [graderResult, setGraderResult] = useState(null);
             const [isGeneratingGrader, setIsGeneratingGrader] = useState(false);
 
-            // YENİ: Proje Fikri Üretici
+            // Proje Fikri Üretici
             const [projectTopic, setProjectTopic] = useState('');
             const [projectResult, setProjectResult] = useState(null);
             const [isGeneratingProject, setIsGeneratingProject] = useState(false);
@@ -528,16 +528,20 @@
                 setIsGeneratingMaterial(true); setMaterialResult(null);
 
                 let kuralMetni = "";
-                let soruKurali = `Zorluk Derecesi: ${matDifficulty}. Toplam tam ${matQuestionCount} adet soru üret. DİKKAT: Sorular birbirini tekrar etmesin.`;
+                let soruKurali = `Zorluk Derecesi: ${matDifficulty}. Toplam tam ${matQuestionCount} adet soru üret. DİKKAT: Sorular birbirini tekrar etmesin. Baslikta "Kolay/Zor" ibareleri YAZMA.`;
 
                 if (materialType === 'ozet') kuralMetni = "İlgi çekici, maddeler halinde ve alt başlıklı RENKLİ BİR KONU ÖZETİ hazırla. Sorular kısmı boş olabilir.";
+                else if (materialType === 'yeni_nesil_test') kuralMetni = `${soruKurali} Sorular LGS/YKS veya MEBİ formatında, uzun paragraflı, mantık ve muhakeme gerektiren Yeni Nesil tarzda olsun. Çoktan seçmeli şıklar ekle. "cozum" alanında neden o cevabın doğru olduğunu öğretmene yönelik açıkla.`;
+                else if (materialType === 'mebi_deneme') kuralMetni = `${soruKurali} MEB müfredatına tam uyumlu, ölçücü mini bir MEBİ Deneme Sınavı formatı oluştur. "cozum" alanında neden o cevabın doğru olduğunu öğretmene yönelik açıkla.`;
                 else if (materialType === 'test') kuralMetni = `${soruKurali} Tamamı ÇOKTAN SEÇMELİ TEST formatında olsun. Her sorunun "cozum" alanında neden o cevabın doğru olduğunu kısa ve öz bir şekilde öğretmene yönelik açıkla.`;
-                else if (materialType === 'okuma_parcasi') kuralMetni = "Bu konuyla ilgili rastgele bir edebi tür (masal, mektup, macera, bilim kurgu, efsane, anı vb.) seçerek yaratıcı bir OKUMA METNİ yaz. Altına sadece 3 tane düşündürücü soru ekle.";
+                else if (materialType === 'okuma_parcasi') kuralMetni = "Bu konuyla ilgili rastgele bir edebi tür (masal, mektup, macera, bilim kurgu, efsane, anı vb.) seçerek yaratıcı bir OKUMA METNİ yaz. Altına okuduğunu anlamaya yönelik 3 düşündürücü açık uçlu soru ekle.";
                 else if (materialType === '5n1k') kuralMetni = "Özgün bir KISA HİKAYE veya OKUMA METNİ yaz. Ardından okuma anlama (5N1K - Kim, Ne, Nerede, Nasıl, Ne Zaman, Neden) formatında sorular oluştur.";
-                else if (materialType === 'pekistirme') kuralMetni = `${soruKurali} AÇIK UÇLU yorum soruları hazırla. Cevaplarını belirt.`;
+                else if (materialType === 'pekistirme') kuralMetni = `${soruKurali} AÇIK UÇLU yorum soruları hazırla. Öğretmen için cevapları ve çözümleri belirt.`;
                 else if (materialType === 'karma') kuralMetni = `Önce konuyu anlatan RENKLİ BİR KONU ÖZETİ hazırla. Ardından HEMEN ALTINA ${soruKurali} içeren bir ÇOKTAN SEÇMELİ TEST ekle. Testin çözümlerini de ver.`;
                 else if (materialType === 'bosluk') kuralMetni = `${soruKurali} Tamamı BOŞLUK DOLDURMA formatında olsun. Soru metinlerinde boş bırakılan yerleri "_________" şeklinde göster. Cevap anahtarına o boşluğa gelmesi gereken kelimeyi yaz.`;
                 else if (materialType === 'dogru_yanlis') kuralMetni = `${soruKurali} Tamamı DOĞRU/YANLIŞ formatında olsun. Cümlenin sonuna öğrencinin (D) veya (Y) yazabileceği bir parantez (   ) ekle.`;
+                else if (materialType === 'eslestirme') kuralMetni = `DİKKAT: Soru tipi kesinlikle "eslestirme" olmalı. ${soruKurali} A sütunundaki kavramlarla B sütunundaki açıklamaları/karşılıkları eşleştirme formatında hazırla. 'sol_sutun' içine maddeleri, 'sag_sutun_karisik' içine karşılıkların KARIŞTIRILMIŞ halini yaz.`;
+                // Özel Eğitim & Dil Konuşma
                 else if (materialType === 'gorsel_eslestirme') kuralMetni = "Özel eğitim için kavram, nesne, renk veya şekil eşleştirme yönergeleri hazırla. Eğlenceli ve basit oyunlaştırmalar ekle.";
                 else if (materialType === 'duyusal_motor') kuralMetni = "İnce motor becerileri veya duyusal bütünleme aktiviteleri içeren, evde/sınıfta yapılabilecek 5 aşamalı bir çalışma kağıdı/etkinlik listesi hazırla.";
                 else if (materialType === 'dil_konusma_egzersizi') kuralMetni = "Dil ve konuşma terapisi için (verilen konuya/sese uygun) artikülasyon egzersizleri, tekerlemeler, solunum-nefes çalışmaları veya dudak-dil motor beceri listesi oluştur.";
@@ -557,7 +561,7 @@
                                         dokuman_basligi: { type: "STRING" }, alt_baslik: { type: "STRING" },
                                         okuma_metni: { type: "STRING" },
                                         ozet_maddeleri: { type: "ARRAY", items: { type: "OBJECT", properties: { baslik: { type: "STRING" }, metin: { type: "STRING" }, renk: { type: "STRING", description: "blue, green, purple, orange, rose, yellow, teal" } } } },
-                                        sorular: { type: "ARRAY", items: { type: "OBJECT", properties: { tip: { type: "STRING", description: "coktan_secmeli, acik_uclu, bosluk_doldurma, dogru_yanlis" }, soru_metni: { type: "STRING" }, secenekler: { type: "ARRAY", items: { type: "STRING" } }, cevap: { type: "STRING" }, cozum: { type: "STRING" } } } }
+                                        sorular: { type: "ARRAY", items: { type: "OBJECT", properties: { tip: { type: "STRING", description: "coktan_secmeli, acik_uclu, bosluk_doldurma, dogru_yanlis, eslestirme" }, soru_metni: { type: "STRING" }, secenekler: { type: "ARRAY", items: { type: "STRING" } }, sol_sutun: { type: "ARRAY", items: { type: "STRING" } }, sag_sutun_karisik: { type: "ARRAY", items: { type: "STRING" } }, cevap: { type: "STRING", description: "Kesin doğru cevap veya eşleştirme anahtarı (1-C, 2-A vb)." }, cozum: { type: "STRING", description: "Öğretmen için çözüm/açıklama." } } } }
                                     }, required: ["dokuman_basligi", "ozet_maddeleri", "sorular"]
                                 }
                             }
@@ -843,7 +847,7 @@
                     )}
 
                     {toastMessage && (
-                        <div className="fixed top-5 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white px-6 py-3 rounded-full shadow-2xl z-50 flex items-center space-x-2 animate-fade-in no-print font-medium text-sm w-max">
+                        <div className="fixed top-5 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white px-6 py-3 rounded-full shadow-2xl z-50 flex items-center space-x-2 animate-fade-in no-print font-medium text-sm w-max z-[9999]">
                             <i className="fa-solid fa-bell text-green-400"></i><span>{toastMessage}</span>
                         </div>
                     )}
@@ -951,11 +955,12 @@
                                             </div>
                                             
                                             <div id="printable-report">
+                                                <div className="text-[10px] text-gray-500 mb-2 print-only font-bold">🌐 baris-ogretmen.github.io/site-1/</div>
                                                 <div className="text-center mb-8 pb-4 border-b-2 border-gray-800 print-only">
-                                                    <h1 className="text-2xl font-extrabold uppercase tracking-widest text-gray-900 mb-2">{selectedCategoryObj.reportTitle}</h1>
+                                                    <h1 className="text-2xl font-extrabold uppercase tracking-widest text-gray-900 mb-2 print-high-contrast">{selectedCategoryObj.reportTitle}</h1>
                                                     <div className="flex justify-between text-base font-bold text-gray-700 mt-4 px-4">
-                                                        <span>Öğrenci: {studentName}</span>
-                                                        <span>Tarih: {date.split('-').reverse().join('.')}</span>
+                                                        <span className="print-high-contrast">Öğrenci: {studentName}</span>
+                                                        <span className="print-high-contrast">Tarih: {date.split('-').reverse().join('.')}</span>
                                                     </div>
                                                 </div>
                                                 <div className="space-y-6">
@@ -1120,6 +1125,7 @@
                                                             <button onClick={() => downloadAsPDF('tool-printable-analiz', 'Gelisim_Analizi')} className="text-xs bg-indigo-500 hover:bg-indigo-600 text-white px-3 py-1 rounded font-bold"><i className="fa-solid fa-file-pdf mr-1"></i> PDF İndir</button>
                                                             <button onClick={handlePrint} className="text-xs bg-white text-indigo-900 px-3 py-1 rounded font-bold ml-2"><i className="fa-solid fa-print mr-1"></i> Yazdır</button>
                                                         </div>
+                                                        <div className="text-[10px] text-gray-400 mb-2 print-only font-bold">🌐 baris-ogretmen.github.io/site-1/</div>
                                                         <h2 className="text-2xl font-black mb-4 print-only print-high-contrast">{selectedStudent} - Gelişim Analizi ve Yol Haritası</h2>
                                                         <div className="break-inside-avoid">
                                                             <h4 className="text-yellow-400 font-bold text-sm uppercase mb-1 print-high-contrast">Genel Değerlendirme</h4>
@@ -1171,7 +1177,7 @@
                                                     </div>
                                                     <p className="text-sm text-gray-600 mb-4 italic border-l-2 border-gray-300 pl-3">"{report.observation}"</p>
                                                     <div className="flex gap-2">
-                                                        <button onClick={() => {setEditingReportId(null); setStudentName(report.studentName); setDate(report.date); setCategory(report.category); setObservation(report.observation); setEditableResult(report.result); setActiveTab('new_report');}} className="text-sm font-medium text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg transition"><i className="fa-solid fa-eye mr-1"></i> Görüntüle / PDF İndir / Yazdır</button>
+                                                        <button onClick={() => {setEditingReportId(null); setStudentName(report.studentName); setDate(report.date); setCategory(report.category); setObservation(report.observation); setEditableResult(report.result); setActiveTab('new_report');}} className="text-sm font-medium text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg transition"><i className="fa-solid fa-eye mr-1"></i> Görüntüle / Düzenle / Yazdır</button>
                                                     </div>
                                                 </div>
                                             ))}
@@ -1222,6 +1228,18 @@
                                                             <input type="radio" name="matType" value="test" checked={materialType==='test'} onChange={e=>setMaterialType(e.target.value)} className="hidden"/>
                                                             <i className="fa-solid fa-list-check text-xl mb-1"></i> <span className="text-[11px] font-bold leading-tight mt-1">Çoktan Seçmeli</span>
                                                         </label>
+                                                        <label className={`cursor-pointer p-3 rounded-lg border-2 flex flex-col items-center justify-center text-center transition ${materialType==='yeni_nesil_test' ? 'bg-white text-teal-900 border-white' : 'bg-teal-800/50 border-teal-500 text-teal-100 hover:bg-teal-700'}`}>
+                                                            <input type="radio" name="matType" value="yeni_nesil_test" checked={materialType==='yeni_nesil_test'} onChange={e=>setMaterialType(e.target.value)} className="hidden"/>
+                                                            <i className="fa-solid fa-brain text-xl mb-1"></i> <span className="text-[11px] font-bold leading-tight mt-1">Yeni Nesil Test</span>
+                                                        </label>
+                                                        <label className={`cursor-pointer p-3 rounded-lg border-2 flex flex-col items-center justify-center text-center transition ${materialType==='mebi_deneme' ? 'bg-white text-teal-900 border-white' : 'bg-teal-800/50 border-teal-500 text-teal-100 hover:bg-teal-700'}`}>
+                                                            <input type="radio" name="matType" value="mebi_deneme" checked={materialType==='mebi_deneme'} onChange={e=>setMaterialType(e.target.value)} className="hidden"/>
+                                                            <i className="fa-solid fa-school text-xl mb-1"></i> <span className="text-[11px] font-bold leading-tight mt-1">MEBİ Deneme Sınavı</span>
+                                                        </label>
+                                                        <label className={`cursor-pointer p-3 rounded-lg border-2 flex flex-col items-center justify-center text-center transition ${materialType==='eslestirme' ? 'bg-white text-teal-900 border-white' : 'bg-teal-800/50 border-teal-500 text-teal-100 hover:bg-teal-700'}`}>
+                                                            <input type="radio" name="matType" value="eslestirme" checked={materialType==='eslestirme'} onChange={e=>setMaterialType(e.target.value)} className="hidden"/>
+                                                            <i className="fa-solid fa-arrows-turn-to-dots text-xl mb-1"></i> <span className="text-[11px] font-bold leading-tight mt-1">Sütun Eşleştirme</span>
+                                                        </label>
                                                         <label className={`cursor-pointer p-3 rounded-lg border-2 flex flex-col items-center justify-center text-center transition ${materialType==='bosluk' ? 'bg-white text-teal-900 border-white' : 'bg-teal-800/50 border-teal-500 text-teal-100 hover:bg-teal-700'}`}>
                                                             <input type="radio" name="matType" value="bosluk" checked={materialType==='bosluk'} onChange={e=>setMaterialType(e.target.value)} className="hidden"/>
                                                             <i className="fa-solid fa-pen-ruler text-xl mb-1"></i> <span className="text-[11px] font-bold leading-tight mt-1">Boşluk Doldurma</span>
@@ -1256,7 +1274,7 @@
                                                         </label>
                                                     </div>
 
-                                                    {['test', 'pekistirme', 'karma', 'bosluk', 'dogru_yanlis'].includes(materialType) && (
+                                                    {['test', 'yeni_nesil_test', 'mebi_deneme', 'eslestirme', 'pekistirme', 'karma', 'bosluk', 'dogru_yanlis'].includes(materialType) && (
                                                         <div className="grid grid-cols-2 gap-3 mb-4 bg-teal-800/30 p-3 rounded-xl border border-teal-500/30">
                                                             <div>
                                                                 <label className="block text-[10px] font-bold text-teal-300 uppercase mb-1">Soru Sayısı</label>
@@ -1274,7 +1292,6 @@
                                                                     <option value="Çok Kolay (Temel Kavrama)" className="text-gray-900">Kolay</option>
                                                                     <option value="Orta Seviye" className="text-gray-900">Orta</option>
                                                                     <option value="Zor (Seçici)" className="text-gray-900">Zor</option>
-                                                                    <option value="Yeni Nesil (Analitik/Mantık/Beceri Temelli)" className="text-gray-900">Yeni Nesil</option>
                                                                 </select>
                                                             </div>
                                                         </div>
@@ -1302,7 +1319,7 @@
                                         </div>
                                     </div>
 
-                                    {/* YENİ ARAÇ: Sınav Okuyucu / Dönüt Verici */}
+                                    {/* MİNİ ARAÇLAR: Sınav Okuyucu / Dönüt Verici */}
                                     <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden flex flex-col" id="tool-printable-grader">
                                         <div className="bg-indigo-600 p-4 text-white flex items-center"><i className="fa-solid fa-marker text-3xl mr-3"></i><div><h3 className="font-bold text-lg">Cevap Okuyucu</h3><p className="text-indigo-100 text-xs">Öğrenci cevaplarını AI ile değerlendirin.</p></div></div>
                                         <div className="p-5 flex-1 flex flex-col gap-4 no-print">
@@ -1318,6 +1335,7 @@
                                                     <button onClick={() => downloadAsPDF('tool-printable-grader', 'Ogrenci_Geribildirimi')} className="text-xs bg-red-100 text-red-600 px-3 py-1 rounded font-bold"><i className="fa-solid fa-file-pdf mr-1"></i> PDF</button>
                                                     <button onClick={handlePrint} className="text-xs bg-gray-800 text-white px-3 py-1 rounded font-bold ml-2"><i className="fa-solid fa-print mr-1"></i> Yazdır</button>
                                                 </div>
+                                                <div className="text-[10px] text-gray-500 mb-2 print-only font-bold">🌐 baris-ogretmen.github.io/site-1/</div>
                                                 <div className="bg-indigo-50 border border-indigo-100 p-4 rounded-xl text-sm text-gray-800 relative print-high-contrast space-y-3">
                                                     <div className="flex justify-between items-center border-b border-indigo-200 pb-2">
                                                         <span className="font-bold">Öğrenci Puanı:</span>
@@ -1332,7 +1350,7 @@
                                         )}
                                     </div>
 
-                                    {/* YENİ ARAÇ: Proje Fikri Üretici */}
+                                    {/* MİNİ ARAÇLAR: Proje Fikri Üretici */}
                                     <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden flex flex-col" id="tool-printable-project">
                                         <div className="bg-amber-500 p-4 text-white flex items-center"><i className="fa-solid fa-lightbulb text-3xl mr-3"></i><div><h3 className="font-bold text-lg">Proje Üretici</h3><p className="text-amber-100 text-xs">Yaratıcı dönem ve performans ödevleri.</p></div></div>
                                         <div className="p-5 flex-1 flex flex-col gap-4 no-print">
@@ -1347,6 +1365,7 @@
                                                     <button onClick={() => downloadAsPDF('tool-printable-project', 'Proje_Odevleri')} className="text-xs bg-red-100 text-red-600 px-3 py-1 rounded font-bold"><i className="fa-solid fa-file-pdf mr-1"></i> PDF</button>
                                                     <button onClick={handlePrint} className="text-xs bg-gray-800 text-white px-3 py-1 rounded font-bold ml-2"><i className="fa-solid fa-print mr-1"></i> Yazdır</button>
                                                 </div>
+                                                <div className="text-[10px] text-gray-500 mb-2 print-only font-bold">🌐 baris-ogretmen.github.io/site-1/</div>
                                                 <div className="space-y-4">
                                                     {projectResult.projeler?.map((p, idx) => (
                                                         <div key={idx} className="bg-amber-50 rounded-xl p-4 border border-amber-100 break-inside-avoid print-high-contrast">
@@ -1384,45 +1403,16 @@
                                         </div>
                                         {parentReply && (
                                             <div className="p-5 pt-0 mt-auto print-card break-inside-avoid">
+                                                <div className="flex justify-end mb-2 no-print">
+                                                    <button onClick={() => downloadAsPDF('tool-printable-veli', 'Veli_Mesaji')} className="text-xs bg-red-100 text-red-600 px-3 py-1 rounded font-bold"><i className="fa-solid fa-file-pdf mr-1"></i> PDF</button>
+                                                    <button onClick={handlePrint} className="text-xs bg-gray-800 text-white px-3 py-1 rounded font-bold ml-2"><i className="fa-solid fa-print mr-1"></i> Yazdır</button>
+                                                </div>
+                                                <div className="text-[10px] text-gray-500 mb-2 print-only font-bold">🌐 baris-ogretmen.github.io/site-1/</div>
                                                 <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl text-sm text-gray-800 whitespace-pre-wrap relative print-high-contrast">
                                                     {parentReply}
                                                     <div className="absolute top-2 right-2 flex space-x-1 no-print">
                                                         <button onClick={() => {navigator.clipboard.writeText(parentReply); showToast("Kopyalandı!");}} className="text-blue-500 bg-white p-1.5 rounded shadow"><i className="fa-regular fa-copy"></i></button>
-                                                        <button onClick={() => downloadAsPDF('tool-printable-veli', 'Veli_Mesaji')} className="text-red-500 bg-white p-1.5 rounded shadow"><i className="fa-solid fa-file-pdf"></i></button>
                                                     </div>
-                                                </div>
-                                                <BrandFooter />
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* MİNİ ARAÇLAR: Etkinlik Planlayıcı */}
-                                    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden flex flex-col" id="tool-printable-etkinlik">
-                                        <div className="bg-purple-600 p-4 text-white flex items-center"><i className="fa-solid fa-puzzle-piece text-3xl mr-3"></i><div><h3 className="font-bold text-lg">Etkinlik Planlayıcı</h3><p className="text-purple-100 text-xs">Yaratıcı oyun fikirleri üretin.</p></div></div>
-                                        <div className="p-5 flex-1 flex flex-col gap-4 no-print">
-                                            <div><textarea value={activityTopic} onChange={(e) => setActivityTopic(e.target.value)} rows="3" placeholder="Kazanım Nedir? Örn: İnce motor becerisi, Kesirler..." className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg outline-none text-sm resize-y"></textarea></div>
-                                            <button onClick={generateActivityIdeas} disabled={isGeneratingActivity || !activityTopic.trim()} className="w-full bg-purple-100 text-purple-700 hover:bg-purple-200 py-2.5 rounded-lg font-bold text-sm transition disabled:opacity-50 flex justify-center items-center">
-                                                {isGeneratingActivity ? <i className="fa-solid fa-spinner fa-spin mr-2"></i> : <i className="fa-solid fa-lightbulb mr-2"></i>} Fikir Bul ✨
-                                            </button>
-                                        </div>
-                                        {activityResult && !materialResult && (
-                                            <div className="p-5 pt-0 print-card">
-                                                <div className="flex justify-end mb-2 no-print">
-                                                    <button onClick={() => downloadAsPDF('tool-printable-etkinlik', 'Etkinlik_Plani')} className="text-xs bg-red-100 text-red-600 px-3 py-1 rounded font-bold"><i className="fa-solid fa-file-pdf mr-1"></i> PDF Yap</button>
-                                                    <button onClick={handlePrint} className="text-xs bg-gray-800 text-white px-3 py-1 rounded font-bold ml-2"><i className="fa-solid fa-print mr-1"></i> Yazdır</button>
-                                                </div>
-                                                <div className="space-y-4">
-                                                    {activityResult.etkinlikler?.map((etk, idx) => (
-                                                        <div key={idx} className="bg-purple-50 rounded-xl p-4 border border-purple-100 break-inside-avoid print-high-contrast">
-                                                            <h4 className="font-bold text-purple-900 text-lg mb-2">{idx + 1}. {etk.baslik}</h4>
-                                                            <div className="flex gap-2 mb-2"><span className="text-xs bg-white text-purple-600 font-bold px-2 py-1 rounded shadow-sm border border-purple-200"><i className="fa-regular fa-clock mr-1"></i> {etk.sure}</span></div>
-                                                            <div className="space-y-2 text-sm text-gray-800">
-                                                                <p><b>Materyaller:</b> {etk.materyaller}</p>
-                                                                <p><b>Nasıl Oynanır:</b> {etk.nasil_oynanir}</p>
-                                                                <p className="italic text-green-700"><b>Kazanım:</b> {etk.kazanim}</p>
-                                                            </div>
-                                                        </div>
-                                                    ))}
                                                 </div>
                                                 <BrandFooter />
                                             </div>
@@ -1444,6 +1434,7 @@
                                                     <button onClick={() => downloadAsPDF('tool-printable-davranis', 'Davranis_Stratejisi')} className="text-xs bg-red-100 text-red-600 px-3 py-1 rounded font-bold"><i className="fa-solid fa-file-pdf mr-1"></i> PDF Yap</button>
                                                     <button onClick={handlePrint} className="text-xs bg-gray-800 text-white px-3 py-1 rounded font-bold ml-2"><i className="fa-solid fa-print mr-1"></i> Yazdır</button>
                                                 </div>
+                                                <div className="text-[10px] text-gray-500 mb-2 print-only font-bold">🌐 baris-ogretmen.github.io/site-1/</div>
                                                 <div className="bg-rose-50 border border-rose-100 p-4 rounded-xl text-sm text-gray-800 whitespace-pre-wrap print-high-contrast">
                                                     {behaviorResult}
                                                 </div>
@@ -1467,6 +1458,7 @@
                                                     <button onClick={() => downloadAsPDF('tool-printable-metin', 'Sadelestirilmis_Metin')} className="text-xs bg-red-100 text-red-600 px-3 py-1 rounded font-bold"><i className="fa-solid fa-file-pdf mr-1"></i> PDF Yap</button>
                                                     <button onClick={handlePrint} className="text-xs bg-gray-800 text-white px-3 py-1 rounded font-bold ml-2"><i className="fa-solid fa-print mr-1"></i> Yazdır</button>
                                                 </div>
+                                                <div className="text-[10px] text-gray-500 mb-2 print-only font-bold">🌐 baris-ogretmen.github.io/site-1/</div>
                                                 <div className="bg-cyan-50 border border-cyan-100 p-4 rounded-xl text-sm text-gray-800 whitespace-pre-wrap relative print-high-contrast overflow-y-auto max-h-[300px]">
                                                     {simplifiedResult}
                                                     <button onClick={() => {navigator.clipboard.writeText(simplifiedResult); showToast("Kopyalandı!");}} className="absolute top-2 right-2 text-cyan-600 bg-white p-1 rounded shadow no-print"><i className="fa-regular fa-copy"></i></button>
@@ -1494,6 +1486,7 @@
                                                     <button onClick={() => downloadAsPDF('tool-printable-bep', 'BEP_Hedefleri')} className="text-xs bg-red-100 text-red-600 px-3 py-1 rounded font-bold"><i className="fa-solid fa-file-pdf mr-1"></i> PDF Yap</button>
                                                     <button onClick={handlePrint} className="text-xs bg-gray-800 text-white px-3 py-1 rounded font-bold ml-2"><i className="fa-solid fa-print mr-1"></i> Yazdır</button>
                                                 </div>
+                                                <div className="text-[10px] text-gray-500 mb-2 print-only font-bold">🌐 baris-ogretmen.github.io/site-1/</div>
                                                 <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-xl text-sm text-gray-800 whitespace-pre-wrap relative print-high-contrast">
                                                     {bepResult}
                                                     <button onClick={() => {navigator.clipboard.writeText(bepResult); showToast("Kopyalandı!");}} className="absolute top-2 right-2 text-emerald-600 bg-white p-1 rounded shadow no-print"><i className="fa-regular fa-copy"></i></button>
@@ -1515,7 +1508,7 @@
                                             <div className="flex space-x-3 items-center flex-wrap gap-y-2 justify-end">
                                                 {materialResult.sorular && materialResult.sorular.length > 0 && (
                                                     <button onClick={() => setShowAnswerKey(!showAnswerKey)} className={`px-4 py-2 rounded-lg font-bold transition flex items-center shadow text-sm ${showAnswerKey ? 'bg-yellow-500 hover:bg-yellow-600 text-white' : 'bg-gray-600 hover:bg-gray-500 text-gray-200'}`}>
-                                                        <i className={`fa-solid ${showAnswerKey ? 'fa-eye-slash' : 'fa-eye'} mr-2`}></i> Cevap Anahtarını {showAnswerKey ? 'Gizle' : 'Göster'}
+                                                        <i className={`fa-solid ${showAnswerKey ? 'fa-eye-slash' : 'fa-eye'} mr-2`}></i> Cevap Anahtarı {showAnswerKey ? 'Gizle' : 'Göster'}
                                                     </button>
                                                 )}
                                                 <button onClick={() => downloadAsPDF('printable-material', materialResult.dokuman_basligi)} disabled={isDownloadingPdf} className="bg-indigo-500 text-white hover:bg-indigo-600 px-4 py-2 rounded-lg font-bold transition flex items-center shadow text-sm disabled:opacity-50">
@@ -1528,10 +1521,12 @@
                                         </div>
 
                                         <div id="printable-material" className="bg-white mx-auto shadow-2xl print:shadow-none min-h-[1050px] p-8 md:p-12 relative print-card" style={{maxWidth: '210mm'}}>
+                                            <div className="text-[10px] text-gray-500 mb-2 print-only font-bold">🌐 baris-ogretmen.github.io/site-1/</div>
+                                            
                                             {/* Header Alanı */}
                                             <div className="flex justify-between items-end border-b-2 border-gray-800 pb-4 mb-8">
                                                 <div>
-                                                    <h1 className="text-3xl font-black text-gray-900 mb-1 print-high-contrast">{materialResult.dokuman_basligi}</h1>
+                                                    <h1 className="text-3xl font-black text-gray-900 mb-1 print-high-contrast">{materialResult.dokuman_basligi.replace(/(Kolay|Orta|Zor|Seviye) /g, '')}</h1>
                                                     <p className="text-gray-500 font-medium italic print-high-contrast">{materialResult.alt_baslik}</p>
                                                 </div>
                                                 <div className="text-right text-sm font-bold text-gray-700 space-y-2">
@@ -1569,25 +1564,54 @@
                                                 <div className="space-y-8">
                                                     {materialResult.sorular.map((soru, idx) => (
                                                         <div key={idx} className="break-inside-avoid mb-6">
-                                                            <div className="flex items-start mb-3">
-                                                                <span className="font-black text-lg text-gray-900 mr-3 print-high-contrast">{idx + 1}.</span>
-                                                                <p className="font-semibold text-gray-800 text-lg leading-snug print-high-contrast">{soru.soru_metni}</p>
-                                                            </div>
-                                                            {soru.tip === 'coktan_secmeli' && soru.secenekler && (
-                                                                <div className="pl-8 space-y-3 mt-3">
-                                                                    {soru.secenekler.map((sec, sIdx) => (
-                                                                        <div key={sIdx} className="flex items-center text-gray-700 font-medium print-high-contrast">
-                                                                            <span className="w-8 h-8 rounded-full border-2 border-gray-400 flex items-center justify-center mr-3 font-bold text-sm bg-gray-50 print:bg-transparent">{['A', 'B', 'C', 'D', 'E'][sIdx]}</span>
-                                                                            {sec}
+                                                            
+                                                            {/* YENİ: Eşleştirme Render Mantığı */}
+                                                            {soru.tip === 'eslestirme' && soru.sol_sutun && soru.sag_sutun_karisik ? (
+                                                                <div>
+                                                                    <div className="flex items-start mb-4">
+                                                                        <span className="font-black text-lg text-gray-900 mr-3 print-high-contrast">{idx + 1}.</span>
+                                                                        <p className="font-semibold text-gray-800 text-lg leading-snug print-high-contrast">{soru.soru_metni}</p>
+                                                                    </div>
+                                                                    <div className="flex justify-between items-center pl-8 px-4 mt-4 text-sm font-medium">
+                                                                        <div className="w-5/12 space-y-3">
+                                                                            {soru.sol_sutun.map((sol, i) => (
+                                                                                <div key={i} className="flex items-center"><span className="w-6 h-6 rounded-full bg-gray-200 flex justify-center items-center mr-3 font-bold print-high-contrast">{i+1}</span> <span className="print-high-contrast">{sol}</span></div>
+                                                                            ))}
                                                                         </div>
-                                                                    ))}
+                                                                        <div className="w-2/12 flex flex-col justify-center items-center space-y-6 text-gray-300">
+                                                                             <i className="fa-solid fa-arrow-right-arrow-left text-xl opacity-50"></i>
+                                                                        </div>
+                                                                        <div className="w-5/12 space-y-3">
+                                                                            {soru.sag_sutun_karisik.map((sag, i) => (
+                                                                                <div key={i} className="flex items-center"><span className="w-6 h-6 rounded-full bg-gray-200 flex justify-center items-center mr-3 font-bold print-high-contrast">{['A','B','C','D','E','F','G'][i]}</span> <span className="print-high-contrast">{sag}</span></div>
+                                                                            ))}
+                                                                        </div>
+                                                                    </div>
                                                                 </div>
-                                                            )}
-                                                            {(soru.tip === 'acik_uclu' || soru.tip === 'bosluk_doldurma') && (
-                                                                <div className="pl-8 mt-5 space-y-6">
-                                                                    <div className="border-b-2 border-gray-400 w-full"></div>
-                                                                    <div className="border-b-2 border-gray-400 w-full"></div>
-                                                                </div>
+                                                            ) : (
+                                                                // Standart Soru Renderı
+                                                                <>
+                                                                    <div className="flex items-start mb-3">
+                                                                        <span className="font-black text-lg text-gray-900 mr-3 print-high-contrast">{idx + 1}.</span>
+                                                                        <p className="font-semibold text-gray-800 text-lg leading-snug print-high-contrast">{soru.soru_metni}</p>
+                                                                    </div>
+                                                                    {soru.tip === 'coktan_secmeli' && soru.secenekler && (
+                                                                        <div className="pl-8 space-y-3 mt-3">
+                                                                            {soru.secenekler.map((sec, sIdx) => (
+                                                                                <div key={sIdx} className="flex items-center text-gray-700 font-medium print-high-contrast">
+                                                                                    <span className="w-8 h-8 rounded-full border-2 border-gray-400 flex items-center justify-center mr-3 font-bold text-sm bg-gray-50 print:bg-transparent">{['A', 'B', 'C', 'D', 'E'][sIdx]}</span>
+                                                                                    {sec}
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    )}
+                                                                    {(soru.tip === 'acik_uclu' || soru.tip === 'bosluk_doldurma') && (
+                                                                        <div className="pl-8 mt-5 space-y-6">
+                                                                            <div className="border-b-2 border-gray-400 w-full"></div>
+                                                                            <div className="border-b-2 border-gray-400 w-full"></div>
+                                                                        </div>
+                                                                    )}
+                                                                </>
                                                             )}
                                                         </div>
                                                     ))}
