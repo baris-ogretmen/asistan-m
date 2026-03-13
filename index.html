@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Barış Öğretmen - Eğitim & Gelişim Asistanı V11 Ultra</title>
+    <title>Barış Öğretmen - Eğitim & Gelişim Asistanı V12 Ultimate Plus</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -99,7 +99,6 @@
             return <textarea ref={textareaRef} value={value} onChange={onChange} placeholder={placeholder} className={`textarea-auto w-full bg-transparent border border-transparent hover:border-gray-200 focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-100 rounded p-1 transition-all ${className}`} />;
         };
 
-        // Footer Komponenti (PDF ve Yazdırılacak her şeyin altına gelir)
         const BrandFooter = () => (
             <div className="brand-footer mt-10 pt-4 border-t-2 border-gray-300 text-center text-xs text-gray-500 print-only">
                 <p className="font-bold text-sm mb-1 text-black">Barış Öğretmen - Eğitim & Gelişim Asistanı</p>
@@ -200,6 +199,16 @@
             const [projectResult, setProjectResult] = useState(null);
             const [isGeneratingProject, setIsGeneratingProject] = useState(false);
 
+            // YENİ: Ders Planı Sihirbazı
+            const [lessonTopic, setLessonTopic] = useState('');
+            const [lessonResult, setLessonResult] = useState(null);
+            const [isGeneratingLesson, setIsGeneratingLesson] = useState(false);
+
+            // YENİ: Terapötik Hikaye Üretici
+            const [storyTheme, setStoryTheme] = useState('');
+            const [storyResult, setStoryResult] = useState(null);
+            const [isGeneratingStory, setIsGeneratingStory] = useState(false);
+
             // Random Student Picker
             const [pickedStudent, setPickedStudent] = useState(null);
 
@@ -298,7 +307,6 @@
 
             const showToast = (msg) => { setToastMessage(msg); setTimeout(() => setToastMessage(''), 4000); };
 
-            // Gelişmiş API Hata Yönetimi
             const handleApiError = (err) => {
                 console.error(err);
                 if (err.message && err.message.includes('429')) {
@@ -308,7 +316,6 @@
                 }
             };
 
-            // Hızlı Yazdırma Fonksiyonu
             const handlePrint = () => {
                 showToast("Yazdırılıyor...");
                 setTimeout(() => window.print(), 300);
@@ -578,7 +585,65 @@
                 setIsGeneratingMaterial(false);
             };
 
-            // --- YENİ AI ARAÇLARI (Sınav Okuyucu & Proje Fikri) ---
+            // --- YENİ AI ARAÇLARI (Sınav Okuyucu, Proje Fikri, Ders Planı, Hikaye) ---
+            
+            // YENİ: Ders Planı Sihirbazı
+            const generateLessonPlan = async () => {
+                if (!apiKey || !lessonTopic.trim()) { showToast("Lütfen işlenecek konuyu girin."); return; }
+                setIsGeneratingLesson(true);
+                try {
+                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            systemInstruction: { parts: [{ text: "Sen usta bir eğitimcisin. MEB müfredatına ve evrensel pedagojik ilkelere uygun harika ders planları hazırlarsın." }] },
+                            contents: [{ parts: [{ text: `Hedef Kitle: ${activityCategory}\nİşlenecek Konu: ${lessonTopic}\n\nLütfen bu konu için 40 dakikalık yapılandırılmış bir ders planı hazırla. Planda Giriş/Isınma, Konu Anlatımı, Pratik/Uygulama ve Değerlendirme adımları yer alsın ve her birinin süresi belirtilsin.` }] }],
+                            generationConfig: {
+                                responseMimeType: "application/json",
+                                responseSchema: {
+                                    type: "OBJECT", properties: { plan_basligi: { type: "STRING" }, hedefler: { type: "ARRAY", items: { type: "STRING" } }, materyaller: { type: "STRING" }, adimlar: { type: "ARRAY", items: { type: "OBJECT", properties: { sure: { type: "STRING" }, asama_adi: { type: "STRING" }, aciklama: { type: "STRING" } }, required: ["sure", "asama_adi", "aciklama"] } }, odev_tavsiyesi: { type: "STRING" } }, required: ["plan_basligi", "hedefler", "materyaller", "adimlar", "odev_tavsiyesi"]
+                                }
+                            }
+                        })
+                    });
+                    if (!response.ok) throw new Error(response.status === 429 ? '429' : 'API Error');
+                    const data = await response.json();
+                    if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
+                        setLessonResult(JSON.parse(data.candidates[0].content.parts[0].text));
+                        showToast("Ders planı başarıyla oluşturuldu! ✨");
+                    }
+                } catch (err) { handleApiError(err); }
+                setIsGeneratingLesson(false);
+            };
+
+            // YENİ: Terapötik Hikaye Üretici
+            const generateStory = async () => {
+                if (!apiKey || !storyTheme.trim()) { showToast("Lütfen bir tema veya aşılması gereken bir durum yazın."); return; }
+                setIsGeneratingStory(true);
+                let studentContext = matStudentName ? `Hikayenin başrolünde "${matStudentName}" adında bir çocuk olsun. İlgi alanları: ${matInterests || 'Belirtilmedi'}. Bu çocuğu motive edip özel hissettir.` : "Ana karakter çocukların kolayca bağ kurabileceği sevimli bir hayvan veya çocuk olsun.";
+                try {
+                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            systemInstruction: { parts: [{ text: "Sen çocuk psikolojisini çok iyi bilen bir yazar ve oyun terapisitisin. Çocukların korkularını yenebileceği, empati kurabileceği ve doğru davranışları öğrenebileceği 'terapötik (iyileştirici)' hikayeler ve masallar yazarsın." }] },
+                            contents: [{ parts: [{ text: `Hedef Kitle: ${activityCategory}\nİşlenecek Tema / Aşılması Gereken Korku veya Davranış: ${storyTheme}\n${studentContext}\n\nLütfen bu temayı işleyen, çocuğun hayal gücünü besleyen harika bir pedagojik hikaye yaz.` }] }],
+                            generationConfig: {
+                                responseMimeType: "application/json",
+                                responseSchema: {
+                                    type: "OBJECT", properties: { hikaye_basligi: { type: "STRING" }, hikaye_metni: { type: "STRING" }, cikarilacak_ders: { type: "STRING" }, tartisma_sorulari: { type: "ARRAY", items: { type: "STRING" }, description: "Hikayeden sonra çocuğa sorulacak anlama ve empati soruları" } }, required: ["hikaye_basligi", "hikaye_metni", "cikarilacak_ders", "tartisma_sorulari"]
+                                }
+                            }
+                        })
+                    });
+                    if (!response.ok) throw new Error(response.status === 429 ? '429' : 'API Error');
+                    const data = await response.json();
+                    if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
+                        setStoryResult(JSON.parse(data.candidates[0].content.parts[0].text));
+                        showToast("Pedagojik hikaye başarıyla oluşturuldu! ✨");
+                    }
+                } catch (err) { handleApiError(err); }
+                setIsGeneratingStory(false);
+            };
+
             const generateGraderFeedback = async () => {
                 if (!apiKey || !graderQuestion.trim() || !graderAnswer.trim()) { showToast("Soru ve cevap alanları dolu olmalıdır."); return; }
                 setIsGeneratingGrader(true);
@@ -859,7 +924,7 @@
                                 <div className="w-10 h-10 bg-gradient-to-br from-indigo-600 to-purple-700 text-white rounded-xl flex items-center justify-center text-lg font-extrabold shadow-md">Bİ</div>
                                 <div>
                                     <h1 className="text-lg md:text-xl font-bold text-gray-900 leading-tight">Barış Öğretmen</h1>
-                                    <p className="text-[10px] md:text-xs text-indigo-600 font-semibold uppercase tracking-wider">Eğitim & Gelişim Asistanı V10</p>
+                                    <p className="text-[10px] md:text-xs text-indigo-600 font-semibold uppercase tracking-wider">Eğitim & Gelişim Asistanı V12</p>
                                 </div>
                             </div>
                             
@@ -955,7 +1020,6 @@
                                             </div>
                                             
                                             <div id="printable-report">
-                                                <div className="text-[10px] text-gray-500 mb-2 print-only font-bold">🌐 baris-ogretmen.github.io/site-1/</div>
                                                 <div className="text-center mb-8 pb-4 border-b-2 border-gray-800 print-only">
                                                     <h1 className="text-2xl font-extrabold uppercase tracking-widest text-gray-900 mb-2 print-high-contrast">{selectedCategoryObj.reportTitle}</h1>
                                                     <div className="flex justify-between text-base font-bold text-gray-700 mt-4 px-4">
@@ -1125,7 +1189,6 @@
                                                             <button onClick={() => downloadAsPDF('tool-printable-analiz', 'Gelisim_Analizi')} className="text-xs bg-indigo-500 hover:bg-indigo-600 text-white px-3 py-1 rounded font-bold"><i className="fa-solid fa-file-pdf mr-1"></i> PDF İndir</button>
                                                             <button onClick={handlePrint} className="text-xs bg-white text-indigo-900 px-3 py-1 rounded font-bold ml-2"><i className="fa-solid fa-print mr-1"></i> Yazdır</button>
                                                         </div>
-                                                        <div className="text-[10px] text-gray-400 mb-2 print-only font-bold">🌐 baris-ogretmen.github.io/site-1/</div>
                                                         <h2 className="text-2xl font-black mb-4 print-only print-high-contrast">{selectedStudent} - Gelişim Analizi ve Yol Haritası</h2>
                                                         <div className="break-inside-avoid">
                                                             <h4 className="text-yellow-400 font-bold text-sm uppercase mb-1 print-high-contrast">Genel Değerlendirme</h4>
@@ -1187,7 +1250,7 @@
                             </div>
                         )}
 
-                        {/* --- 4. ARAÇ KUTUSU & MATBAA (TOOLS) SEKMESİ --- */}
+                        {/* --- 4. ARAÇ KUT SELMESİ (YENİ ARAÇLAR EKLENDİ) --- */}
                         {activeTab === 'tools' && (
                             <div className="animate-fade-in pb-20 space-y-8">
                                 <div className="text-center mb-6 no-print">
@@ -1319,6 +1382,73 @@
                                         </div>
                                     </div>
 
+                                    {/* MİNİ ARAÇLAR: Ders Planı Sihirbazı (YENİ) */}
+                                    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden flex flex-col" id="tool-printable-lesson">
+                                        <div className="bg-fuchsia-600 p-4 text-white flex items-center"><i className="fa-solid fa-chalkboard-teacher text-3xl mr-3"></i><div><h3 className="font-bold text-lg">Ders Planı Sihirbazı</h3><p className="text-fuchsia-100 text-xs">40 dakikalık profesyonel ders planları üretin.</p></div></div>
+                                        <div className="p-5 flex-1 flex flex-col gap-4 no-print">
+                                            <div><textarea value={lessonTopic} onChange={(e) => setLessonTopic(e.target.value)} rows="3" placeholder="İşlenecek Konu Nedir? Örn: Duyu organlarımız..." className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg outline-none text-sm resize-y"></textarea></div>
+                                            <button onClick={generateLessonPlan} disabled={isGeneratingLesson || !lessonTopic.trim()} className="w-full bg-fuchsia-100 text-fuchsia-700 hover:bg-fuchsia-200 py-2.5 rounded-lg font-bold text-sm transition disabled:opacity-50 flex justify-center items-center">
+                                                {isGeneratingLesson ? <i className="fa-solid fa-spinner fa-spin mr-2"></i> : <i className="fa-solid fa-wand-magic-sparkles mr-2"></i>} Ders Planı Oluştur ✨
+                                            </button>
+                                        </div>
+                                        {lessonResult && (
+                                            <div className="p-5 pt-0 mt-auto print-card break-inside-avoid">
+                                                <div className="flex justify-end mb-2 no-print">
+                                                    <button onClick={() => downloadAsPDF('tool-printable-lesson', 'Ders_Plani')} className="text-xs bg-red-100 text-red-600 px-3 py-1 rounded font-bold"><i className="fa-solid fa-file-pdf mr-1"></i> PDF</button>
+                                                    <button onClick={handlePrint} className="text-xs bg-gray-800 text-white px-3 py-1 rounded font-bold ml-2"><i className="fa-solid fa-print mr-1"></i> Yazdır</button>
+                                                </div>
+                                                <div className="bg-fuchsia-50 border border-fuchsia-100 p-4 rounded-xl text-sm text-gray-800 relative print-high-contrast space-y-3">
+                                                    <h3 className="font-bold text-lg text-fuchsia-900 border-b border-fuchsia-200 pb-2">{lessonResult.plan_basligi}</h3>
+                                                    <div><span className="font-bold text-fuchsia-700">Kazanımlar:</span><ul className="list-disc pl-4 text-xs mt-1">{lessonResult.hedefler.map((g,i)=><li key={i}>{g}</li>)}</ul></div>
+                                                    <div><span className="font-bold text-fuchsia-700">Materyaller:</span> <span className="text-xs">{lessonResult.materyaller}</span></div>
+                                                    <div className="space-y-2 mt-2">
+                                                        {lessonResult.adimlar.map((adim, i) => (
+                                                            <div key={i} className="bg-white p-2 rounded border border-fuchsia-100">
+                                                                <div className="font-bold text-fuchsia-800 text-xs mb-1 flex justify-between"><span>{adim.asama_adi}</span><span><i className="fa-regular fa-clock mr-1"></i>{adim.sure}</span></div>
+                                                                <p className="text-xs leading-relaxed">{adim.aciklama}</p>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                    <div className="bg-white p-2 rounded border border-fuchsia-100 italic mt-2"><span className="font-bold block not-italic text-fuchsia-700 text-xs mb-1">Ödev/Değerlendirme:</span><span className="text-xs">{lessonResult.odev_tavsiyesi}</span></div>
+                                                </div>
+                                                <BrandFooter />
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* MİNİ ARAÇLAR: Terapötik Hikaye (YENİ) */}
+                                    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden flex flex-col" id="tool-printable-story">
+                                        <div className="bg-pink-600 p-4 text-white flex items-center"><i className="fa-solid fa-book-magic text-3xl mr-3"></i><div><h3 className="font-bold text-lg">Terapötik Hikaye</h3><p className="text-pink-100 text-xs">Korku ve davranışlar için pedagojik masallar.</p></div></div>
+                                        <div className="p-5 flex-1 flex flex-col gap-4 no-print">
+                                            <div className="text-xs text-gray-500 bg-gray-100 p-2 rounded border border-gray-200">💡 <i>Matbaa ayarlarında öğrenci adı girerseniz hikayenin başrolü o olur.</i></div>
+                                            <div><textarea value={storyTheme} onChange={(e) => setStoryTheme(e.target.value)} rows="3" placeholder="Hangi konu/korku işlenecek? Örn: Dişçiye gitme korkusu, karanlık korkusu..." className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg outline-none text-sm resize-y"></textarea></div>
+                                            <button onClick={generateStory} disabled={isGeneratingStory || !storyTheme.trim()} className="w-full bg-pink-100 text-pink-700 hover:bg-pink-200 py-2.5 rounded-lg font-bold text-sm transition disabled:opacity-50 flex justify-center items-center">
+                                                {isGeneratingStory ? <i className="fa-solid fa-spinner fa-spin mr-2"></i> : <i className="fa-solid fa-wand-magic-sparkles mr-2"></i>} Masal Üret ✨
+                                            </button>
+                                        </div>
+                                        {storyResult && (
+                                            <div className="p-5 pt-0 mt-auto print-card break-inside-avoid">
+                                                <div className="flex justify-end mb-2 no-print">
+                                                    <button onClick={() => downloadAsPDF('tool-printable-story', 'Terapotik_Hikaye')} className="text-xs bg-red-100 text-red-600 px-3 py-1 rounded font-bold"><i className="fa-solid fa-file-pdf mr-1"></i> PDF</button>
+                                                    <button onClick={handlePrint} className="text-xs bg-gray-800 text-white px-3 py-1 rounded font-bold ml-2"><i className="fa-solid fa-print mr-1"></i> Yazdır</button>
+                                                </div>
+                                                <div className="bg-pink-50 border border-pink-100 p-4 rounded-xl text-sm text-gray-800 relative print-high-contrast space-y-3">
+                                                    <h3 className="font-bold text-xl text-pink-900 border-b border-pink-200 pb-2 text-center">{storyResult.hikaye_basligi}</h3>
+                                                    <p className="text-sm leading-relaxed text-justify whitespace-pre-wrap">{storyResult.hikaye_metni}</p>
+                                                    <div className="bg-white p-3 rounded-lg border border-pink-200 mt-4">
+                                                        <span className="font-bold text-pink-700 block mb-1">🌟 Çıkarılacak Ders:</span>
+                                                        <p className="text-xs italic">{storyResult.cikarilacak_ders}</p>
+                                                    </div>
+                                                    <div className="bg-white p-3 rounded-lg border border-pink-200 mt-2">
+                                                        <span className="font-bold text-pink-700 block mb-1">💬 Anlama Soruları:</span>
+                                                        <ul className="list-disc pl-4 text-xs">{storyResult.tartisma_sorulari.map((q,i)=><li key={i} className="mb-1">{q}</li>)}</ul>
+                                                    </div>
+                                                </div>
+                                                <BrandFooter />
+                                            </div>
+                                        )}
+                                    </div>
+
                                     {/* MİNİ ARAÇLAR: Sınav Okuyucu / Dönüt Verici */}
                                     <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden flex flex-col" id="tool-printable-grader">
                                         <div className="bg-indigo-600 p-4 text-white flex items-center"><i className="fa-solid fa-marker text-3xl mr-3"></i><div><h3 className="font-bold text-lg">Cevap Okuyucu</h3><p className="text-indigo-100 text-xs">Öğrenci cevaplarını AI ile değerlendirin.</p></div></div>
@@ -1335,7 +1465,6 @@
                                                     <button onClick={() => downloadAsPDF('tool-printable-grader', 'Ogrenci_Geribildirimi')} className="text-xs bg-red-100 text-red-600 px-3 py-1 rounded font-bold"><i className="fa-solid fa-file-pdf mr-1"></i> PDF</button>
                                                     <button onClick={handlePrint} className="text-xs bg-gray-800 text-white px-3 py-1 rounded font-bold ml-2"><i className="fa-solid fa-print mr-1"></i> Yazdır</button>
                                                 </div>
-                                                <div className="text-[10px] text-gray-500 mb-2 print-only font-bold">🌐 baris-ogretmen.github.io/site-1/</div>
                                                 <div className="bg-indigo-50 border border-indigo-100 p-4 rounded-xl text-sm text-gray-800 relative print-high-contrast space-y-3">
                                                     <div className="flex justify-between items-center border-b border-indigo-200 pb-2">
                                                         <span className="font-bold">Öğrenci Puanı:</span>
@@ -1365,8 +1494,7 @@
                                                     <button onClick={() => downloadAsPDF('tool-printable-project', 'Proje_Odevleri')} className="text-xs bg-red-100 text-red-600 px-3 py-1 rounded font-bold"><i className="fa-solid fa-file-pdf mr-1"></i> PDF</button>
                                                     <button onClick={handlePrint} className="text-xs bg-gray-800 text-white px-3 py-1 rounded font-bold ml-2"><i className="fa-solid fa-print mr-1"></i> Yazdır</button>
                                                 </div>
-                                                <div className="text-[10px] text-gray-500 mb-2 print-only font-bold">🌐 baris-ogretmen.github.io/site-1/</div>
-                                                <div className="space-y-4">
+                                                <div className="space-y-4 mt-2">
                                                     {projectResult.projeler?.map((p, idx) => (
                                                         <div key={idx} className="bg-amber-50 rounded-xl p-4 border border-amber-100 break-inside-avoid print-high-contrast">
                                                             <h4 className="font-bold text-amber-900 text-base mb-2">{idx + 1}. {p.proje_adi}</h4>
@@ -1407,12 +1535,44 @@
                                                     <button onClick={() => downloadAsPDF('tool-printable-veli', 'Veli_Mesaji')} className="text-xs bg-red-100 text-red-600 px-3 py-1 rounded font-bold"><i className="fa-solid fa-file-pdf mr-1"></i> PDF</button>
                                                     <button onClick={handlePrint} className="text-xs bg-gray-800 text-white px-3 py-1 rounded font-bold ml-2"><i className="fa-solid fa-print mr-1"></i> Yazdır</button>
                                                 </div>
-                                                <div className="text-[10px] text-gray-500 mb-2 print-only font-bold">🌐 baris-ogretmen.github.io/site-1/</div>
                                                 <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl text-sm text-gray-800 whitespace-pre-wrap relative print-high-contrast">
                                                     {parentReply}
                                                     <div className="absolute top-2 right-2 flex space-x-1 no-print">
                                                         <button onClick={() => {navigator.clipboard.writeText(parentReply); showToast("Kopyalandı!");}} className="text-blue-500 bg-white p-1.5 rounded shadow"><i className="fa-regular fa-copy"></i></button>
                                                     </div>
+                                                </div>
+                                                <BrandFooter />
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* MİNİ ARAÇLAR: Etkinlik Planlayıcı */}
+                                    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden flex flex-col" id="tool-printable-etkinlik">
+                                        <div className="bg-purple-600 p-4 text-white flex items-center"><i className="fa-solid fa-puzzle-piece text-3xl mr-3"></i><div><h3 className="font-bold text-lg">Etkinlik Planlayıcı</h3><p className="text-purple-100 text-xs">Yaratıcı oyun fikirleri üretin.</p></div></div>
+                                        <div className="p-5 flex-1 flex flex-col gap-4 no-print">
+                                            <div><textarea value={activityTopic} onChange={(e) => setActivityTopic(e.target.value)} rows="3" placeholder="Kazanım Nedir? Örn: İnce motor becerisi, Kesirler..." className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg outline-none text-sm resize-y"></textarea></div>
+                                            <button onClick={generateActivityIdeas} disabled={isGeneratingActivity || !activityTopic.trim()} className="w-full bg-purple-100 text-purple-700 hover:bg-purple-200 py-2.5 rounded-lg font-bold text-sm transition disabled:opacity-50 flex justify-center items-center">
+                                                {isGeneratingActivity ? <i className="fa-solid fa-spinner fa-spin mr-2"></i> : <i className="fa-solid fa-lightbulb mr-2"></i>} Fikir Bul ✨
+                                            </button>
+                                        </div>
+                                        {activityResult && !materialResult && (
+                                            <div className="p-5 pt-0 print-card">
+                                                <div className="flex justify-end mb-2 no-print">
+                                                    <button onClick={() => downloadAsPDF('tool-printable-etkinlik', 'Etkinlik_Plani')} className="text-xs bg-red-100 text-red-600 px-3 py-1 rounded font-bold"><i className="fa-solid fa-file-pdf mr-1"></i> PDF Yap</button>
+                                                    <button onClick={handlePrint} className="text-xs bg-gray-800 text-white px-3 py-1 rounded font-bold ml-2"><i className="fa-solid fa-print mr-1"></i> Yazdır</button>
+                                                </div>
+                                                <div className="space-y-4">
+                                                    {activityResult.etkinlikler?.map((etk, idx) => (
+                                                        <div key={idx} className="bg-purple-50 rounded-xl p-4 border border-purple-100 break-inside-avoid print-high-contrast">
+                                                            <h4 className="font-bold text-purple-900 text-lg mb-2">{idx + 1}. {etk.baslik}</h4>
+                                                            <div className="flex gap-2 mb-2"><span className="text-xs bg-white text-purple-600 font-bold px-2 py-1 rounded shadow-sm border border-purple-200"><i className="fa-regular fa-clock mr-1"></i> {etk.sure}</span></div>
+                                                            <div className="space-y-2 text-sm text-gray-800">
+                                                                <p><b>Materyaller:</b> {etk.materyaller}</p>
+                                                                <p><b>Nasıl Oynanır:</b> {etk.nasil_oynanir}</p>
+                                                                <p className="italic text-green-700"><b>Kazanım:</b> {etk.kazanim}</p>
+                                                            </div>
+                                                        </div>
+                                                    ))}
                                                 </div>
                                                 <BrandFooter />
                                             </div>
@@ -1434,7 +1594,6 @@
                                                     <button onClick={() => downloadAsPDF('tool-printable-davranis', 'Davranis_Stratejisi')} className="text-xs bg-red-100 text-red-600 px-3 py-1 rounded font-bold"><i className="fa-solid fa-file-pdf mr-1"></i> PDF Yap</button>
                                                     <button onClick={handlePrint} className="text-xs bg-gray-800 text-white px-3 py-1 rounded font-bold ml-2"><i className="fa-solid fa-print mr-1"></i> Yazdır</button>
                                                 </div>
-                                                <div className="text-[10px] text-gray-500 mb-2 print-only font-bold">🌐 baris-ogretmen.github.io/site-1/</div>
                                                 <div className="bg-rose-50 border border-rose-100 p-4 rounded-xl text-sm text-gray-800 whitespace-pre-wrap print-high-contrast">
                                                     {behaviorResult}
                                                 </div>
@@ -1458,7 +1617,6 @@
                                                     <button onClick={() => downloadAsPDF('tool-printable-metin', 'Sadelestirilmis_Metin')} className="text-xs bg-red-100 text-red-600 px-3 py-1 rounded font-bold"><i className="fa-solid fa-file-pdf mr-1"></i> PDF Yap</button>
                                                     <button onClick={handlePrint} className="text-xs bg-gray-800 text-white px-3 py-1 rounded font-bold ml-2"><i className="fa-solid fa-print mr-1"></i> Yazdır</button>
                                                 </div>
-                                                <div className="text-[10px] text-gray-500 mb-2 print-only font-bold">🌐 baris-ogretmen.github.io/site-1/</div>
                                                 <div className="bg-cyan-50 border border-cyan-100 p-4 rounded-xl text-sm text-gray-800 whitespace-pre-wrap relative print-high-contrast overflow-y-auto max-h-[300px]">
                                                     {simplifiedResult}
                                                     <button onClick={() => {navigator.clipboard.writeText(simplifiedResult); showToast("Kopyalandı!");}} className="absolute top-2 right-2 text-cyan-600 bg-white p-1 rounded shadow no-print"><i className="fa-regular fa-copy"></i></button>
@@ -1486,7 +1644,6 @@
                                                     <button onClick={() => downloadAsPDF('tool-printable-bep', 'BEP_Hedefleri')} className="text-xs bg-red-100 text-red-600 px-3 py-1 rounded font-bold"><i className="fa-solid fa-file-pdf mr-1"></i> PDF Yap</button>
                                                     <button onClick={handlePrint} className="text-xs bg-gray-800 text-white px-3 py-1 rounded font-bold ml-2"><i className="fa-solid fa-print mr-1"></i> Yazdır</button>
                                                 </div>
-                                                <div className="text-[10px] text-gray-500 mb-2 print-only font-bold">🌐 baris-ogretmen.github.io/site-1/</div>
                                                 <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-xl text-sm text-gray-800 whitespace-pre-wrap relative print-high-contrast">
                                                     {bepResult}
                                                     <button onClick={() => {navigator.clipboard.writeText(bepResult); showToast("Kopyalandı!");}} className="absolute top-2 right-2 text-emerald-600 bg-white p-1 rounded shadow no-print"><i className="fa-regular fa-copy"></i></button>
@@ -1521,7 +1678,6 @@
                                         </div>
 
                                         <div id="printable-material" className="bg-white mx-auto shadow-2xl print:shadow-none min-h-[1050px] p-8 md:p-12 relative print-card" style={{maxWidth: '210mm'}}>
-                                            <div className="text-[10px] text-gray-500 mb-2 print-only font-bold">🌐 baris-ogretmen.github.io/site-1/</div>
                                             
                                             {/* Header Alanı */}
                                             <div className="flex justify-between items-end border-b-2 border-gray-800 pb-4 mb-8">
