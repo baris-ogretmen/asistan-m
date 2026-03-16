@@ -47,9 +47,9 @@ body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; color: #1f29
     .print-container p, .print-container span, .print-container div, .print-container li, .print-high-contrast,
     .print-container table, .print-container td, .print-container th { color: #000000 !important; font-weight: 600 !important; }
 
-    /* Özel Cevap Anahtarı Başlık Koruması */
-    .cevap-anahtari-baslik { background-color: #1f2937 !important; color: #ffffff !important; }
-    .cevap-anahtari-baslik * { color: #ffffff !important; }
+    /* Özel Cevap Anahtarı Başlık Koruması - AÇIK RENK/OKUNAKLI */
+    .cevap-anahtari-baslik { background-color: #fef08a !important; color: #1e3a8a !important; border: 2px solid #1e3a8a !important; }
+    .cevap-anahtari-baslik * { color: #1e3a8a !important; }
 
     textarea, input { border: none !important; background: transparent !important; resize: none !important; padding: 0 !important; box-shadow: none !important; color: #000000 !important; outline: none !important; font-weight: 700 !important; }
 
@@ -308,7 +308,14 @@ useEffect(() => {
 if (!isFbReady || !user || !db) return;
 const { collection, onSnapshot } = window.FirebaseSDK;
 const unsubReports = onSnapshot(collection(db, 'artifacts', appId, 'users', user.uid, 'reports'), (snapshot) => {
-const reps = []; snapshot.forEach((doc) => reps.push({ id: doc.id, ...doc.data() }));
+const reps = []; 
+snapshot.forEach((doc) => {
+    const data = doc.data();
+    // EĞER "SİLİNDİ" ETİKETİ YOKSA EKRANA GETİR (Yumuşak Silme Filtresi)
+    if (!data.isDeleted) { 
+        reps.push({ id: doc.id, ...data });
+    }
+});
 reps.sort((a, b) => new Date(b.date) - new Date(a.date));
 setSavedReports(reps);
 });
@@ -400,23 +407,26 @@ catch (err) { showToast("Silme başarısız."); console.error(err); }
 // YENİLENDİ: Arşiv Silme Hatası Kesin Çözümü (Hata Yakalama Zırhlı)
 const deleteReport = async (id) => {
     if (!isFbReady || !user || !db) return;
-    if (!window.confirm("Bu raporu arşivden kalıcı olarak silmek istediğinize emin misiniz? (Geri alınamaz)")) return;
+    if (!window.confirm("Bu raporu arşivden kaldırmak istediğinize emin misiniz?")) return;
     
     try { 
-        await window.FirebaseSDK.deleteDoc(window.FirebaseSDK.doc(db, 'artifacts', appId, 'users', user.uid, 'reports', id)); 
-        showToast("Rapor başarıyla silindi. 🗑️"); 
+        // YENİ TAKTİK: Veritabanı DELETE komutunu reddediyorsa, UPDATE ile dosyayı "isDeleted: true" yaparak gizliyoruz.
+        const reportRef = window.FirebaseSDK.doc(db, 'artifacts', appId, 'users', user.uid, 'reports', id);
+        await window.FirebaseSDK.updateDoc(reportRef, { isDeleted: true }); 
         
-        // BEYAZ EKRAN ÇÖZÜMÜ: Eğer bu öğrencinin son raporu silindiyse, sistemi çökertmeden ana arşive dön.
+        showToast("Rapor başarıyla arşivden kaldırıldı. 🗑️"); 
+        
+        // ÇÖKME ENGELLEYİCİ
         const remainingReports = savedReports.filter(r => r.id !== id);
         if (selectedStudent) {
-            const studentStillHasReports = remainingReports.some(r => r.studentName.toUpperCase() === selectedStudent.toUpperCase());
+            const studentStillHasReports = remainingReports.some(r => r.studentName.toUpperCase() === selectedStudent.toUpperCase() && !r.isDeleted);
             if (!studentStillHasReports) {
                 setSelectedStudent(null);
             }
         }
     } catch (err) { 
         console.error("Firebase Silme Hatası:", err);
-        showToast("Hata: Silinemedi! Yetki sorunu veya ID kayıp olabilir."); 
+        showToast("Hata: Sistem bu dosyayı arşivden kaldıramadı."); 
     }
 };
 
@@ -602,7 +612,7 @@ kuralMetni = `DİKKAT: Zengin bir eğitim materyali üret. ${soruKurali}`;
 }
 
 let kisisellestirme = matStudentName ? `\nÖNEMLİ: Öğrencimin adı ${matStudentName}. İlgi alanları: ${matInterests}. Materyali ona özel hale getir.` : "";
-let cozumKurali = "\nDİKKAT: Öğretmen için KESİNLİKLE 'cevap_anahtari' alanını doldur. Çözümleri ASLA ana sayfa metinlerinin veya soruların içine yazma. Sadece JSON'daki 'cevap_anahtari' kısmında detaylı, adım adım pedagojik çözüm şeklinde yaz.";
+let cozumKurali = "\nÇOK ÖNEMLİ KURAL: Hangi materyali üretirsen üret, öğretmen için KESİNLİKLE 'cevap_anahtari' alanını doldur! Çözümleri asla soruların içine yazma. Sadece 'cevap_anahtari' kısmına renkli, emojili, adım adım ve çok detaylı pedagojik çözümler yaz.";
 let baslikKurali = "\nDİKKAT: dokuman_basligi alanına konuya tam uygun, yaratıcı bir başlık koy. alt_baslik alanına ASLA 'Özel Öğrenme İhtiyaçları', 'Otizm', 'Disleksi', 'Destekli' gibi klinik veya etiketleyici kelimeler YAZMA. Her zaman motive edici, pozitif ve kapsayıcı alt başlıklar kullan.";
 
 try {
@@ -610,7 +620,7 @@ const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/m
 method: 'POST', headers: { 'Content-Type': 'application/json' },
 body: JSON.stringify({
 // YAPAY ZEKA GÜNCELLEMESİ: Dünyanın en iyi öğretmeni rolü
-systemInstruction: { parts: [{ text: "Sen ordinaryüs profesör seviyesinde, hatasız ve dünyanın en iyi eğitim teknoloğu ve öğretmenisin. Hata yapma payın SIFIRDIR." }] },
+systemInstruction: { parts: [{ text: "Sen ordinaryüs profesör seviyesinde dünyanın en iyi eğitim teknoloğusun. ÇOK ÖNEMLİ KURAL: Sana verilen 'İstenen Format' kuralının dışına ASLA çıkma. Kafandan test için yeni blok uydurma, test isteniyorsa KESİNLİKLE sadece 'standart_soru' blok tipini kullanarak soruları üret." }] },
 contents: [{ parts: [{ text: `Hedef Kitle: ${activityCategory}\nKonu: ${materialTopic}\nİstenen Format: ${kuralMetni}${kisisellestirme}${cozumKurali}${baslikKurali}` }] }],
 generationConfig: {
 responseMimeType: "application/json",
@@ -1160,7 +1170,7 @@ return (
 <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 md:p-8 mb-8">
 <div className="flex items-center space-x-4 mb-6 border-b pb-6"><div className="w-16 h-16 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center font-bold text-2xl shadow-lg">{selectedStudent.charAt(0)}</div><div><h2 className="text-2xl font-bold text-gray-800">{selectedStudent}</h2><p className="text-gray-500">Gelişim ve İlerleme Analizi</p></div></div>
 <h3 className="text-lg font-bold text-gray-700 mb-4"><i className="fa-solid fa-chart-line text-indigo-500 mr-2"></i> Gelişim Puanı Grafiği (1-10)</h3>
-<ProgressChart reports={groupedStudents[selectedStudent]} />
+<ProgressChart reports={groupedStudents[selectedStudent] || []} />
 </div>
 <div className="bg-gradient-to-br from-indigo-900 to-purple-900 rounded-2xl shadow-lg p-6 mb-8 text-white relative overflow-hidden mt-6">
 <i className="fa-solid fa-brain absolute -right-4 -bottom-4 text-8xl text-white opacity-10"></i>
@@ -1221,7 +1231,7 @@ return (
 </div>
 <h3 className="text-xl font-bold text-gray-800 mb-4"><i className="fa-solid fa-history text-indigo-500 mr-2"></i> Geçmiş Raporlar ve Ödev Takibi</h3>
 <div className="space-y-4">
-{groupedStudents[selectedStudent].map((report, idx) => (
+{(groupedStudents[selectedStudent] || []).map((report, idx) => (
 <div key={report.id} className="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md transition">
 <div className="flex justify-between items-start mb-3">
 <div>
@@ -2334,29 +2344,30 @@ default: return null;
 {/* ÇÖZÜMLÜ CEVAP ANAHTARI BÖLÜMÜ (AYRI SAYFA) - ÖĞRETMEN NÜSHASI */}
 {showAnswerKey && materialResult.icerik_bloklari.some(b => b.cevap_anahtari) && (
 <div className="page-break-before mt-16 pt-8 border-t-4 border-dashed border-gray-400">
-<div className="cevap-anahtari-baslik bg-gray-800 text-white p-4 rounded-xl mb-6 text-center print-high-contrast print-bg-dark">
-<h3 className="text-2xl font-black uppercase tracking-widest"><i className="fa-solid fa-key mr-2 text-yellow-400"></i> CEVAP ANAHTARI & ÇÖZÜMLER</h3>
-<p className="text-xs text-gray-300 mt-1">Öğretmen Nüshası - Lütfen bu sayfayı öğrenciye vermeyin.</p>
+<div className="cevap-anahtari-baslik bg-yellow-200 text-indigo-900 border-2 border-indigo-800 p-4 rounded-xl mb-6 text-center print-high-contrast shadow-md">
+<h3 className="text-2xl font-black uppercase tracking-widest"><i className="fa-solid fa-key mr-2 text-indigo-700"></i> CEVAP ANAHTARI & DETAYLI ÇÖZÜMLER</h3>
+<p className="text-sm font-bold text-indigo-800 mt-1">Öğretmen Nüshası - Lütfen bu sayfayı öğrenciye vermeyin.</p>
 </div>
 
 <div className="space-y-6">
 {materialResult.icerik_bloklari.map((blok, idx) => {
 if(!blok.cevap_anahtari) return null;
 
-// Soru numarasını cevap anahtarında da eşleştirmek için sayaç
 let soruLabel = `Blok ${idx + 1}`;
-if (blok.blok_tipi === 'standart_soru') {
+if (['standart_soru', 'eslestirme_tablosu', 'bosluk_doldurma'].includes(blok.blok_tipi)) {
   let sNo = 1;
   for (let i = 0; i < idx; i++) {
-    if (materialResult.icerik_bloklari[i].blok_tipi === 'standart_soru' || materialResult.icerik_bloklari[i].blok_tipi === 'eslestirme_tablosu' || materialResult.icerik_bloklari[i].blok_tipi === 'bosluk_doldurma') sNo++;
+    if (['standart_soru', 'eslestirme_tablosu', 'bosluk_doldurma'].includes(materialResult.icerik_bloklari[i].blok_tipi)) sNo++;
   }
   soruLabel = `${sNo}. Soru Çözümü`;
+} else if (blok.baslik) {
+  soruLabel = blok.baslik + " (Çözüm)";
 }
 
 return (
-<div key={idx} className="bg-gray-50 border-l-4 border-indigo-500 border-y border-r border-gray-200 p-5 rounded-r-xl shadow-sm break-inside-avoid">
-<div className="flex items-center mb-3 border-b border-gray-200 pb-2">
-<span className="font-black text-indigo-700 text-sm print-high-contrast"><i className="fa-solid fa-thumbtack mr-2"></i> {soruLabel}:</span>
+<div key={idx} className="bg-indigo-50 border-l-8 border-indigo-500 border-y border-r border-indigo-200 p-5 rounded-r-xl shadow-sm break-inside-avoid print:bg-transparent print:border-gray-300 print:border-l-indigo-500">
+<div className="flex items-center mb-3 border-b border-indigo-200 pb-2">
+<span className="font-black text-indigo-800 text-base print-high-contrast"><i className="fa-solid fa-thumbtack mr-2 text-indigo-500"></i> {soruLabel}:</span>
 </div>
 <p className="text-sm text-gray-800 font-medium print-high-contrast whitespace-pre-wrap leading-relaxed">{blok.cevap_anahtari}</p>
 </div>
