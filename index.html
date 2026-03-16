@@ -6,14 +6,10 @@
 <title>Barış Öğretmen - Eğitim & Gelişim Ekosistemi V16 MEGA FINAL</title>
 
 <script src="https://cdn.tailwindcss.com"></script>
-
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
 <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
 <script type="module">
@@ -35,35 +31,48 @@ body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; color: #1f29
 .textarea-auto { display: block; width: 100%; overflow: hidden; resize: none; min-height: 40px; line-height: 1.5; }
 .font-serif { font-family: 'Merriweather', serif; }
 
-/* YAZDIRMA MOTORU - Kesin Okunabilirlik, Yüksek Kontrast ve Marka Footer */
+/* GÜÇLENDİRİLMİŞ YAZDIRMA MOTORU - Marka Footer ve Cevap Anahtarı Renk Koruması */
 @media print {
-body { background-color: white !important; color: black !important; margin: 0; padding: 0; }
-.no-print { display: none !important; }
-.print-only { display: block !important; }
-* { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    body { background-color: white !important; color: black !important; margin: 0; padding: 0; }
+    .no-print { display: none !important; }
+    .print-only { display: block !important; }
+    
+    /* Renkleri zorla koruma komutu (Cevap anahtarı ve rubrikler için hayati) */
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
 
-.print-container { box-shadow: none !important; padding: 0 !important; margin: 0 !important; border: none !important; }
-.print-card { border: 1px solid #d1d5db !important; box-shadow: none !important; break-inside: avoid; margin-bottom: 1rem !important; page-break-inside: avoid; }
+    .print-container { box-shadow: none !important; padding: 0 !important; margin: 0 !important; border: none !important; }
+    .print-card { border: 1px solid #d1d5db !important; box-shadow: none !important; break-inside: avoid; margin-bottom: 1rem !important; page-break-inside: avoid; }
 
-.print-container h1, .print-container h2, .print-container h3, .print-container h4, .print-container h5,
-.print-container p, .print-container span, .print-container div, .print-container li, .print-high-contrast,
-.print-container table, .print-container td, .print-container th { color: #000000 !important; font-weight: 600 !important; }
+    .print-container h1, .print-container h2, .print-container h3, .print-container h4, .print-container h5,
+    .print-container p, .print-container span, .print-container div, .print-container li, .print-high-contrast,
+    .print-container table, .print-container td, .print-container th { color: #000000 !important; font-weight: 600 !important; }
 
-textarea, input { border: none !important; background: transparent !important; resize: none !important; padding: 0 !important; box-shadow: none !important; color: #000000 !important; outline: none !important; font-weight: 700 !important; }
+    /* Özel Cevap Anahtarı Başlık Koruması */
+    .cevap-anahtari-baslik { background-color: #1f2937 !important; color: #ffffff !important; }
+    .cevap-anahtari-baslik * { color: #ffffff !important; }
 
-@page { margin: 1cm; }
-h1, h2, h3, h4, h5 { page-break-after: avoid; }
-.break-inside-avoid { break-inside: avoid; page-break-inside: avoid; }
-.page-break-before { page-break-before: always !important; break-before: page !important; }
+    textarea, input { border: none !important; background: transparent !important; resize: none !important; padding: 0 !important; box-shadow: none !important; color: #000000 !important; outline: none !important; font-weight: 700 !important; }
 
-.brand-footer { display: block !important; width: 100%; text-align: center; margin-top: 40px; padding-top: 15px; border-top: 3px solid #000; font-size: 14px; font-weight: 900; color: #000; break-inside: avoid; }
+    @page { margin: 1cm; }
+    h1, h2, h3, h4, h5 { page-break-after: avoid; }
+    .break-inside-avoid { break-inside: avoid; page-break-inside: avoid; }
+    .page-break-before { page-break-before: always !important; break-before: page !important; }
+
+    .brand-footer { display: block !important; width: 100%; text-align: center; margin-top: 40px; padding-top: 15px; border-top: 3px solid #000; font-size: 14px; font-weight: 900; color: #000; break-inside: avoid; }
 }
+
 .brand-footer { display: block; width: 100%; text-align: center; margin-top: 40px; padding-top: 15px; border-top: 2px solid #e5e7eb; font-size: 12px; color: #6b7280; }
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
 ::-webkit-scrollbar-thumb { background: #c7c7cc; border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: #a1a1aa; }
 .pb-safe { padding-bottom: 80px; }
+
+/* Medya Yükleme Alanı CSS'i */
+.media-gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; mt-4; }
+.media-item { position: relative; border-radius: 8px; overflow: hidden; border: 1px solid #e5e7eb; background: #000; display: flex; align-items: center; justify-content: center; height: 120px; }
+.media-item img, .media-item video { width: 100%; height: 100%; object-fit: cover; }
+.media-delete-btn { position: absolute; top: 4px; right: 4px; background: rgba(255,0,0,0.8); color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 12px; }
 </style>
 </head>
 <body>
@@ -146,6 +155,7 @@ const [isFbReady, setIsFbReady] = useState(false);
 const [savedReports, setSavedReports] = useState([]);
 const [contacts, setContacts] = useState([]);
 const [notes, setNotes] = useState([]);
+const [localMedia, setLocalMedia] = useState([]); // YENİ MODÜL: Medya Galerisi İçin
 
 const [editingReportId, setEditingReportId] = useState(null);
 const [studentName, setStudentName] = useState('');
@@ -223,6 +233,12 @@ const [isGeneratingNewsletter, setIsGeneratingNewsletter] = useState(false);
 const [gameTopic, setGameTopic] = useState('');
 const [gameResult, setGameResult] = useState(null);
 const [isGeneratingGame, setIsGeneratingGame] = useState(false);
+
+// YENİ MODÜL: CV Oluşturucu Stateleri
+const [cvInfo, setCvInfo] = useState('');
+const [cvResult, setCvResult] = useState(null);
+const [cvPhoto, setCvPhoto] = useState(null);
+const [isGeneratingCV, setIsGeneratingCV] = useState(false);
 
 const [pickedStudent, setPickedStudent] = useState(null);
 
@@ -310,7 +326,7 @@ return () => { unsubReports(); unsubContacts(); unsubNotes(); };
 
 const showToast = (msg) => { setToastMessage(msg); setTimeout(() => setToastMessage(''), 4000); };
 const handleApiError = (err) => {
-console.error(err);
+console.error("API Hatası:", err);
 if (err.message && err.message.includes('429')) showToast("🛑 API limitine ulaştınız. Lütfen 1 dakika bekleyin.");
 else showToast("❌ Yapay zeka iletişim hatası. API anahtarınızı kontrol edin.");
 };
@@ -339,7 +355,7 @@ pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] }
 try {
 await html2pdf().set(opt).from(element).save();
 showToast("PDF başarıyla indirildi! 📥");
-} catch(e) { showToast("PDF oluşturulurken bir hata oluştu."); } 
+} catch(e) { showToast("PDF oluşturulurken bir hata oluştu."); console.error(e); } 
 finally {
 noPrintElements.forEach(el => el.style.display = '');
 const restoredElements = element.querySelectorAll('[data-pdf-restored="true"]');
@@ -373,19 +389,27 @@ try {
 await window.FirebaseSDK.addDoc(window.FirebaseSDK.collection(db, 'artifacts', appId, 'users', user.uid, 'contacts'), newContact);
 showToast("Kişi rehbere eklendi!");
 setNewContact({ studentName: '', parentName: '', phone: '', group: '' });
-} catch (err) { showToast("Hata oluştu."); }
+} catch (err) { showToast("Hata oluştu."); console.error(err); }
 };
 const deleteContact = async (id) => {
 if (!isFbReady || !user || !db || !window.confirm("Bu kişiyi silmek istediğinize emin misiniz?")) return;
 try { await window.FirebaseSDK.deleteDoc(window.FirebaseSDK.doc(db, 'artifacts', appId, 'users', user.uid, 'contacts', id)); showToast("Kişi silindi."); } 
-catch (err) { showToast("Silme başarısız."); }
+catch (err) { showToast("Silme başarısız."); console.error(err); }
 };
 
+// YENİLENDİ: Arşiv Silme Hatası Kesin Çözümü (Hata Yakalama Zırhlı)
 const deleteReport = async (id) => {
-if (!isFbReady || !user || !db || !window.confirm("Bu raporu arşivden kalıcı olarak silmek istediğinize emin misiniz?")) return;
-try { await window.FirebaseSDK.deleteDoc(window.FirebaseSDK.doc(db, 'artifacts', appId, 'users', user.uid, 'reports', id)); showToast("Rapor silindi. 🗑️"); } 
-catch (err) { showToast("Silinemedi."); }
+if (!isFbReady || !user || !db) return;
+if (!window.confirm("Bu raporu arşivden kalıcı olarak silmek istediğinize emin misiniz? (Geri alınamaz)")) return;
+try { 
+  await window.FirebaseSDK.deleteDoc(window.FirebaseSDK.doc(db, 'artifacts', appId, 'users', user.uid, 'reports', id)); 
+  showToast("Rapor başarıyla silindi. 🗑️"); 
+} catch (err) { 
+  console.error("Firebase Silme Hatası:", err);
+  showToast("Hata: Silinemedi! Yetki sorunu veya ID kayıp olabilir."); 
+}
 };
+
 const editReport = (report) => {
 setEditingReportId(report.id); setStudentName(report.studentName); setParentName(report.parentName || '');
 setParentPhone(report.parentPhone || ''); setDate(report.date); setCategory(report.category);
@@ -415,6 +439,24 @@ try { await window.FirebaseSDK.deleteDoc(window.FirebaseSDK.doc(db, 'artifacts',
 catch (err) { showToast("Başarısız."); }
 };
 
+// YENİ MODÜL: Yerel Medya Yükleme (Fotoğraf/Video)
+const handleMediaUpload = (e) => {
+  const files = Array.from(e.target.files);
+  const newMedia = files.map(file => {
+    return {
+      id: Date.now() + Math.random().toString(),
+      url: URL.createObjectURL(file),
+      type: file.type.startsWith('video/') ? 'video' : 'image',
+      name: file.name
+    };
+  });
+  setLocalMedia(prev => [...prev, ...newMedia]);
+  showToast(`${files.length} dosya galerine eklendi!`);
+};
+
+const removeMedia = (id) => {
+  setLocalMedia(prev => prev.filter(m => m.id !== id));
+};// BÖLÜM 3 BAŞLANGICI
 const generateReport = async () => {
 if (!apiKey) { setActiveTab('settings'); showToast("API anahtarınızı girin."); return; }
 if (!studentName.trim() || !observation.trim()) { showToast('Ad ve gözlem boş olamaz.'); return; }
@@ -422,7 +464,8 @@ setLoading(true); setEditableResult(null);
 const hitapPrompt = parentName.trim() ? `Veli Adı/Hitap: ${parentName}` : "Veli Adı/Hitap: Genel";
 const hitapKurali = parentName.trim() ? `veli_mesaji doğrudan "${parentName}" ismiyle nazik bir hitapla başlasın.` : `veli_mesaji "Kıymetli Velimiz" hitabıyla başlasın.`;
 const dinamikOdevKurali = "DİKKAT: Gözlem notundaki duygu durumuna göre ödevleri ayarla. Olumsuzsa motive edici, harikaysa zenginleştirici görevler ver.";
-const systemInstruction = `Sen Barış Öğretmen'sin. Eğitim teknoloğu, uzman öğretici ve koçsun. Profesyonel ve şefkatli bir dil kullanırsın.`;
+// YAPAY ZEKA GÜNCELLEMESİ: Dünyanın en iyi öğretmeni rolü
+const systemInstruction = `Sen ordinaryüs profesör seviyesinde, dünyanın en iyi öğretmeni ve eğitim koçusun. Profesyonel, şefkatli ve vizyoner bir dil kullanırsın.`;
 const userPrompt = `Öğrenci Adı: ${studentName}\n${hitapPrompt}\nTarih: ${date}\nKademe: ${category}\nGözlem: ${observation}\nKurallar:\n1) ${hitapKurali}\n2) Özel eğitimde test boş olmalı.\n3) gelisim_puani 1-10 arası olmalı.\n4) ${dinamikOdevKurali}`;
 try {
 const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
@@ -480,7 +523,9 @@ return { ...contact, preparedMessage: msg, sent: false };
 });
 setBulkMessages(generated); setIsGeneratingBulk(false); showToast(`${generated.length} veli için mesajlar hazır!`);
 };
-const markAsSent = (id) => setBulkMessages(prev => prev.map(m => m.id === id ? { ...m, sent: true } : m));// --- DEVASA MATBAA (BLOK TABANLI RENDER SİSTEMİ) ---
+const markAsSent = (id) => setBulkMessages(prev => prev.map(m => m.id === id ? { ...m, sent: true } : m));
+
+// --- DEVASA MATBAA (BLOK TABANLI RENDER SİSTEMİ) ---
 const generateMaterial = async () => {
 if (!apiKey || !materialTopic.trim()) { showToast("Lütfen konu girin ve API anahtarınızı kontrol edin."); return; }
 setIsGeneratingMaterial(true); setMaterialResult(null);
@@ -491,7 +536,7 @@ const isTestType = ['yeni_nesil_test', 'test', 'eslestirme', 'bosluk', 'dogru_ya
 let soruKurali = "";
 if (isTestType) {
   let zDurum = matDifficulty.includes('Fark Etmez') ? "Zorluk seviyesini öğrenciye uygun şekilde belirle." : `Zorluk Derecesi: ${matDifficulty}.`;
-  let sDurum = matQuestionCount.toString().includes('Fark Etmez') ? "Soru sayısını optimal belirle." : `Toplam tam ${matQuestionCount} adet 'standart_soru' üret. Sorular kesinlikle 1'den başlamalıdır.`;
+  let sDurum = matQuestionCount.toString().includes('Fark Etmez') ? "Soru sayısını optimal belirle." : `Toplam tam ${matQuestionCount} adet 'standart_soru' üret. Sorular KESİNLİKLE 1'den başlamalıdır.`;
   soruKurali = `${zDurum} ${sDurum}`;
 }
 const gorselKural = " Resim çizemeyeceğin için lütfen BOLCA YÜKSEK ÇÖZÜNÜRLÜKLÜ EMOJİ kullan.";
@@ -554,6 +599,7 @@ try {
 const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
 method: 'POST', headers: { 'Content-Type': 'application/json' },
 body: JSON.stringify({
+// YAPAY ZEKA GÜNCELLEMESİ: Dünyanın en iyi öğretmeni rolü
 systemInstruction: { parts: [{ text: "Sen ordinaryüs profesör seviyesinde, hatasız ve dünyanın en iyi eğitim teknoloğu ve öğretmenisin. Hata yapma payın SIFIRDIR." }] },
 contents: [{ parts: [{ text: `Hedef Kitle: ${activityCategory}\nKonu: ${materialTopic}\nİstenen Format: ${kuralMetni}${kisisellestirme}${cozumKurali}${baslikKurali}` }] }],
 generationConfig: {
@@ -601,8 +647,8 @@ showToast("Materyal başarıyla hazırlandı! ✨");
 } catch (err) { handleApiError(err); }
 setIsGeneratingMaterial(false);
 };
-
-// --- MİNİ AI ARAÇLARI ---
+// BÖLÜM 3 SONU// BÖLÜM 4 BAŞLANGICI
+// --- MİNİ AI ARAÇLARI (GÜNCELLENMİŞ ZEKALAR) ---
 const generateStory = async () => {
 if (!apiKey || !storyTheme.trim()) { showToast("Tema yazın."); return; }
 setIsGeneratingStory(true);
@@ -611,7 +657,7 @@ try {
 const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
 method: 'POST', headers: { 'Content-Type': 'application/json' },
 body: JSON.stringify({
-systemInstruction: { parts: [{ text: "Sen çocuk psikolojisini bilen bir yazarsın." }] },
+systemInstruction: { parts: [{ text: "Sen ordinaryüs profesör seviyesinde, dünyanın en iyi öğretmeni ve çocuk psikolojisi uzmanısın." }] },
 contents: [{ parts: [{ text: `Hedef: ${activityCategory}\nTema: ${storyTheme}\n${studentContext}\nPedagojik hikaye yaz.` }] }],
 generationConfig: { responseMimeType: "application/json", responseSchema: { type: "OBJECT", properties: { hikaye_basligi: { type: "STRING" }, hikaye_metni: { type: "STRING" }, cikarilacak_ders: { type: "STRING" }, tartisma_sorulari: { type: "ARRAY", items: { type: "STRING" } } }, required: ["hikaye_basligi", "hikaye_metni", "cikarilacak_ders", "tartisma_sorulari"] } }
 })
@@ -630,7 +676,7 @@ try {
 const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
 method: 'POST', headers: { 'Content-Type': 'application/json' },
 body: JSON.stringify({
-systemInstruction: { parts: [{ text: "Sen yaratıcı bir Eğitsel Oyun Tasarımcısısın. Sınıfta tahta ve kalem harici materyal olmadan oynanacak oyunlar tasarlarsın." }] },
+systemInstruction: { parts: [{ text: "Sen ordinaryüs profesör seviyesinde, dünyanın en iyi öğretmeni ve yaratıcı eğitsel oyun tasarımcısısın. Sınıfta materyal olmadan oynanacak oyunlar tasarlarsın." }] },
 contents: [{ parts: [{ text: `Hedef Kitle: ${activityCategory}\nKonu: ${gameTopic}\nLütfen bu konuyu öğretmek için 2 adet yaratıcı, materyalsiz sınıf içi oyun tasarla.` }] }],
 generationConfig: { responseMimeType: "application/json", responseSchema: { type: "OBJECT", properties: { oyunlar: { type: "ARRAY", items: { type: "OBJECT", properties: { oyun_adi: { type: "STRING" }, kurallar: { type: "STRING" }, pedagojik_faydasi: { type: "STRING" } }, required: ["oyun_adi", "kurallar", "pedagojik_faydasi"] } } }, required: ["oyunlar"] } }
 })
@@ -649,7 +695,7 @@ try {
 const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
 method: 'POST', headers: { 'Content-Type': 'application/json' },
 body: JSON.stringify({
-systemInstruction: { parts: [{ text: "Sen deneyimli bir pedagogsun." }] },
+systemInstruction: { parts: [{ text: "Sen ordinaryüs profesör seviyesinde, dünyanın en iyi öğretmeni ve uzman pedagogusun." }] },
 contents: [{ parts: [{ text: `Yaş Grubu: ${activityCategory}\nZorlayıcı Davranış: ${behaviorIssue}\nLütfen pratik stratejiler öner.` }] }]
 })
 });
@@ -667,7 +713,7 @@ try {
 const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
 method: 'POST', headers: { 'Content-Type': 'application/json' },
 body: JSON.stringify({
-systemInstruction: { parts: [{ text: "Sen uzman bir BEP danışmanısın." }] },
+systemInstruction: { parts: [{ text: "Sen ordinaryüs profesör seviyesinde, dünyanın en iyi özel eğitimcisi ve BEP danışmanısın." }] },
 contents: [{ parts: [{ text: `Mevcut Durum: ${studentCurrentLevel}\nHedef: ${targetSkill}\nLütfen SMART kriterlerine uygun BEP taslağı hazırla.` }] }]
 })
 });
@@ -685,7 +731,7 @@ try {
 const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
 method: 'POST', headers: { 'Content-Type': 'application/json' },
 body: JSON.stringify({
-systemInstruction: { parts: [{ text: "Sen şefkatli bir öğretmensin. Velilere yapıcı yanıt yaz." }] },
+systemInstruction: { parts: [{ text: "Sen ordinaryüs profesör seviyesinde, dünyanın en iyi öğretmeni ve veli iletişim uzmanısın. Şefkatli ve profesyonel yanıtlar yazarsın." }] },
 contents: [{ parts: [{ text: `Veli Mesajı: ${parentMessage}` }] }],
 generationConfig: { responseMimeType: "text/plain" }
 })
@@ -703,7 +749,7 @@ try {
 const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
 method: 'POST', headers: { 'Content-Type': 'application/json' },
 body: JSON.stringify({
-systemInstruction: { parts: [{ text: "Sen adil bir öğretmensin." }] },
+systemInstruction: { parts: [{ text: "Sen ordinaryüs profesör seviyesinde, dünyanın en adil ve analitik ölçme değerlendirme uzmanısın." }] },
 contents: [{ parts: [{ text: `Soru: ${graderQuestion}\nCevap: ${graderAnswer}\nDeğerlendir ve not ver.` }] }],
 generationConfig: { responseMimeType: "application/json", responseSchema: { type: "OBJECT", properties: { puan: { type: "INTEGER" }, guclu_yonler: { type: "ARRAY", items: { type: "STRING" } }, gelisim_alanlari: { type: "ARRAY", items: { type: "STRING" } }, ogrenciye_not: { type: "STRING" } }, required: ["puan", "guclu_yonler", "gelisim_alanlari", "ogrenciye_not"] } }
 })
@@ -723,7 +769,7 @@ try {
 const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
 method: 'POST', headers: { 'Content-Type': 'application/json' },
 body: JSON.stringify({
-systemInstruction: { parts: [{ text: "Sen eğitim koçusun. Gelişim analizi yaparsın." }] },
+systemInstruction: { parts: [{ text: "Sen ordinaryüs profesör seviyesinde, dünyanın en iyi eğitim koçu ve veri analistisin. Gelişim analizi yaparsın." }] },
 contents: [{ parts: [{ text: `Öğrenci: ${selectedStudent}\nVeri:\n${studentData}\nAnaliz et.` }] }],
 generationConfig: { responseMimeType: "application/json", responseSchema: { type: "OBJECT", properties: { genel_degerlendirme: { type: "STRING" }, ilerleme_skorlari: { type: "ARRAY", items: { type: "OBJECT", properties: { kategori: { type: "STRING" }, yuzde: { type: "INTEGER" }, renk: { type: "STRING" } } } }, rozetler: { type: "ARRAY", items: { type: "STRING" } }, guclu_yonler: { type: "ARRAY", items: { type: "STRING" } }, gelisim_alanlari: { type: "ARRAY", items: { type: "STRING" } }, yol_haritasi: { type: "STRING" } }, required: ["genel_degerlendirme", "ilerleme_skorlari", "rozetler", "guclu_yonler", "gelisim_alanlari", "yol_haritasi"] } }
 })
@@ -741,7 +787,7 @@ try {
 const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
 method: 'POST', headers: { 'Content-Type': 'application/json' },
 body: JSON.stringify({
-systemInstruction: { parts: [{ text: "Sen ölçme değerlendirme uzmanısın." }] },
+systemInstruction: { parts: [{ text: "Sen ordinaryüs profesör seviyesinde, dünyanın en iyi ölçme değerlendirme uzmanısın." }] },
 contents: [{ parts: [{ text: `Konu: ${rubricTopic}\n4 seviyeli rubrik tablosu oluştur.` }] }],
 generationConfig: { responseMimeType: "application/json", responseSchema: { type: "OBJECT", properties: { baslik: { type: "STRING" }, aciklama: { type: "STRING" }, kriterler: { type: "ARRAY", items: { type: "OBJECT", properties: { kriter_adi: { type: "STRING" }, seviye_1_gelistirilmeli: { type: "STRING" }, seviye_2_yeterli: { type: "STRING" }, seviye_3_iyi: { type: "STRING" }, seviye_4_mukemmel: { type: "STRING" } }, required: ["kriter_adi", "seviye_1_gelistirilmeli", "seviye_2_yeterli", "seviye_3_iyi", "seviye_4_mukemmel"] } } }, required: ["baslik", "aciklama", "kriterler"] } }
 })
@@ -759,7 +805,7 @@ try {
 const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
 method: 'POST', headers: { 'Content-Type': 'application/json' },
 body: JSON.stringify({
-systemInstruction: { parts: [{ text: "Sen usta bir eğitimcisin." }] },
+systemInstruction: { parts: [{ text: "Sen ordinaryüs profesör seviyesinde, dünyanın en iyi ders tasarımcısı ve usta öğreticisisin." }] },
 contents: [{ parts: [{ text: `Konu: ${lessonTopic}\n40 dakikalık ders planı hazırla.` }] }],
 generationConfig: { responseMimeType: "application/json", responseSchema: { type: "OBJECT", properties: { plan_basligi: { type: "STRING" }, hedefler: { type: "ARRAY", items: { type: "STRING" } }, materyaller: { type: "STRING" }, adimlar: { type: "ARRAY", items: { type: "OBJECT", properties: { sure: { type: "STRING" }, asama_adi: { type: "STRING" }, aciklama: { type: "STRING" } }, required: ["sure", "asama_adi", "aciklama"] } }, odev_tavsiyesi: { type: "STRING" } }, required: ["plan_basligi", "hedefler", "materyaller", "adimlar", "odev_tavsiyesi"] } }
 })
@@ -777,7 +823,7 @@ try {
 const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
 method: 'POST', headers: { 'Content-Type': 'application/json' },
 body: JSON.stringify({
-systemInstruction: { parts: [{ text: "Sen yaratıcı bir öğretmensin." }] },
+systemInstruction: { parts: [{ text: "Sen ordinaryüs profesör seviyesinde, dünyanın en üretken ve vizyoner öğretmenisin." }] },
 contents: [{ parts: [{ text: `Konu: ${newsletterTopics}\nHaftalık bülten oluştur.` }] }],
 generationConfig: { responseMimeType: "application/json", responseSchema: { type: "OBJECT", properties: { bulten_basligi: { type: "STRING" }, haftanin_ozeti: { type: "STRING" }, ogrenilen_kavramlar: { type: "ARRAY", items: { type: "STRING" } }, velilere_tavsiye: { type: "STRING" } }, required: ["bulten_basligi", "haftanin_ozeti", "ogrenilen_kavramlar", "velilere_tavsiye"] } }
 })
@@ -788,6 +834,35 @@ setNewsletterResult(JSON.parse(data.candidates[0].content.parts[0].text));
 setIsGeneratingNewsletter(false);
 };
 
+// YENİ MODÜL: PROFESYONEL CV OLUŞTURUCU AI
+const generateCV = async () => {
+if (!apiKey || !cvInfo.trim()) { showToast("CV için bilgi girmelisiniz."); return; }
+setIsGeneratingCV(true);
+try {
+const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
+method: 'POST', headers: { 'Content-Type': 'application/json' },
+body: JSON.stringify({
+systemInstruction: { parts: [{ text: "Sen ordinaryüs profesör seviyesinde, dünyanın en iyi Kariyer Danışmanı ve Eğitim İK Uzmanısın. Öğretmenler için çok şık, kurumsal ve etkileyici CV'ler tasarlarsın." }] },
+contents: [{ parts: [{ text: `Aşağıdaki dağınık bilgileri toparlayıp profesyonel bir CV oluştur:\n${cvInfo}` }] }],
+generationConfig: { responseMimeType: "application/json", responseSchema: { type: "OBJECT", properties: { ad_soyad: { type: "STRING" }, unvan: { type: "STRING" }, iletisim: { type: "ARRAY", items: { type: "STRING" } }, hakkimda_ozet: { type: "STRING" }, deneyimler: { type: "ARRAY", items: { type: "OBJECT", properties: { kurum: { type: "STRING" }, pozisyon: { type: "STRING" }, sure: { type: "STRING" }, aciklama: { type: "STRING" } } } }, egitim: { type: "ARRAY", items: { type: "STRING" } }, yetenekler: { type: "ARRAY", items: { type: "STRING" } }, sertifikalar: { type: "ARRAY", items: { type: "STRING" } } }, required: ["ad_soyad", "unvan", "iletisim", "hakkimda_ozet", "deneyimler", "egitim", "yetenekler"] } }
+})
+});
+const data = await response.json();
+setCvResult(JSON.parse(data.candidates[0].content.parts[0].text));
+showToast("CV Başarıyla Oluşturuldu! 📄");
+} catch(err) { handleApiError(err); }
+setIsGeneratingCV(false);
+};
+
+// CV FOTOĞRAF YÜKLEME HANDLER
+const handleCvPhotoUpload = (e) => {
+  const file = e.target.files[0];
+  if (file) {
+    setCvPhoto(URL.createObjectURL(file));
+    showToast("Vesikalık fotoğraf yüklendi!");
+  }
+};
+
 const expandObservation = async () => {
 if (!apiKey || !observation.trim()) return;
 setIsExpanding(true);
@@ -795,7 +870,7 @@ try {
 const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
 method: 'POST', headers: { 'Content-Type': 'application/json' },
 body: JSON.stringify({
-systemInstruction: { parts: [{ text: "Sen uzman eğitimcisin. Notları pedagojik genişlet." }] },
+systemInstruction: { parts: [{ text: "Sen ordinaryüs profesör seviyesinde uzman eğitimcisin. Notları pedagojik ve profesyonel dille genişlet." }] },
 contents: [{ parts: [{ text: `Gözlem: ${observation}` }] }]
 })
 });
@@ -811,7 +886,9 @@ const names = Object.keys(groupedStudents);
 const random = names[Math.floor(Math.random() * names.length)];
 setPickedStudent(random);
 setTimeout(() => setPickedStudent(null), 3000);
-};return (
+};
+
+return (
 <div className="min-h-screen flex flex-col bg-gray-50 pb-safe md:pb-0">
 {/* Rastgele Seçilen Öğrenci Ekrani */}
 {pickedStudent && (
@@ -858,7 +935,7 @@ setTimeout(() => setPickedStudent(null), 3000);
 </div>
 </div>
 </header>
-
+// BÖLÜM 4 SONU// BÖLÜM 5 BAŞLANGICI
 <main className="flex-1 max-w-7xl mx-auto w-full px-4 py-6">
 
 {/* 1. RAPOR SEKMESİ */}
@@ -1152,6 +1229,7 @@ title="Veli ödevi yaptıysa buraya tıklayın."
 </button>
 <div className="w-10 h-10 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold border border-indigo-100" title="Gelişim Puanı">{report.result?.gelisim_puani || '-'}</div>
 <button onClick={() => editReport(report)} className="text-yellow-500 hover:text-yellow-600 p-1" title="Raporu Düzenle"><i className="fa-solid fa-pen-to-square"></i></button>
+{/* ARŞİV SİLME BUTONU ZIRHLANDI */}
 <button onClick={() => deleteReport(report.id)} className="text-red-400 hover:text-red-600 p-1" title="Raporu Sil"><i className="fa-solid fa-trash-can"></i></button>
 </div>
 </div>
@@ -1165,7 +1243,8 @@ title="Veli ödevi yaptıysa buraya tıklayın."
 </>
 )}
 </div>
-)}{/* 4. ARAÇ KUTUSU & MEGA MATBAA SEKMESİ */}
+)}
+// BÖLÜM 5 SONU{/* 4. ARAÇ KUTUSU & MEGA MATBAA SEKMESİ */}
 {activeTab === 'tools' && (
 <div className="animate-fade-in pb-20 space-y-8">
 <div className="text-center mb-6 no-print">
@@ -1247,7 +1326,7 @@ title="Veli ödevi yaptıysa buraya tıklayın."
 </optgroup>
 </select>
 
-{/* AKILLI GİZLEME: Sadece test ve soru barındıran şablonlarda soru/zorluk sorulur. */}
+{/* AKILLI GİZLEME */}
 {['test', 'yeni_nesil_test', 'eslestirme', 'bosluk', 'dogru_yanlis', 'karma'].includes(materialType) && (
 <div className="grid grid-cols-2 gap-3 mb-4 bg-teal-800/30 p-3 rounded-xl border border-teal-500/30 animate-fade-in">
 <div>
@@ -1596,7 +1675,91 @@ title="Veli ödevi yaptıysa buraya tıklayın."
 )}
 </div>
 
-</div>{/* YAZDIRILABİLİR MATERYAL EKRANI (BLOK TABANLI MEGA MATBAA ÇIKTISI) */}
+{/* YENİ MODÜL: MİNİ ARAÇ 10: PROFESYONEL CV OLUŞTURUCU */}
+<div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden flex flex-col lg:col-span-2" id="tool-printable-cv">
+<div className="bg-slate-800 p-4 text-white flex items-center"><i className="fa-solid fa-user-tie text-3xl mr-3"></i><div><h3 className="font-bold text-lg">Profesyonel CV Oluşturucu</h3><p className="text-slate-300 text-xs">Öğretmenler için AI destekli şık ve kurumsal özgeçmiş.</p></div></div>
+<div className="p-5 flex-1 flex flex-col gap-4 no-print">
+<div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+<label className="block text-xs font-bold text-slate-700 mb-2"><i className="fa-solid fa-camera mr-1"></i> Vesikalık Fotoğraf (Opsiyonel)</label>
+<input type="file" accept="image/*" onChange={handleCvPhotoUpload} className="text-sm text-slate-600 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-slate-200 file:text-slate-700 hover:file:bg-slate-300 transition cursor-pointer"/>
+</div>
+<div><textarea value={cvInfo} onChange={(e) => setCvInfo(e.target.value)} rows="5" placeholder="Bilgilerinizi dağınık yazın. Örn: Adım Barış İlkan, 10 yıllık okul öncesi öğretmeniyim. Değişim Kolejinde çalıştım. Robotik ve satranç biliyorum. Telefon: 0555..." className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg outline-none text-sm resize-y"></textarea></div>
+<button onClick={generateCV} disabled={isGeneratingCV || !cvInfo.trim()} className="w-full bg-slate-800 text-white hover:bg-slate-900 py-3 rounded-lg font-bold text-sm transition disabled:opacity-50 flex justify-center items-center shadow-md">
+{isGeneratingCV ? <i className="fa-solid fa-spinner fa-spin mr-2"></i> : <i className="fa-solid fa-wand-magic-sparkles mr-2"></i>} CV'yi Tasarla ✨
+</button>
+</div>
+{cvResult && (
+<div className="p-5 pt-0 mt-auto print-card break-inside-avoid">
+<div className="flex justify-end mb-4 no-print">
+<button onClick={() => downloadAsPDF('tool-printable-cv', 'Baris_Ogretmen_CV')} className="text-xs bg-red-100 text-red-600 px-3 py-1 rounded font-bold"><i className="fa-solid fa-file-pdf mr-1"></i> PDF İndir</button>
+<button onClick={handlePrint} className="text-xs bg-slate-800 text-white px-3 py-1 rounded font-bold ml-2"><i className="fa-solid fa-print mr-1"></i> Yazdır</button>
+</div>
+<div className="bg-white border border-slate-200 p-6 md:p-10 rounded-xl print-high-contrast shadow-sm relative text-slate-800">
+{/* CV Header */}
+<div className="flex flex-col md:flex-row items-center md:items-start gap-6 border-b-2 border-slate-800 pb-6 mb-6">
+{cvPhoto && <img src={cvPhoto} alt="CV Foto" className="w-32 h-32 object-cover rounded-full border-4 border-slate-100 shadow-md print-high-contrast"/>}
+<div className="text-center md:text-left flex-1">
+<h1 className="text-3xl font-black text-slate-900 uppercase tracking-wider mb-1">{cvResult.ad_soyad}</h1>
+<h2 className="text-lg font-bold text-slate-500 uppercase tracking-widest mb-4">{cvResult.unvan}</h2>
+<div className="flex flex-wrap gap-x-4 gap-y-2 text-sm justify-center md:justify-start font-medium">
+{cvResult.iletisim.map((item, i) => <span key={i}><i className="fa-solid fa-circle text-[8px] text-slate-300 mr-2"></i>{item}</span>)}
+</div>
+</div>
+</div>
+{/* CV Body */}
+<div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+<div className="md:col-span-2 space-y-6">
+<section>
+<h3 className="text-lg font-bold text-slate-900 border-b border-slate-300 pb-1 mb-3 uppercase tracking-wider">Hakkımda</h3>
+<p className="text-sm leading-relaxed text-justify">{cvResult.hakkimda_ozet}</p>
+</section>
+<section>
+<h3 className="text-lg font-bold text-slate-900 border-b border-slate-300 pb-1 mb-3 uppercase tracking-wider">İş Deneyimi</h3>
+<div className="space-y-4">
+{cvResult.deneyimler.map((den, i) => (
+<div key={i}>
+<div className="flex justify-between items-baseline mb-1">
+<h4 className="font-bold text-slate-800">{den.pozisyon}</h4>
+<span className="text-xs font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded">{den.sure}</span>
+</div>
+<div className="text-sm font-semibold text-indigo-700 mb-1">{den.kurum}</div>
+<p className="text-xs leading-relaxed text-slate-600">{den.aciklama}</p>
+</div>
+))}
+</div>
+</section>
+</div>
+<div className="space-y-6">
+<section>
+<h3 className="text-lg font-bold text-slate-900 border-b border-slate-300 pb-1 mb-3 uppercase tracking-wider">Eğitim</h3>
+<ul className="space-y-2 text-sm">
+{cvResult.egitim.map((eg, i) => <li key={i} className="leading-snug"><i className="fa-solid fa-graduation-cap text-slate-400 mr-2"></i>{eg}</li>)}
+</ul>
+</section>
+<section>
+<h3 className="text-lg font-bold text-slate-900 border-b border-slate-300 pb-1 mb-3 uppercase tracking-wider">Yetenekler</h3>
+<div className="flex flex-wrap gap-2">
+{cvResult.yetenekler.map((yet, i) => <span key={i} className="text-xs font-bold bg-slate-100 text-slate-700 px-2 py-1 rounded">{yet}</span>)}
+</div>
+</section>
+{cvResult.sertifikalar && cvResult.sertifikalar.length > 0 && (
+<section>
+<h3 className="text-lg font-bold text-slate-900 border-b border-slate-300 pb-1 mb-3 uppercase tracking-wider">Sertifikalar</h3>
+<ul className="space-y-2 text-sm">
+{cvResult.sertifikalar.map((ser, i) => <li key={i} className="leading-snug"><i className="fa-solid fa-certificate text-slate-400 mr-2"></i>{ser}</li>)}
+</ul>
+</section>
+)}
+</div>
+</div>
+</div>
+</div>
+)}
+</div>
+
+</div>
+
+{/* YAZDIRILABİLİR MATERYAL EKRANI (BLOK TABANLI MEGA MATBAA ÇIKTISI) */}
 {materialResult && (
 <div className="animate-fade-in print-container mt-0">
 <div className="no-print flex flex-col md:flex-row justify-between items-center mb-4 bg-gray-800 p-4 rounded-xl text-white shadow-lg gap-4">
@@ -2161,7 +2324,7 @@ default: return null;
 {/* ÇÖZÜMLÜ CEVAP ANAHTARI BÖLÜMÜ (AYRI SAYFA) - ÖĞRETMEN NÜSHASI */}
 {showAnswerKey && materialResult.icerik_bloklari.some(b => b.cevap_anahtari) && (
 <div className="page-break-before mt-16 pt-8 border-t-4 border-dashed border-gray-400">
-<div className="bg-gray-800 text-white p-4 rounded-xl mb-6 text-center print-high-contrast">
+<div className="cevap-anahtari-baslik bg-gray-800 text-white p-4 rounded-xl mb-6 text-center print-high-contrast print-bg-dark">
 <h3 className="text-2xl font-black uppercase tracking-widest"><i className="fa-solid fa-key mr-2 text-yellow-400"></i> CEVAP ANAHTARI & ÇÖZÜMLER</h3>
 <p className="text-xs text-gray-300 mt-1">Öğretmen Nüshası - Lütfen bu sayfayı öğrenciye vermeyin.</p>
 </div>
@@ -2200,13 +2363,44 @@ return (
 </div>
 )}
 
-{/* --- 5. DİJİTAL NOT DEFTERİ SEKMESİ (ŞABLONLAR EKLENDİ) --- */}
+{/* --- 5. DİJİTAL NOT DEFTERİ SEKMESİ (ŞABLONLAR VE MEDYA GALERİSİ EKLENDİ) --- */}
 {activeTab === 'notepad' && (
 <div className="animate-fade-in no-print pb-20 space-y-6">
 <div className="text-center mb-6">
 <h2 className="text-3xl font-extrabold text-gray-800"><i className="fa-solid fa-book-journal-whills text-indigo-600 mr-3"></i>Dijital Not Defterim</h2>
-<p className="text-gray-500 mt-2">Günlük öğrenci takibi, teslim edilen dosyalar ve kişisel notlarınız.</p>
+<p className="text-gray-500 mt-2">Günlük öğrenci takibi, dosyalar, fotoğraflar ve videolar.</p>
 </div>
+
+{/* YENİ MODÜL: MEDYA GALERİSİ (Fotoğraf/Video) */}
+<div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6">
+<div className="flex justify-between items-center border-b pb-4 mb-4">
+<h3 className="text-lg font-bold text-gray-800"><i className="fa-solid fa-photo-film text-indigo-500 mr-2"></i>Medya Galerisi</h3>
+<label className="cursor-pointer bg-indigo-50 text-indigo-700 px-4 py-2 rounded-lg font-bold text-sm hover:bg-indigo-100 transition shadow-sm">
+<i className="fa-solid fa-cloud-arrow-up mr-1"></i> Dosya Yükle
+<input type="file" accept="image/*,video/*" multiple onChange={handleMediaUpload} className="hidden" />
+</label>
+</div>
+{localMedia.length === 0 ? (
+<div className="text-center py-8 text-gray-400 border-2 border-dashed border-gray-200 rounded-xl">
+<i className="fa-solid fa-folder-open text-4xl mb-2 opacity-50"></i>
+<p className="text-sm font-medium">Sınıf içi çalışmaların fotoğraf veya videolarını yükleyin.</p>
+</div>
+) : (
+<div className="media-gallery-grid">
+{localMedia.map(media => (
+<div key={media.id} className="media-item group">
+{media.type === 'image' ? (
+<img src={media.url} alt={media.name} />
+) : (
+<video src={media.url} controls className="w-full h-full" />
+)}
+<button onClick={() => removeMedia(media.id)} className="media-delete-btn opacity-0 group-hover:opacity-100 transition"><i className="fa-solid fa-times"></i></button>
+</div>
+))}
+</div>
+)}
+</div>
+
 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 lg:col-span-2">
 <div className="flex justify-between items-center mb-4 border-b pb-2">
@@ -2286,7 +2480,7 @@ notes.map(n => (
 
 {/* MARKA ALT BİLGİSİ - EKRAN */}
 <footer className="no-print bg-white border-t border-gray-200 py-4 text-center text-xs text-gray-500 mt-auto mb-14 md:mb-0">
-<i className="fa-solid fa-copyright mr-1"></i> 2026 Barış Öğretmen Eğitim Ekosistemi V16 FINAL • Tüm hakları saklıdır.
+<i className="fa-solid fa-copyright mr-1"></i> 2026 Barış Öğretmen Eğitim Ekosistemi V16 MEGA FINAL • Tüm hakları saklıdır.
 <br/><span className="text-gray-400 mt-1 block">🌐 https://baris-ogretmen.github.io/site-1/</span>
 </footer>
 
