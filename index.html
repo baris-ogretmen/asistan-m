@@ -2543,6 +2543,10 @@ notes.map(n => (
 <button onClick={() => setActiveTab('archive')} className={`flex flex-col items-center justify-center w-full h-full space-y-1 transition ${activeTab === 'archive' ? 'text-indigo-600 scale-110' : 'text-gray-400'}`}><i className="fa-solid fa-users-viewfinder text-lg"></i><span className="text-[10px] font-bold">Arşiv</span></button>
 <button onClick={() => setActiveTab('tools')} className={`flex flex-col items-center justify-center w-full h-full space-y-1 transition ${activeTab === 'tools' ? 'text-indigo-600 scale-110' : 'text-gray-400'}`}><i className="fa-solid fa-wand-magic-sparkles text-lg"></i><span className="text-[10px] font-bold">Matbaa</span></button>
 <button onClick={() => setActiveTab('notepad')} className={`flex flex-col items-center justify-center w-full h-full space-y-1 transition ${activeTab === 'notepad' ? 'text-indigo-600 scale-110' : 'text-gray-400'}`}><i className="fa-solid fa-book text-lg"></i><span className="text-[10px] font-bold">Notlar</span></button>
+<button onClick={() => setActiveTab('settings')} className={`flex flex-col items-center justify-center w-full h-full ${activeTab === 'settings' ? 'text-indigo-600' : 'text-gray-400'}`}>
+        <i className="fa-solid fa-gear mb-1 text-lg"></i>
+        <span className="text-[10px] font-bold">Ayarlar</span>
+    </button>
 </div>
 </nav>
 
