@@ -251,6 +251,7 @@ const [timeLeft, setTimeLeft] = useState(2400);
 
 useEffect(() => {
 if (apiKey) localStorage.setItem('gemini_api_key', apiKey);
+localStorage.setItem('gemini_model_name', modelName);
 if (modelName) localStorage.setItem('gemini_model_name', modelName);
 }, [apiKey, modelName]);
 
@@ -632,7 +633,7 @@ kuralMetni = `DİKKAT: Zengin bir eğitim materyali üret. ${soruKurali}`;
 }
 
 let kisisellestirme = matStudentName ? `\nÖNEMLİ: Öğrencimin adı ${matStudentName}. İlgi alanları: ${matInterests}. Materyali ona özel hale getir.` : "";
-let cozumKurali = "\nŞİDDETLİ UYARI: Soruları ASLA tekrar etme, her soru %100 FARKLI olmalı! Ayrıca, ürettiğin içeriğin en sonundaki bloğa KESİNLİKLE 'cevap_anahtari' alanını ekle ve içine 1-A, 2-B gibi tüm çözümleri yaz. Cevap anahtarı yoksa sistem çöker!";
+let cozumKurali = "\nÇÖZÜM MOTORU: 'cevap_anahtari' kısmında sadece şıkkı/cevabı yazıp bırakma. KESİNLİKLE kısa, öz ve pedagojik bir açıklama ekle (Örn: 'Doğru cevap Mitokondri; çünkü hücrenin enerji ihtiyacını karşılayan santraldir.'). Her madde için neden-sonuç açıklaması zorunludur.";
 let baslikKurali = "\nDİKKAT: dokuman_basligi alanına konuya tam uygun, yaratıcı bir başlık koy. alt_baslik alanına ASLA 'Özel Öğrenme İhtiyaçları', 'Otizm', 'Disleksi', 'Destekli' gibi klinik veya etiketleyici kelimeler YAZMA. Her zaman motive edici, pozitif ve kapsayıcı alt başlıklar kullan.";
 
 try {
@@ -643,8 +644,12 @@ body: JSON.stringify({
 systemInstruction: { parts: [{ text: "Sen ordinaryüs profesör seviyesinde katı bir Eğitsel İçerik Mimarısın. KESİN KURALLAR: 1) ASLA öğrenciyle sohbet etme (örn: 'Aferin, bitti' gibi cümleler KULLANMA). 2) Soruları ASLA tekrar etme, her soru %100 farklı olmalı. 3) Test formatında sadece 'standart_soru' kullan. 4) En sona KESİNLİKLE 'cevap_anahtari' alanını detaylıca ekle!" }] },
 contents: [{ parts: [{ text: `## EĞİTİM MATERYALİ TASLAĞI ##\nHedef Kitle: ${activityCategory}\nKonu: ${materialTopic}\nİstenen Format: ${kuralMetni}\n\n${kisisellestirme}\n${cozumKurali}\n${baslikKurali}\n\nZORUNLU KURAL: Hiçbir bloğun içine 'Tebrikler', 'Test bitti' gibi sohbet metinleri YAZMA. Sadece saf akademik içeriği JSON formatında üret.` }] }],
 generationConfig: {
-responseMimeType: "application/json",
-responseSchema: {
+    responseMimeType: "application/json",
+    temperature: 0.8,
+    topP: 0.8,
+    topK: 40,
+    maxOutputTokens: 2500,
+    responseSchema: {
 type: "OBJECT",
 properties: {
 dokuman_basligi: { type: "STRING" },
@@ -2485,49 +2490,43 @@ notes.map(n => (
 
 {/* --- 6. AYARLAR SEKMESİ --- */}
 {activeTab === 'settings' && (
-<div className="max-w-2xl mx-auto bg-white rounded-2xl shadow-sm border border-gray-200 p-6 md:p-8 animate-fade-in no-print">
-<div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 border-b pb-4 gap-4">
-<h2 className="text-2xl font-bold text-gray-800"><i className="fa-solid fa-gear text-indigo-600 mr-3"></i>Ayarlar</h2>
-<div className="flex flex-col items-end space-y-1 text-sm bg-gray-50 p-2 rounded-lg border border-gray-100">
-<div className="flex items-center space-x-2">
-<span className={`w-3 h-3 rounded-full ${isFbReady ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-red-500'}`}></span>
-<span className="font-bold text-gray-600 text-xs uppercase tracking-wider">{isFbReady ? 'Veritabanı: Aktif' : 'Veritabanı: Bekleniyor'}</span>
-</div>
-<div className="flex items-center space-x-2">
-<span className={`w-3 h-3 rounded-full ${isApiValid ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-red-500 animate-pulse'}`}></span>
-<span className="font-bold text-gray-600 text-xs uppercase tracking-wider">{isApiValid ? 'Yapay Zeka: Aktif' : 'API Doğrulanmadı'}</span>
-</div>
-</div>
-</div>
-<div className="space-y-6">
-<div>
-<label className="block text-sm font-bold text-gray-700 mb-2">Gemini API Anahtarı</label>
-<input type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder="AIzaSy..." className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-sm shadow-inner" />
-<p className="text-xs text-gray-500 mt-1"><i className="fa-solid fa-shield-halved mr-1 text-indigo-400"></i> API anahtarınız tarayıcınızda şifrelenerek saklanır, dışarı aktarılmaz.</p>
-</div>
-<div>
-<label className="block text-sm font-bold text-gray-700 mb-2">Model Seçimi (Manuel Giriş)</label>
-<input type="text" value={modelName} onChange={(e) => setModelName(e.target.value)} placeholder="örn: gemini-2.5-pro" className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-sm shadow-inner" />
-<div className="flex flex-wrap gap-2 mt-2">
-<button onClick={() => setModelName('gemini-2.5-pro')} className="text-xs bg-indigo-50 text-indigo-600 px-3 py-1.5 rounded-lg font-bold hover:bg-indigo-100 transition shadow-sm border border-indigo-100">Gemini 2.5 Pro</button>
-<button onClick={() => setModelName('gemini-2.5-flash')} className="text-xs bg-indigo-50 text-indigo-600 px-3 py-1.5 rounded-lg font-bold hover:bg-indigo-100 transition shadow-sm border border-indigo-100">Gemini 2.5 Flash</button>
-</div>
-</div>
+<div className="max-w-2xl mx-auto bg-white rounded-2xl shadow-sm border border-gray-200 p-4 md:p-8 animate-fade-in no-print">
+    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 border-b pb-4 gap-4">
+        <h2 className="text-2xl font-bold text-gray-800"><i className="fa-solid fa-gear text-indigo-600 mr-3"></i>Ayarlar</h2>
+        <div className="flex flex-col items-start sm:items-end space-y-1 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+            <div className="flex items-center gap-2">
+                <span className={`w-2 h-2 rounded-full ${isFbReady ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                <span>Veritabanı: {isFbReady ? 'Aktif' : 'Bekleniyor'}</span>
+            </div>
+            <div className="flex items-center gap-2">
+                <span className={`w-2 h-2 rounded-full ${isApiValid ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                <span>Yapay Zeka: {isApiValid ? 'Hazır' : 'Doğrulanmadı'}</span>
+            </div>
+        </div>
+    </div>
+    <div className="space-y-5">
+        <div>
+            <label className="block text-sm font-bold text-gray-700 mb-2">Gemini API Anahtarı</label>
+            <input type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-sm" />
+        </div>
+        <div>
+            <label className="block text-sm font-bold text-gray-700 mb-2">Model Seçimi (Manuel)</label>
+            <input type="text" value={modelName} onChange={(e) => setModelName(e.target.value)} className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-sm" />
+        </div>
+        
+        {/* TAMAM VE DOĞRULA BUTONU */}
+        <button onClick={verifyAndSaveSettings} className="w-full bg-indigo-600 text-white py-4 rounded-xl font-black text-lg hover:bg-indigo-700 transition shadow-lg active:scale-95 flex items-center justify-center">
+            <i className="fa-solid fa-circle-check mr-2"></i> TAMAM (Kaydet ve Doğrula)
+        </button>
 
-{/* YENİ TAMAM VE DOĞRULA BUTONU */}
-<button onClick={verifyAndSaveSettings} className="w-full bg-gradient-to-r from-indigo-600 to-blue-600 text-white py-4 rounded-xl font-black text-lg hover:from-indigo-700 hover:to-blue-700 transition-all flex items-center justify-center shadow-lg transform hover:scale-[1.01] active:scale-95">
-<i className="fa-solid fa-bolt mr-2 text-yellow-300"></i> ANAHTARI DOĞRULA VE KAYDET
-</button>
-
-<div className="pt-4 border-t mt-8">
-<button onClick={() => {localStorage.clear(); window.location.reload();}} className="w-full bg-red-50 text-red-500 py-3 rounded-xl font-bold hover:bg-red-100 transition flex items-center justify-center border border-red-100">
-<i className="fa-solid fa-trash-can mr-2"></i> Tüm Verileri ve Çerezleri Sıfırla
-</button>
-</div>
-</div>
+        <div className="pt-4 border-t mt-6">
+            <button onClick={() => {localStorage.clear(); window.location.reload();}} className="w-full bg-red-50 text-red-500 py-3 rounded-xl font-bold hover:bg-red-100 transition text-sm">
+                <i className="fa-solid fa-trash-can mr-2"></i> Tüm Verileri Sıfırla
+            </button>
+        </div>
+    </div>
 </div>
 )}
-
 </main>
 
 {/* MARKA ALT BİLGİSİ - EKRAN */}
