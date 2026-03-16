@@ -399,15 +399,25 @@ catch (err) { showToast("Silme başarısız."); console.error(err); }
 
 // YENİLENDİ: Arşiv Silme Hatası Kesin Çözümü (Hata Yakalama Zırhlı)
 const deleteReport = async (id) => {
-if (!isFbReady || !user || !db) return;
-if (!window.confirm("Bu raporu arşivden kalıcı olarak silmek istediğinize emin misiniz? (Geri alınamaz)")) return;
-try { 
-  await window.FirebaseSDK.deleteDoc(window.FirebaseSDK.doc(db, 'artifacts', appId, 'users', user.uid, 'reports', id)); 
-  showToast("Rapor başarıyla silindi. 🗑️"); 
-} catch (err) { 
-  console.error("Firebase Silme Hatası:", err);
-  showToast("Hata: Silinemedi! Yetki sorunu veya ID kayıp olabilir."); 
-}
+    if (!isFbReady || !user || !db) return;
+    if (!window.confirm("Bu raporu arşivden kalıcı olarak silmek istediğinize emin misiniz? (Geri alınamaz)")) return;
+    
+    try { 
+        await window.FirebaseSDK.deleteDoc(window.FirebaseSDK.doc(db, 'artifacts', appId, 'users', user.uid, 'reports', id)); 
+        showToast("Rapor başarıyla silindi. 🗑️"); 
+        
+        // BEYAZ EKRAN ÇÖZÜMÜ: Eğer bu öğrencinin son raporu silindiyse, sistemi çökertmeden ana arşive dön.
+        const remainingReports = savedReports.filter(r => r.id !== id);
+        if (selectedStudent) {
+            const studentStillHasReports = remainingReports.some(r => r.studentName.toUpperCase() === selectedStudent.toUpperCase());
+            if (!studentStillHasReports) {
+                setSelectedStudent(null);
+            }
+        }
+    } catch (err) { 
+        console.error("Firebase Silme Hatası:", err);
+        showToast("Hata: Silinemedi! Yetki sorunu veya ID kayıp olabilir."); 
+    }
 };
 
 const editReport = (report) => {
@@ -456,7 +466,7 @@ const handleMediaUpload = (e) => {
 
 const removeMedia = (id) => {
   setLocalMedia(prev => prev.filter(m => m.id !== id));
-};// BÖLÜM 3 BAŞLANGICI
+};
 const generateReport = async () => {
 if (!apiKey) { setActiveTab('settings'); showToast("API anahtarınızı girin."); return; }
 if (!studentName.trim() || !observation.trim()) { showToast('Ad ve gözlem boş olamaz.'); return; }
@@ -647,7 +657,7 @@ showToast("Materyal başarıyla hazırlandı! ✨");
 } catch (err) { handleApiError(err); }
 setIsGeneratingMaterial(false);
 };
-// BÖLÜM 3 SONU// BÖLÜM 4 BAŞLANGICI
+
 // --- MİNİ AI ARAÇLARI (GÜNCELLENMİŞ ZEKALAR) ---
 const generateStory = async () => {
 if (!apiKey || !storyTheme.trim()) { showToast("Tema yazın."); return; }
@@ -935,7 +945,7 @@ return (
 </div>
 </div>
 </header>
-// BÖLÜM 4 SONU// BÖLÜM 5 BAŞLANGICI
+
 <main className="flex-1 max-w-7xl mx-auto w-full px-4 py-6">
 
 {/* 1. RAPOR SEKMESİ */}
@@ -1244,7 +1254,7 @@ title="Veli ödevi yaptıysa buraya tıklayın."
 )}
 </div>
 )}
-// BÖLÜM 5 SONU{/* 4. ARAÇ KUTUSU & MEGA MATBAA SEKMESİ */}
+{/* 4. ARAÇ KUTUSU & MEGA MATBAA SEKMESİ */}
 {activeTab === 'tools' && (
 <div className="animate-fade-in pb-20 space-y-8">
 <div className="text-center mb-6 no-print">
