@@ -332,6 +332,12 @@ setNotes(nts);
 return () => { unsubReports(); unsubContacts(); unsubNotes(); };
 }, [isFbReady, user, db, appId]);
 const [isApiValid, setIsApiValid] = useState(false);
+
+React.useEffect(() => {
+    if (apiKey && apiKey.length > 10) {
+        setIsApiValid(true);
+    }
+}, [apiKey]);
 const verifyAndSaveSettings = async () => {
     if (!apiKey) { showToast("API Anahtarı boş olamaz!"); return; }
     showToast("Bağlantı test ediliyor, lütfen bekleyin...");
