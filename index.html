@@ -714,7 +714,9 @@ if (materialType === 'Fark Etmez (Yapay Zeka Seçsin)') {
 } else if (materialType === 'deneme_sinavi') {
   kuralMetni = `DİKKAT: Tam kapsamlı, profesyonel bir DENEME SINAVI hazırla! Maksimum jeton limitini sonuna kadar kullan. Bolca 'okuma_parcasi', 'standart_soru' kullan. Soruları 1'den başlatarak numaralandır. ${soruKurali}`;
 } else if (materialType === 'fasikul_modu') {
-  kuralMetni = `DİKKAT: En az 4 bölümden oluşan DEV BİR FASİKÜL hazırla! Maksimum uzunlukta çıktı ver. HECELEME VE RENK KURALI: Metinlerin veya hecelerin renkli olmasını isterse, KESİNLİKLE 'zengin_metin' bloğunu kullan ve HTML yaz. (Örnek: <span style='color:red;'>he</span><span style='color:blue;'>ce</span>).`;
+  kuralMetni = `DİKKAT: EN AZ 5 SAYFA SÜRECEK DEVASA BİR FASİKÜL HAZIRLA! (Minimum 15-20 JSON bloğu kullan). 
+  YAPAY ZEKA İNİSİYATİFİ: Kullanıcı promptta az şey istese bile; konuya uygun olarak 'gorsel_dikte' (Dikte Çalışması), 'sifre_kirici' (Matematik/Sayılar), 'sudoku_bulmaca' (Mantık), 'eslestirme_tablosu' (Kavramlar) ve bolca 'standart_soru' bloklarını KENDİ KENDİNE ÜRET VE FASİKÜLE EKLE! Dolu dolu bir set olsun.
+  HECELEME VE RENK KURALI: Okuma metinleri ve heceler için 'zengin_metin' bloğu kullanıp serbestçe HTML (<span style='color:red'>) yazabilirsin.`;
 }
 
 let kisisellestirme = matStudentName ? `\nÖNEMLİ: Öğrencimin adı ${matStudentName}. İlgi alanları: ${matInterests}. Materyali ona özel hale getir.` : "";
