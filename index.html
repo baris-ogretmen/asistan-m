@@ -576,20 +576,24 @@ setBulkMessages(generated); setIsGeneratingBulk(false); showToast(`${generated.l
 const markAsSent = (id) => setBulkMessages(prev => prev.map(m => m.id === id ? { ...m, sent: true } : m));
 
 // --- DEVASA MATBAA (BLOK TABANLI RENDER SİSTEMİ) ---
-// BARIŞ HOCA MEGA FİLTRE VE ANALİZ MOTORU (PDF + Görsel Okuma, Kişiselleştirme)
-const generatePersonalizedMaterialFromFile = async (base64Data, mimeType) => {
+// BARIŞ HOCA TİTİZ KLONLAMA VE DİNAMİK UYARLAMA MOTORU
+const generatePersonalizedMaterialFromFile = async (base64Data, mimeType, kullaniciTalimati) => {
     setIsGeneratingMaterial(true);
     setMaterialResult(null);
 
-    const userPrompt = `## ÇALIŞMA KAĞIDI / PDF ANALİZ VE KİŞİSELLEŞTİRME MOTORU ##
-    Görev: Ekteki dosyayı (PDF veya Görsel) derinlemesine analiz et.
-    1. İÇERİĞİ KORU: İçindeki tüm soruları, metinleri, şıkları eksiksiz al.
-    2. BARIŞ HOCA KİŞİSELLEŞTİRMESİ: Sorulardaki ve metinlerdeki 'Ahmet, Ali, Ayşe' gibi genel isimleri 'Barış Öğretmen' veya 'Barış İlkan' olarak değiştir. İçeriği ona özel, daha eğlenceli hale getir.
-    3. DİL VE KONUŞMA / ÇİZİM EKLENTİLERİ: 
-       - Metindeki kilit kelimeler için 'Dil ve Konuşma (Artikülasyon)' pratikleri ekle ('bilgi_kutusu' bloğu olarak).
-       - Görsel çizemeyeceğin için, her bölümün sonuna "🎨 Çizim Fikri: [Ne çizilmesi gerektiğini betimle]" şeklinde şık bir bilgi_kutusu ekle.
-    4. ZIRH KURALI: HTML etiketi kullanma. Çift tırnak kullanma. Maksimum token limitini kullan (uzun PDF ise hepsini aktar). Sadece JSON blok formatında dön!`;
+    // Senin yan panelde yazdığın "Öğrenciye Özel Yap" ismini alır, yoksa talimata bakar.
+    let isimKurali = matStudentName ? `Metinlerdeki ve sorulardaki genel isimleri şu isme göre uyarla: '${matStudentName}'.` : "İsimleri kullanıcının yazdığı özel talimata göre ayarla.";
+    
+    // Senin ana metin kutusuna yazdığın o değerli promptu alır.
+    let ozelTalimat = kullaniciTalimati && kullaniciTalimati.trim() !== '' ? `KULLANICININ ÖZEL TALİMATI: "${kullaniciTalimati}"` : "Ekstra özel talimat yok, orijinaline tamamen sadık kal.";
 
+    const userPrompt = `## ÇALIŞMA KAĞIDI / PDF BİREBİR KLONLAMA VE UYARLAMA MOTORU ##
+    Görev: Ekteki dosyayı (PDF veya Görsel) analiz et. 
+    1. TIPA TIP KORUMA (HAYATİ): Orijinal dosyanın bağlamından, formatından, soru sayısından ve mantığından ASLA KOPMA. Soruları, metinleri, şıkları eksiksiz ve aynı düzende dijitale aktar.
+    2. KİŞİSELLEŞTİRME: ${isimKurali}
+    3. ${ozelTalimat}
+    4. EKLENTİLER (İstenirse): Eğer kullanıcı özel talimatında 'dil/konuşma', 'heceleme' veya 'çizim' istemişse ekle, istememişse sadece orijinali klonla.
+    5. ZIRH KURALI: Çift tırnak işaretini (") metinlerde asla kullanma, hep tek tırnak (') kullan. PDF uzunsa maksimum token limitini kullanıp tamamını çevir.`;
     try {
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
             method: 'POST',
@@ -616,8 +620,11 @@ const generatePersonalizedMaterialFromFile = async (base64Data, mimeType) => {
         const data = await response.json();
 
         if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
-            let aiMetni = data.candidates[0].content.parts[0].text;
+let aiMetni = data.candidates[0].content.parts[0].text;
+            // BARIŞ HOCA SON VURUŞ (PDF İÇİN): 
             aiMetni = aiMetni.replace(/```json/gi, '').replace(/```/gi, '').trim();
+            aiMetni = aiMetni.replace(/\\'/g, "'"); 
+            aiMetni = aiMetni.replace(/<([^>]+)>/g, (match) => match.replace(/"/g, "'"));
             try {
                 const ayristirilmisData = JSON.parse(aiMetni);
                 setMaterialResult(ayristirilmisData);
@@ -704,8 +711,10 @@ if (materialType === 'Fark Etmez (Yapay Zeka Seçsin)') {
   kuralMetni = `DİKKAT: 'gorsel_dikte' bloğunu kullan. Devasa emojiler ver.` + gorselKural;
 } else if (materialType === 'bosluk' || materialType === 'dogru_yanlis') {
   kuralMetni = `DİKKAT: Boşluk doldurma veya doğru/yanlış soruları üret. ${soruKurali}`;
-} else {
-  kuralMetni = `DİKKAT: Zengin bir eğitim materyali üret. ${soruKurali}`;
+} else if (materialType === 'deneme_sinavi') {
+  kuralMetni = `DİKKAT: Tam kapsamlı, profesyonel bir DENEME SINAVI hazırla! Maksimum jeton limitini sonuna kadar kullan. Bolca 'okuma_parcasi', 'standart_soru' kullan. Soruları 1'den başlatarak numaralandır. ${soruKurali}`;
+} else if (materialType === 'fasikul_modu') {
+  kuralMetni = `DİKKAT: En az 4 bölümden oluşan DEV BİR FASİKÜL hazırla! Maksimum uzunlukta çıktı ver. HECELEME VE RENK KURALI: Metinlerin veya hecelerin renkli olmasını isterse, KESİNLİKLE 'zengin_metin' bloğunu kullan ve HTML yaz. (Örnek: <span style='color:red;'>he</span><span style='color:blue;'>ce</span>).`;
 }
 
 let kisisellestirme = matStudentName ? `\nÖNEMLİ: Öğrencimin adı ${matStudentName}. İlgi alanları: ${matInterests}. Materyali ona özel hale getir.` : "";
@@ -725,7 +734,7 @@ try {
 const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
 method: 'POST', headers: { 'Content-Type': 'application/json' },
 body: JSON.stringify({
-systemInstruction: { parts: [{ text: "Sen ordinaryüs profesör seviyesinde Eğitsel İçerik Mimarısın. HAYATİ KURALLAR: 1) JSON şemasına %100 uy. Şemada olmayan hiçbir özellik (property) uydurma. 2) Metinlerin İÇİNDE (cümlelerde) çift tırnak (\") kullanma, sadece tek tırnak (') kullan. 3) HTML kodları (<span>, <br> vb.) KESİNLİKLE YASAKTIR, metinleri düz yaz. 4) Soruları tekrar etme." }] },
+systemInstruction: { parts: [{ text: "Sen ordinaryüs profesör seviyesinde Eğitsel İçerik Mimarısın. HAYATİ KURALLAR: 1) JSON şemasına %100 uy. 2) Metinlerde ASLA çift tırnak (\") kullanma. 3) HTML yazarken (zengin_metin içinde) etiketleri TEK TIRNAK ile yaz (Örn: <span style='color:red'>). Tek tırnakların önüne ASLA kaçış işareti (ters eğik çizgi \\) KOYMA! 4) Metinlerin içine 'Enter' tuşuyla gerçek satır boşlukları bırakma, satır atlamak için '\\n' kullan. 5) Soruları tekrar etme." }] },
 contents: [{ parts: [{ text: `## EĞİTİM MATERYALİ TASLAĞI ##\nHedef Kitle: ${hedefKitleMetni}\nKonu: ${materialTopic}\nİstenen Format: ${kuralMetni}\n\n${kisisellestirme}\n${cozumKurali}\n${baslikKurali}\n\nZORUNLU KURAL: İstenen her şeyi %100 kapsayan, saf akademik içeriği JSON formatında üret.` }] }],
 generationConfig: {
     responseMimeType: "application/json",
@@ -770,9 +779,11 @@ if (!response.ok) throw new Error(response.status === 429 ? '429' : 'API Error')
 const data = await response.json();
 
 if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
-    let aiMetni = data.candidates[0].content.parts[0].text;
-    aiMetni = aiMetni.replace(/```json/gi, '').replace(/```/gi, '').trim();
-    
+ let aiMetni = data.candidates[0].content.parts[0].text;
+            // BARIŞ HOCA SON VURUŞ (ANA MATBAA İÇİN): 
+            aiMetni = aiMetni.replace(/```json/gi, '').replace(/```/gi, '').trim();
+            aiMetni = aiMetni.replace(/\\'/g, "'"); 
+            aiMetni = aiMetni.replace(/<([^>]+)>/g, (match) => match.replace(/"/g, "'"));
     try {
         // Yapay zeka düzgün yazdıysa normal çalıştır:
         const ayristirilmisData = JSON.parse(aiMetni);
@@ -1506,6 +1517,8 @@ title="Veli ödevi yaptıysa buraya tıklayın."
 <option value="eslestirme">🔗 Sütun Eşleştirme</option>
 <option value="bosluk">✍️ Boşluk Doldurma</option>
 <option value="dogru_yanlis">✔️ Doğru / Yanlış İfadeleri</option>
+<option value="deneme_sinavi">📑 Kapsamlı Deneme Sınavı (Uzun Format)</option>
+<option value="fasikul_modu">📚 4 Sayfalık Dev Fasikül (Renkli Heceli)</option>
 </optgroup>
 </select>
 
@@ -1556,17 +1569,20 @@ title="Veli ödevi yaptıysa buraya tıklayın."
     <label className="cursor-pointer bg-gradient-to-r from-yellow-400 to-orange-500 text-slate-900 px-3 py-1.5 rounded-lg font-black text-xs hover:scale-105 transition flex items-center w-max shadow-lg no-print">
         <i className="fa-solid fa-file-pdf mr-1.5"></i> Dosya Yükle (PDF/Resim) & Uyarla
         <input type="file" id="analizDosyasi" accept="image/*,application/pdf" onChange={(e) => {
-            const file = e.target.files[0];
+const file = e.target.files[0];
             if(!file || !apiKey) { showToast("API Anahtarı veya dosya eksik!"); return; }
             
-            // Matbaa ekranını temizle ve bekleme moduna geç
-            setMaterialTopic('⏳ DEVASA DOSYA (PDF veya GÖRSEL) YAPAY ZEKAYA YÜKLENİYOR VE ANALİZ EDİLİYOR... LÜTFEN BEKLEYİN!');
+            // BARIŞ HOCA MEGA GÜNCELLEME: Senin kutuya yazdığın özel talimatı kaybolmadan hafızaya alıyoruz!
+            const mevcutTalimat = materialTopic; 
+            
+            setMaterialTopic('⏳ DEVASA DOSYA (PDF/GÖRSEL) ANALİZ EDİLİYOR... LÜTFEN BEKLEYİN!');
             setMaterialType('Fark Etmez (Yapay Zeka Seçsin)');
             
             const reader = new FileReader();
             reader.onload = () => {
                 const base64Content = reader.result.split(',')[1];
-                generatePersonalizedMaterialFromFile(base64Content, file.type);
+                // Hafızadaki talimatı doğrudan motora gönderiyoruz:
+                generatePersonalizedMaterialFromFile(base64Content, file.type, mevcutTalimat);
             };
             reader.readAsDataURL(file);
             e.target.value = '';
