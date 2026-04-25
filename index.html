@@ -706,7 +706,7 @@ const generateMaterial = async () => {
     } else if (materialType === 'yonergeli_cizim') {
         kuralMetni = `DİKKAT: 'yonergeli_cizim' bloğunu kullan. İşitsel algı çalışması için 'Önce büyük bir ev çiz, çatısını kırmızıya boya' gibi adımlar üret.`;
     } else if (materialType === 'cizgi_calismasi') {
-        kuralMetni = `DİKKAT: İnce motor becerileri için 'cizgi_calismasi' (veya HTML içeren bilgi kutularını modifiye ederek) kesik çizgiler, labirentler veya takip edilecek şablonlar üret. Bolca yatay, dikey ve eğik çizgi yönergesi ver. - - - - - veya . . . . . gibi formlar kullan.`;
+        kuralMetni = `DİKKAT: SADECE 'cizgi_calismasi' bloğunu kullan. 'baslik' kısmına eğlenceli bir yönerge yaz (Örn: Tavşanı havuca götür). 'cizim_adimlari' dizisine bolca "- - - - - -" veya ". . . . . ." veya "~ ~ ~ ~ ~" gibi noktalı/kesik çizgi desenleri koy. ASLA TEST VEYA CEVAP ANAHTARI ÜRETME!`;
     } else if (materialType === 'konu_anlatimi') {
         kuralMetni = `DİKKAT: Sadece 'bilgi_kutusu', 'okuma_parcasi' ve 'zihin_haritasi' bloklarını kullanarak renkli ve dikkat çekici konu özeti üret.`;
     } else if (materialType === 'karma') {
@@ -2596,6 +2596,25 @@ return (
 <div className="w-full md:w-2/3 border-4 border-dashed border-gray-300 rounded-2xl flex items-center justify-center min-h-[300px] md:min-h-full">
 <span className="text-gray-300 font-bold tracking-widest uppercase text-xl rotate-[-15deg] opacity-50 select-none">Çizim Alanı</span>
 </div>
+</div>
+);
+
+// 26. ÇİZGİ ÇALIŞMASI (MOTOR BECERİLER)
+case 'cizgi_calismasi':
+return (
+<div key={idx} className="break-inside-avoid mb-8 bg-white border-[3px] border-gray-300 rounded-3xl p-6 md:p-10 print:bg-transparent shadow-sm">
+    {blok.baslik && <h3 className="font-bold text-2xl text-gray-800 mb-10 text-center print-high-contrast"><i className="fa-solid fa-pen-fancy mr-3 text-indigo-500"></i>{blok.baslik}</h3>}
+    <div className="space-y-12">
+        {blok.cizim_adimlari && blok.cizim_adimlari.map((cizgi, i) => (
+            <div key={i} className="flex items-center w-full relative">
+                <div className="w-6 h-6 rounded-full bg-green-500 border-4 border-green-200 z-10 print-high-contrast flex-shrink-0"></div>
+                <div className="flex-1 mx-2 overflow-hidden flex items-center">
+                   <span className="text-gray-300 font-black tracking-[0.6em] text-3xl md:text-4xl whitespace-nowrap w-full select-none print-high-contrast">{cizgi || "- - - - - - - - - - - - - - - - - - - -"}</span>
+                </div>
+                <div className="w-8 h-8 rounded-full bg-red-500 flex items-center justify-center text-white z-10 shadow-md print-high-contrast flex-shrink-0"><i className="fa-solid fa-star text-xs"></i></div>
+            </div>
+        ))}
+    </div>
 </div>
 );
 
