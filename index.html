@@ -677,7 +677,7 @@ const generateMaterial = async () => {
     let kayitliHafiza = localStorage.getItem(memoryKey) || lastPromptContext;
 
     if (materialTopic.toLowerCase().includes('devam') || materialTopic.toLowerCase().includes('bölüm') || materialTopic.toLowerCase().includes('bolum')) {
-        islenenKonu = `DEVAM İSTEĞİ: Öğrenci (${matStudentName || 'Genel'}) için geçmişte işlenen ve hafızaya alınan konu şuydu: "${kayitliHafiza}". Lütfen konuyu baştan alma! Geçmiş bölümleri tekrar etmeden, daha ileri seviyede, yepyeni alt başlıklar ve yepyeni sorularla KALDIĞIN YERDEN DEVAM ET! Kullanıcının şu anki ekstra isteği: "${materialTopic}"`;
+        islenenKonu = `DEVAM İSTEĞİ: Öğrenci (${matStudentName || 'Genel'}) için geçmişte işlenen ve hafızaya alınan konu şuydu: "${kayitliHafiza}". Lütfen konuyu baştan alma! Geçmiş bölümleri tekrar etmeden, yepyeni alt başlıklar ve sorularla KALDIĞIN YERDEN DEVAM ET! Kullanıcının ekstra isteği: "${materialTopic}" \n\nÖLÜMCÜL KURAL: Devam bölümünü yazarken de KESİNLİKLE JSON formatında ('dokuman_basligi' ve 'icerik_bloklari' dizisi) yanıt ver! Düz metin YAZMA! Çift tırnak (") ASLA kullanma!`;
     } else {
         setLastPromptContext(materialTopic);
         localStorage.setItem(memoryKey, materialTopic); // Yeni konuyu öğrencinin kalıcı dosyasına kaydet
@@ -2065,7 +2065,7 @@ const file = e.target.files[0];
 
 {/* DINAMIK BLOK RENDER MOTORU */}
 <div className="space-y-6">
-{materialResult.icerik_bloklari.map((blok, idx) => {
+{materialResult.icerik_bloklari && Array.isArray(materialResult.icerik_bloklari) && materialResult.icerik_bloklari.map((blok, idx) => {
 switch(blok.blok_tipi) {
 
 // 1. DEĞERLENDİRME FORMU (Yeni Şov Modülü)
@@ -2633,7 +2633,7 @@ default: return null;
 </div>
 
 {/* ÇÖZÜMLÜ CEVAP ANAHTARI BÖLÜMÜ (AYRI SAYFA) - ÖĞRETMEN NÜSHASI */}
-{showAnswerKey && materialResult.icerik_bloklari.some(b => b.cevap_anahtari) && (
+{showAnswerKey && materialResult.icerik_bloklari && Array.isArray(materialResult.icerik_bloklari) && materialResult.icerik_bloklari.some(b => b.cevap_anahtari) && (
 <div className="page-break-before mt-16 pt-8 border-t-4 border-dashed border-gray-400">
 <div className="cevap-anahtari-baslik bg-yellow-200 text-indigo-900 border-2 border-indigo-800 p-4 rounded-xl mb-6 text-center print-high-contrast shadow-md">
 <h3 className="text-2xl font-black uppercase tracking-widest"><i className="fa-solid fa-key mr-2 text-indigo-700"></i> CEVAP ANAHTARI & DETAYLI ÇÖZÜMLER</h3>
