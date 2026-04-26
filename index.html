@@ -2123,16 +2123,16 @@ for (let i = 0; i < idx; i++) {
 }
 return (
 <div key={idx} className="break-inside-avoid mb-6">
-<div className="flex items-start mb-3">
-<span className="font-black text-lg text-gray-900 mr-3 print-high-contrast">{soruNo}.</span>
-<p className="font-semibold text-gray-800 text-lg leading-snug print-high-contrast whitespace-pre-wrap">{blok.soru_metni}</p>
+<div className="mb-3">
+<span className="font-black text-lg text-gray-900 mr-2 inline-block align-top print-high-contrast">{soruNo}.</span>
+<p className="font-semibold text-gray-800 text-lg leading-snug print-high-contrast whitespace-pre-wrap inline-block w-[92%] align-top m-0">{blok.soru_metni}</p>
 </div>
 {blok.secenekler && blok.secenekler.length > 0 ? (
-<div className="pl-8 space-y-3 mt-3">
+<div className="pl-6 md:pl-8 space-y-3 mt-3">
 {blok.secenekler.map((sec, sIdx) => (
-<div key={sIdx} className="flex items-center text-gray-700 font-medium print-high-contrast w-full mb-1">
-<span className="w-8 h-8 rounded-full border-2 border-gray-400 flex items-center justify-center mr-3 font-bold text-sm bg-gray-50 print:bg-transparent">{['A', 'B', 'C', 'D', 'E'][sIdx]}</span>
-{sec}
+<div key={sIdx} className="text-gray-700 font-medium print-high-contrast w-full mb-1">
+<span className="w-8 h-8 rounded-full border-2 border-gray-400 inline-flex items-center justify-center mr-3 font-bold text-sm bg-gray-50 print:bg-transparent align-middle">{['A', 'B', 'C', 'D', 'E'][sIdx]}</span>
+<span className="inline-block align-middle w-[85%] whitespace-pre-wrap">{sec}</span>
 </div>
 ))}
 </div>
@@ -2156,25 +2156,38 @@ for (let i = 0; i < idx; i++) {
 }
 return (
 <div key={idx} className="break-inside-avoid mb-8">
-<div className="flex items-start mb-4">
-<span className="font-black text-lg text-gray-900 mr-3 print-high-contrast">{eslesmeNo}.</span>
-<p className="font-semibold text-gray-800 text-lg leading-snug print-high-contrast whitespace-pre-wrap">{blok.soru_metni || "Aşağıdaki kavramları eşleştiriniz."}</p>
+<div className="mb-4">
+<span className="font-black text-lg text-gray-900 mr-2 inline-block align-top print-high-contrast">{eslesmeNo}.</span>
+<p className="font-semibold text-gray-800 text-lg leading-snug print-high-contrast whitespace-pre-wrap inline-block w-[90%] align-top m-0">{blok.soru_metni || "Aşağıdaki kavramları eşleştiriniz."}</p>
 </div>
-<div className="flex justify-between items-center pl-8 px-4 mt-4 text-sm font-medium">
-<div className="w-5/12 space-y-4">
-{blok.sol_sutun && blok.sol_sutun.map((sol, i) => (
-<div key={i} className="flex items-center"><span className="min-w-[24px] h-6 rounded-full bg-gray-200 flex justify-center items-center mr-3 font-bold print-high-contrast">{i+1}</span> <span className="print-high-contrast">{sol}</span></div>
-))}
-</div>
-<div className="w-2/12 flex flex-col justify-center items-center space-y-6 text-gray-300">
-<i className="fa-solid fa-arrow-right-arrow-left text-xl opacity-50"></i>
-</div>
-<div className="w-5/12 space-y-4">
-{blok.sag_sutun_karisik && blok.sag_sutun_karisik.map((sag, i) => (
-<div key={i} className="flex items-center"><span className="min-w-[24px] h-6 rounded-full bg-gray-200 flex justify-center items-center mr-3 font-bold print-high-contrast">{['A','B','C','D','E','F','G'][i] || '?'}</span> <span className="print-high-contrast">{sag}</span></div>
-))}
-</div>
-</div>
+<table className="w-full mt-4 text-sm font-medium border-none pl-4 md:pl-8">
+    <tbody>
+        {Math.max(blok.sol_sutun?.length || 0, blok.sag_sutun_karisik?.length || 0) > 0 && 
+         Array.from({ length: Math.max(blok.sol_sutun?.length || 0, blok.sag_sutun_karisik?.length || 0) }).map((_, i) => (
+            <tr key={i} className="border-none">
+                <td className="py-3 px-1 md:px-2 w-5/12 align-middle border-none">
+                    {blok.sol_sutun?.[i] && (
+                        <div>
+                            <span className="inline-flex min-w-[24px] h-6 rounded-full bg-gray-200 justify-center items-center mr-2 md:mr-3 font-bold print-high-contrast align-middle">{i+1}</span>
+                            <span className="inline-block align-middle print-high-contrast break-words max-w-[80%]">{blok.sol_sutun[i]}</span>
+                        </div>
+                    )}
+                </td>
+                <td className="py-3 px-1 md:px-2 w-2/12 align-middle text-center border-none text-gray-300">
+                    {blok.sol_sutun?.[i] && blok.sag_sutun_karisik?.[i] && <i className="fa-solid fa-arrow-right-arrow-left text-xl opacity-50 inline-block align-middle"></i>}
+                </td>
+                <td className="py-3 px-1 md:px-2 w-5/12 align-middle border-none">
+                    {blok.sag_sutun_karisik?.[i] && (
+                        <div>
+                            <span className="inline-flex min-w-[24px] h-6 rounded-full bg-gray-200 justify-center items-center mr-2 md:mr-3 font-bold print-high-contrast align-middle">{['A','B','C','D','E','F','G','H','I','J'][i] || '?'}</span>
+                            <span className="inline-block align-middle print-high-contrast break-words max-w-[80%]">{blok.sag_sutun_karisik[i]}</span>
+                        </div>
+                    )}
+                </td>
+            </tr>
+        ))}
+    </tbody>
+</table>
 </div>
 );
 
