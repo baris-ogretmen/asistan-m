@@ -1691,6 +1691,81 @@ title="Veli ödevi yaptıysa buraya tıklayın."
 <button onClick={() => { setMaterialTopic('5. sınıf için Türkçe, Matematik, Fen Bilimleri, Sosyal Bilgiler ve İngilizce derslerinden dengeli 10 soruluk genel değerlendirme testi hazırla.'); setMaterialType('test'); setMatQuestionCount('10'); setMaterialError(''); }} className="text-xs bg-white/10 hover:bg-white/20 border border-teal-300/40 px-3 py-1.5 rounded-full transition">5. sınıf genel test</button>
 <button onClick={() => { setMaterialTopic('4. sınıf için genel değerlendirme testi hazırla.'); setMaterialType('test'); setMatQuestionCount('10'); setMaterialError(''); }} className="text-xs bg-white/10 hover:bg-white/20 border border-teal-300/40 px-3 py-1.5 rounded-full transition">4. sınıf genel test</button>
 </div>
+{/* HAZIR ŞABLON BUTONLARI - TÜM TÜRLER */}
+<div className="mb-3 bg-teal-800/20 p-3 rounded-xl border border-teal-500/20">
+  <p className="text-[11px] font-bold text-teal-300 uppercase mb-2"><i className="fa-solid fa-bolt mr-1"></i> Hazır Şablonlar — tıkla, sınıfı/konuyu değiştir, üret</p>
+  {[
+    { grup: "📝 Testler & Değerlendirme", items: [
+      { e: "Genel Değerlendirme Testi", t: "test", m: "4. sınıf için tüm derslerden dengeli dağılmış 10 soruluk çoktan seçmeli genel değerlendirme testi hazırla. Her sorunun cevap anahtarını ve kısa açıklamasını ekle." },
+      { e: "Çoktan Seçmeli Test", t: "test", m: "5. sınıf matematik kesirler konusundan 10 soruluk çoktan seçmeli test hazırla. Cevap anahtarı ekle." },
+      { e: "Yeni Nesil Test", t: "yeni_nesil_test", m: "6. sınıf fen bilimleri için günlük hayatla ilişkili, paragraf ve görsel içeren 8 soruluk yeni nesil test hazırla. Cevap anahtarı ekle." },
+      { e: "Deneme Sınavı", t: "deneme_sinavi", m: "8. sınıf LGS tarzı, Türkçe ve matematikten oluşan kapsamlı bir deneme sınavı hazırla. Cevap anahtarı ekle." },
+      { e: "Boşluk Doldurma", t: "bosluk", m: "3. sınıf Türkçe için 10 cümlelik boşluk doldurma çalışması hazırla. Cevap anahtarı ekle." },
+      { e: "Doğru / Yanlış", t: "dogru_yanlis", m: "4. sınıf sosyal bilgiler için 10 maddelik doğru-yanlış çalışması hazırla. Cevap anahtarı ekle." },
+      { e: "Sütun Eşleştirme", t: "eslestirme", m: "2. sınıf için hayvanlar ve yaşam alanlarını eşleştirme çalışması hazırla. Sol sütunda hayvanlar, sağ sütunda yaşam alanları karışık olsun. Cevap anahtarı ekle." },
+      { e: "Kapsamlı İlk Değerlendirme", t: "degerlendirme_formu", m: "İlkokula yeni başlayan bir öğrenci için akademik ve gelişimsel alanları kapsayan kapsamlı ilk değerlendirme formu hazırla." },
+      { e: "4 Sayfalık Fasikül", t: "fasikul_modu", m: "4. sınıf matematik çarpma işlemi konusundan renkli, heceli açıklamalı 4 sayfalık dev fasikül hazırla. Bol örnek ve alıştırma olsun." }
+    ]},
+    { grup: "🧩 Özel Eğitim & Okul Öncesi", items: [
+      { e: "Çizgi Çalışması", t: "cizgi_calismasi", m: "Okul öncesi 5 yaş için el-göz koordinasyonu çizgi çalışması hazırla. Her satırda kalemle üzerinden geçilecek farklı bir desen olsun: düz çizgi, dalgalı çizgi, zikzak, yay, halka. 6 satır olsun." },
+      { e: "Yönergeli Çizim", t: "yonergeli_cizim", m: "Okul öncesi için adım adım yönergeli çizim çalışması hazırla. Çocuk yönergeleri dinleyerek basit bir ev çizsin. 5 adım olsun." },
+      { e: "Ba-Sa-Ra Hece", t: "basara_yontemi", m: "İlk okuma öğrenen bir öğrenci için Ba-Sa-Ra hece yöntemiyle çalışma hazırla. A ve E sesli harfleriyle heceler oluştur." },
+      { e: "Görsel Dikte", t: "gorsel_dikte", m: "Okul öncesi için emojili görsel dikte çalışması hazırla. Her emojinin altına kelimeyi yazması için boşluk bırak. 6 kelime olsun." },
+      { e: "Emoji Farkı Bul", t: "gorsel_fark_emoji", m: "Okul öncesi için emoji matrisi hazırla. Çocuk belirli bir emojiyi (örneğin gülen yüz) diğerleri arasından bulup işaretlesin. 6 satır olsun." },
+      { e: "Sosyal Hikaye", t: "sosyal_hikaye", m: "Okul öncesi çocuklar için diş fırçalama alışkanlığını anlatan, kısa ve olumlu cümlelerden oluşan bir sosyal hikaye yaz. Sonuna 3 basit soru ekle." }
+    ]},
+    { grup: "🗣️ Dil & Konuşma", items: [
+      { e: "Tekerleme", t: "tekerleme_calismasi", m: "Okul öncesi için dil ve konuşma gelişimini destekleyen 3 adet kısa tekerleme hazırla. Her tekerlemenin altına ilgili emojiler koy." },
+      { e: "Nefes Egzersizi", t: "nefes_egzersizi", m: "Konuşma terapisi için fonolojik farkındalık ve nefes egzersizleri içeren bir çalışma hazırla. Adım adım yönergeler olsun." }
+    ]},
+    { grup: "🤖 Kodlama & Teknoloji", items: [
+      { e: "Blok Kodlama", t: "blok_kodlama", m: "5. sınıf için Scratch tarzı blok kodlama görevleri hazırla. Öğrenci bir karakteri hareket ettirmek için blokları sıralasın." },
+      { e: "Algoritma Şeması", t: "algoritma_semasi", m: "Bir günlük rutini (örneğin sabah hazırlığı) akış şeması olarak gösteren bilgisayarsız algoritma çalışması hazırla." },
+      { e: "Algoritma Labirenti", t: "labirent_pano", m: "İlkokul için unplugged algoritma labirenti hazırla. Öğrenci ok yönergeleriyle karakteri hedefe ulaştırsın." }
+    ]},
+    { grup: "🕵️ Macera & Mantık", items: [
+      { e: "Şifre Kırıcı", t: "sifre_kirici", m: "4. sınıf matematik için şifre kırıcı / kaçış odası etkinliği hazırla. İşlemlerin sonuçları harflere karşılık gelsin, gizli kelimeyi bulsun." },
+      { e: "Hata Dedektifi", t: "hata_dedektifi", m: "4. sınıf matematik için içinde bilinçli hatalar bulunan çözülmüş işlemler hazırla. Öğrenci hataları bulup düzeltsin. Cevap anahtarı ekle." },
+      { e: "Sudoku / Mantık Gridi", t: "sudoku_bulmaca", m: "İlkokul seviyesine uygun, sayılar veya sembollerle basit bir sudoku / mantık gridi hazırla. İpucu ve çözüm ekle." }
+    ]},
+    { grup: "🛒 Günlük Yaşam", items: [
+      { e: "Fiş & Fatura", t: "gercek_hayat_fatura", m: "3. sınıf matematik için market alışverişi temalı bir fiş-fatura problemi hazırla. Ürünler, adetler ve fiyatlar olsun, toplam tutarı hesaplasın." },
+      { e: "Yemek Tarifi (Algoritma)", t: "adim_recete", m: "Basit bir sağlıklı atıştırmalık için adım adım yemek tarifi hazırla. Malzemeler ve sıralı adımlar olsun." },
+      { e: "Gazete Manşeti", t: "haber_bulteni", m: "4. sınıf için problem çözme temalı bir gazete manşeti ve kısa haber metni hazırla. Sonuna anlama soruları ekle." }
+    ]},
+    { grup: "🧠 Analitik & Kavramsal", items: [
+      { e: "5N1K Okuma", t: "5n1k", m: "3. sınıf için kısa bir okuma parçası ve ardından 5N1K (kim, ne, nerede, ne zaman, neden, nasıl) sorularını renkli kutularda hazırla." },
+      { e: "İnfografik", t: "infografik", m: "Su döngüsü konusunu görsel infografik çalışması olarak hazırla. Ana kavramlar ve kısa açıklamalar olsun." },
+      { e: "Zihin Haritası", t: "zihin_haritasi", m: "5. sınıf fen için 'canlılar' konusunu merkeze alan bir zihin haritası hazırla. Yan dallar ve alt kavramlar olsun." },
+      { e: "Venn Şeması", t: "venn_semasi", m: "4. sınıf için memeliler ve kuşları karşılaştıran bir Venn şeması hazırla. Ortak ve farklı özellikleri yaz." },
+      { e: "Tablo & Veri Analizi", t: "gorsel_veri", m: "4. sınıf matematik için bir sınıfın sevdiği meyveleri gösteren veri tablosu hazırla, ardından tabloyla ilgili sorular ekle." },
+      { e: "Dönüşüm Makinesi", t: "on_sonra_makine", m: "2. sınıf matematik için girdi-çıktı dönüşüm makinesi hazırla. Kural belli olsun, öğrenci eksik çıktıları bulsun." },
+      { e: "Sırala ve Yapıştır", t: "sirala_yapistir", m: "Okul öncesi için bir hikayenin karışık verilmiş olaylarını doğru sıraya koyma çalışması hazırla." }
+    ]},
+    { grup: "✨ Yaratıcı & Motivasyon", items: [
+      { e: "Başarı Sertifikası", t: "sertifika", m: "Bir öğrenci için renkli ve motive edici bir başarı sertifikası hazırla. İsim alanı boş kalsın, altında tarih ve öğretmen imzası olsun." },
+      { e: "Karikatür / Diyalog", t: "karikatur_diyalog", m: "3. sınıf için iki karakter arasında geçen kısa, eğitici bir diyalog hazırla. Sonuna anlama soruları ekle." },
+      { e: "Tersine Eğitim", t: "tersine_egitim", m: "5. sınıf için 'sen öğret' formatında bir çalışma hazırla. Öğrenci bir konuyu kendisi anlatacakmış gibi doldursun." },
+      { e: "Bilgi Kartları", t: "flashcard", m: "4. sınıf İngilizce için kesilebilir bilgi kartları hazırla. Bir yüzünde İngilizce kelime, diğer yüzünde Türkçesi olsun. 8 kart olsun." }
+    ]},
+    { grup: "🎲 Veli & Ev", items: [
+      { e: "Ev Görevi Tombalası", t: "veli_tombalasi", m: "Okul öncesi çocuk ve velisi için birlikte yapılacak ev görevlerini içeren 9 kareli bir tombala hazırla." },
+      { e: "Renkli Konu Anlatımı", t: "konu_anlatimi", m: "3. sınıf için toplama işlemini örneklerle anlatan renkli bir konu özeti hazırla." },
+      { e: "Konu + Mini Quiz", t: "karma", m: "3. sınıf için çarpma işlemini anlatan renkli konu özeti hazırla, ardından 5 soruluk mini quiz ekle. Cevap anahtarı olsun." }
+    ]}
+  ].map((kategori, ki) => (
+    <div key={ki} className="mb-2">
+      <p className="text-[10px] font-bold text-teal-400/80 mb-1">{kategori.grup}</p>
+      <div className="flex flex-wrap gap-1.5">
+        {kategori.items.map((sablon, i) => (
+          <button key={i} onClick={() => { if (typeof setMaterialType === 'function') { try { setMaterialType(sablon.t); } catch(_){} } setMaterialTopic(sablon.m); setMaterialError(''); }} className="text-[11px] bg-white/10 hover:bg-yellow-400 hover:text-teal-900 text-teal-50 px-2.5 py-1 rounded-md font-semibold transition border border-teal-400/20 hover:border-yellow-400">
+            {sablon.e}
+          </button>
+        ))}
+      </div>
+    </div>
+  ))}
+</div>
 <textarea value={materialTopic} onChange={(e) => { setMaterialTopic(e.target.value); setMaterialError(''); }} rows="6" placeholder="İsteğini doğal biçimde yaz: “5. sınıf için genel değerlendirme testi istiyorum”." className="w-full px-4 py-3 bg-white/10 border border-teal-400/50 rounded-xl outline-none text-white placeholder-teal-200/50 resize-y focus:bg-white focus:text-teal-900 transition mb-2"></textarea>
 {materialProgress && <div className="mb-2 text-sm font-semibold text-yellow-200" role="status"><i className="fa-solid fa-spinner fa-spin mr-2"></i>{materialProgress}</div>}
 {materialError && <div className="mb-2 text-sm text-red-100 bg-red-950/40 border border-red-300/40 rounded-lg px-3 py-2" role="alert"><i className="fa-solid fa-circle-exclamation mr-2"></i>{materialError}</div>}
