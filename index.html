@@ -81,7 +81,7 @@ body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; color: #1f29
 <body>
 <div id="root"></div>
 
-<!-- ===== ZİRVE API KATMANI · çoklu anahtar + otomatik model + düşünme modu düzeltmesi + Türkçe teşhis ===== -->
+<!-- ===== ZİRVE API KATMANI · çoklu anahtar · otomatik model · 503 dayanıklılığı · Türkçe teşhis ===== -->
 <script>
 /* ============================================================
    ZİRVE API KATMANI  ·  çoklu anahtar + otomatik model + teşhis
@@ -145,10 +145,30 @@ function ringBekleme(m){
   return dk>60 ? Math.ceil(dk/60)+' saat' : dk+' dakika';
 }
 
-// ---------- Kota dolunca geçilecek modeller (limiti yüksekten düşüğe) ----------
-const MODEL_ONERI = ["gemini-2.5-flash-lite","gemini-flash-lite-latest","gemini-2.5-flash","gemini-flash-latest","gemini-2.5-pro"];
+// ---------- Yedek model zinciri ----------
+// Tercih sırası (hızlı/bol kotalı → yavaş/kısıtlı). Test Et'e basınca anahtarının
+// GERÇEKTEN erişebildiği modeller öğrenilir ve zincir ona göre kurulur; böylece
+// var olmayan bir model adına düşmeyiz.
+const MODEL_TERCIH = [
+  "gemini-2.5-flash-lite", "gemini-flash-lite-latest",
+  "gemini-2.5-flash", "gemini-flash-latest",
+  "gemini-2.0-flash-lite", "gemini-2.0-flash",
+  "gemini-2.5-pro", "gemini-pro-latest"
+];
+let KULLANILABILIR = [];
+try{ const r=localStorage.getItem('zirve_models'); if(r) KULLANILABILIR=JSON.parse(r)||[]; }catch(e){}
+
+function modelHavuzu(){
+  if(!KULLANILABILIR.length) return MODEL_TERCIH.slice();
+  const havuz = MODEL_TERCIH.filter(m => KULLANILABILIR.indexOf(m)!==-1);
+  // Listede olup tercihimizde olmayan flash modelleri de sona ekle (yeni çıkanlar için)
+  KULLANILABILIR.forEach(m=>{
+    if(havuz.indexOf(m)===-1 && /flash/.test(m) && !/thinking|exp|8b/.test(m)) havuz.push(m);
+  });
+  return havuz.length ? havuz : MODEL_TERCIH.slice();
+}
 function modelSonraki(simdiki, denenenler){
-  return MODEL_ONERI.find(m => m!==simdiki && denenenler.indexOf(m)===-1) || null;
+  return modelHavuzu().find(m => m!==simdiki && denenenler.indexOf(m)===-1) || null;
 }
 
 // ---------- Hız sınırlayıcı (kotayı boşa harcamamak için) ----------
@@ -218,6 +238,8 @@ function netHatasi(e){
     return 'SORUN: MODEL. Bu model adı anahtarınla kullanılamıyor. "Test Et"e bas — çalışan modeli otomatik bulup seçerim.';
   if(/Unknown name|Invalid JSON payload|INVALID_ARGUMENT/i.test(m))
     return 'SORUN: İSTEK BİÇİMİ. Model bu parametreleri kabul etmiyor. Katman otomatik uyarlamayı deniyor; sürerse modeli gemini-2.5-flash yap.';
+  if(/50[0234]|UNAVAILABLE|high demand|overloaded|INTERNAL/i.test(m))
+    return 'SORUN: GOOGLE TARAFI (503). Model şu an aşırı yoğun. Senin anahtarınla, modelinle ya da yazdığın metinle İLGİSİ YOK — Google\'ın sunucusu geçici olarak dolu. Katman bekleyip tekrar denedi ve sırayla diğer modelleri denedi; hepsi doluysa 2-3 dakika sonra tekrar dene.';
   if(/429|quota|RESOURCE_EXHAUSTED/i.test(m))
     return 'SORUN: KOTA (429). Hız sınırını düşür ya da gemini-2.5-flash-lite dene. Günlük kota Pasifik saatiyle gece yarısı sıfırlanır.';
   if(/aborted|AbortError|zaman aşımı/i.test(m))
@@ -308,7 +330,9 @@ window.fetch = async function(input, init){
   };
 
   let sonHata = null;
-  for(let deneme=0; deneme<10; deneme++){
+  const yogunSayac = {};      // model -> kaç kez 503 aldı
+  let bekleme = 900;          // 503 sonrası bekleme (katlanarak artar)
+  for(let deneme=0; deneme<40; deneme++){
     const key = ringPick(model);
     if(!key){
       if(modelDegistir()) continue;
@@ -353,6 +377,27 @@ window.fetch = async function(input, init){
 
     // --- 400: parametre uyumsuzluğu → sonraki gövde varyantı ---
     if(r.status===400 && orjGovde && vi < govdeVar.length-1){ vi++; continue; }
+
+    // --- 503/500/502/504: Google'ın sunucusu yoğun. Anahtarla ilgisi YOK. ---
+    if(r.status===503 || r.status===500 || r.status===502 || r.status===504){
+      const em = await googleErr(r);
+      yogunSayac[model] = (yogunSayac[model]||0)+1;
+      if(yogunSayac[model] <= 3){
+        const sn = Math.round(bekleme/1000);
+        toast(`⏳ <b>Google tarafı yoğun (${r.status})</b> · <b>${model}</b> · ${yogunSayac[model]}/3. deneme, ${sn} sn sonra tekrar...<br><span style="font-weight:700;font-size:.72rem">Bu senin anahtarınla ilgili değil, Google'ın sunucusu geçici olarak dolu. Bekliyorum, sen bir şey yapma.</span>`);
+        await new Promise(res=>setTimeout(res, bekleme));
+        bekleme = Math.min(9000, Math.round(bekleme*1.8));
+        continue;
+      }
+      if(modelDegistir()){
+        bekleme = 900;
+        toast(`🔁 <b>${denenenModeller[denenenModeller.length-2]}</b> yoğunluğu geçmedi → <b>${model}</b> modeli deneniyor.`);
+        continue;
+      }
+      sonHata = new Error('HTTP '+r.status+' · '+em);
+      toast('⚠️ '+netHatasi(sonHata),'red');
+      return r;
+    }
 
     if(!r.ok){
       const em = await googleErr(r);
@@ -441,6 +486,10 @@ async function testEt(){
     }
   }
   if(gecerli.length && modeller){
+    KULLANILABILIR = modeller.slice();
+    try{ localStorage.setItem('zirve_models', JSON.stringify(modeller)); }catch(e){}
+    const havuz = modelHavuzu();
+    satir.push(`<div style="color:#166534;font-weight:700">🔁 Yedek model zinciri kuruldu (${havuz.length} model): ${havuz.slice(0,4).join(' → ')}${havuz.length>4?' → …':''}</div>`);
     const secili=document.getElementById('zirve-model').value.trim();
     if(!secili || modeller.indexOf(secili)===-1){
       const iyi=enIyiModel(modeller);
@@ -528,7 +577,9 @@ else panelKur();
 
 // Dışarıdan erişim (konsoldan bakmak istersen)
 window.ZIRVE = { RING, get model(){return MODEL;}, set model(m){ MODEL=m; localStorage.setItem(LS.model,m); panelYenile(); },
-                 netHatasi, listModels, ringHazir, ringLoad, ringSet, ringSave, modelSonraki, testEt, panelYenile };
+                 netHatasi, listModels, ringHazir, ringLoad, ringSet, ringSave, modelSonraki, testEt, panelYenile,
+                 modelHavuzu, get modeller(){return KULLANILABILIR;},
+                 set modeller(l){ KULLANILABILIR=l; try{localStorage.setItem('zirve_models',JSON.stringify(l));}catch(e){} } };
 })();
 </script>
 
