@@ -81,7 +81,7 @@ body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; color: #1f29
 <body>
 <div id="root"></div>
 
-<!-- ===== ZİRVE API KATMANI · çoklu anahtar · otomatik model · 503 dayanıklılığı · Türkçe teşhis ===== -->
+<!-- ===== ZİRVE KATMANI · API dayanıklılığı + 82 düzenlenebilir şablon ===== -->
 <script>
 /* ============================================================
    ZİRVE API KATMANI  ·  çoklu anahtar + otomatik model + teşhis
@@ -283,6 +283,111 @@ function enIyiModel(list){
 }
 
 // ============================================================
+//  HAZIR ŞABLON KÜTÜPHANESİ (82 şablon) — düzenlenebilir
+// ============================================================
+const VARSAYILAN_SABLONLAR = [{"grup": "📝 Testler & Değerlendirme", "items": [{"e": "Genel Değerlendirme Testi", "t": "test", "m": "4. sınıf için tüm derslerden dengeli dağılmış 10 soruluk çoktan seçmeli genel değerlendirme testi hazırla. Her sorunun cevap anahtarını ve kısa açıklamasını ekle."}, {"e": "Çoktan Seçmeli Test", "t": "test", "m": "5. sınıf matematik kesirler konusundan 10 soruluk çoktan seçmeli test hazırla. Cevap anahtarı ekle."}, {"e": "Yeni Nesil Test", "t": "yeni_nesil_test", "m": "6. sınıf fen bilimleri için günlük hayatla ilişkili, paragraf ve görsel içeren 8 soruluk yeni nesil test hazırla. Cevap anahtarı ekle."}, {"e": "Deneme Sınavı", "t": "deneme_sinavi", "m": "8. sınıf LGS tarzı, Türkçe ve matematikten oluşan kapsamlı bir deneme sınavı hazırla. Cevap anahtarı ekle."}, {"e": "Boşluk Doldurma", "t": "bosluk", "m": "3. sınıf Türkçe için 10 cümlelik boşluk doldurma çalışması hazırla. Cevap anahtarı ekle."}, {"e": "Doğru / Yanlış", "t": "dogru_yanlis", "m": "4. sınıf sosyal bilgiler için 10 maddelik doğru-yanlış çalışması hazırla. Cevap anahtarı ekle."}, {"e": "Sütun Eşleştirme", "t": "eslestirme", "m": "2. sınıf için hayvanlar ve yaşam alanlarını eşleştirme çalışması hazırla. Sol sütunda hayvanlar, sağ sütunda yaşam alanları karışık olsun. Cevap anahtarı ekle."}, {"e": "Kapsamlı İlk Değerlendirme", "t": "degerlendirme_formu", "m": "İlkokula yeni başlayan bir öğrenci için akademik ve gelişimsel alanları kapsayan kapsamlı ilk değerlendirme formu hazırla."}, {"e": "4 Sayfalık Fasikül", "t": "fasikul_modu", "m": "4. sınıf matematik çarpma işlemi konusundan renkli, heceli açıklamalı 4 sayfalık dev fasikül hazırla. Bol örnek ve alıştırma olsun."}]}, {"grup": "🧩 Özel Eğitim & Okul Öncesi", "items": [{"e": "Çizgi Çalışması", "t": "cizgi_calismasi", "m": "Okul öncesi 5 yaş için el-göz koordinasyonu çizgi çalışması hazırla. Her satırda kalemle üzerinden geçilecek farklı bir desen olsun: düz çizgi, dalgalı çizgi, zikzak, yay, halka. 6 satır olsun."}, {"e": "Yönergeli Çizim", "t": "yonergeli_cizim", "m": "Okul öncesi için adım adım yönergeli çizim çalışması hazırla. Çocuk yönergeleri dinleyerek basit bir ev çizsin. 5 adım olsun."}, {"e": "Ba-Sa-Ra Hece", "t": "basara_yontemi", "m": "İlk okuma öğrenen bir öğrenci için Ba-Sa-Ra hece yöntemiyle çalışma hazırla. A ve E sesli harfleriyle heceler oluştur."}, {"e": "Görsel Dikte", "t": "gorsel_dikte", "m": "Okul öncesi için emojili görsel dikte çalışması hazırla. Her emojinin altına kelimeyi yazması için boşluk bırak. 6 kelime olsun."}, {"e": "Emoji Farkı Bul", "t": "gorsel_fark_emoji", "m": "Okul öncesi için emoji matrisi hazırla. Çocuk belirli bir emojiyi (örneğin gülen yüz) diğerleri arasından bulup işaretlesin. 6 satır olsun."}, {"e": "Sosyal Hikaye", "t": "sosyal_hikaye", "m": "Okul öncesi çocuklar için diş fırçalama alışkanlığını anlatan, kısa ve olumlu cümlelerden oluşan bir sosyal hikaye yaz. Sonuna 3 basit soru ekle."}]}, {"grup": "🗣️ Dil & Konuşma", "items": [{"e": "Tekerleme", "t": "tekerleme_calismasi", "m": "Okul öncesi için dil ve konuşma gelişimini destekleyen 3 adet kısa tekerleme hazırla. Her tekerlemenin altına ilgili emojiler koy."}, {"e": "Nefes Egzersizi", "t": "nefes_egzersizi", "m": "Konuşma terapisi için fonolojik farkındalık ve nefes egzersizleri içeren bir çalışma hazırla. Adım adım yönergeler olsun."}]}, {"grup": "🤖 Kodlama & Teknoloji", "items": [{"e": "Blok Kodlama", "t": "blok_kodlama", "m": "5. sınıf için Scratch tarzı blok kodlama görevleri hazırla. Öğrenci bir karakteri hareket ettirmek için blokları sıralasın."}, {"e": "Algoritma Şeması", "t": "algoritma_semasi", "m": "Bir günlük rutini (örneğin sabah hazırlığı) akış şeması olarak gösteren bilgisayarsız algoritma çalışması hazırla."}, {"e": "Algoritma Labirenti", "t": "labirent_pano", "m": "İlkokul için unplugged algoritma labirenti hazırla. Öğrenci ok yönergeleriyle karakteri hedefe ulaştırsın."}]}, {"grup": "🕵️ Macera & Mantık", "items": [{"e": "Şifre Kırıcı", "t": "sifre_kirici", "m": "4. sınıf matematik için şifre kırıcı / kaçış odası etkinliği hazırla. İşlemlerin sonuçları harflere karşılık gelsin, gizli kelimeyi bulsun."}, {"e": "Hata Dedektifi", "t": "hata_dedektifi", "m": "4. sınıf matematik için içinde bilinçli hatalar bulunan çözülmüş işlemler hazırla. Öğrenci hataları bulup düzeltsin. Cevap anahtarı ekle."}, {"e": "Sudoku / Mantık Gridi", "t": "sudoku_bulmaca", "m": "İlkokul seviyesine uygun, sayılar veya sembollerle basit bir sudoku / mantık gridi hazırla. İpucu ve çözüm ekle."}]}, {"grup": "🛒 Günlük Yaşam", "items": [{"e": "Fiş & Fatura", "t": "gercek_hayat_fatura", "m": "3. sınıf matematik için market alışverişi temalı bir fiş-fatura problemi hazırla. Ürünler, adetler ve fiyatlar olsun, toplam tutarı hesaplasın."}, {"e": "Yemek Tarifi (Algoritma)", "t": "adim_recete", "m": "Basit bir sağlıklı atıştırmalık için adım adım yemek tarifi hazırla. Malzemeler ve sıralı adımlar olsun."}, {"e": "Gazete Manşeti", "t": "haber_bulteni", "m": "4. sınıf için problem çözme temalı bir gazete manşeti ve kısa haber metni hazırla. Sonuna anlama soruları ekle."}]}, {"grup": "🧠 Analitik & Kavramsal", "items": [{"e": "5N1K Okuma", "t": "5n1k", "m": "3. sınıf için kısa bir okuma parçası ve ardından 5N1K (kim, ne, nerede, ne zaman, neden, nasıl) sorularını renkli kutularda hazırla."}, {"e": "İnfografik", "t": "infografik", "m": "Su döngüsü konusunu görsel infografik çalışması olarak hazırla. Ana kavramlar ve kısa açıklamalar olsun."}, {"e": "Zihin Haritası", "t": "zihin_haritasi", "m": "5. sınıf fen için 'canlılar' konusunu merkeze alan bir zihin haritası hazırla. Yan dallar ve alt kavramlar olsun."}, {"e": "Venn Şeması", "t": "venn_semasi", "m": "4. sınıf için memeliler ve kuşları karşılaştıran bir Venn şeması hazırla. Ortak ve farklı özellikleri yaz."}, {"e": "Tablo & Veri Analizi", "t": "gorsel_veri", "m": "4. sınıf matematik için bir sınıfın sevdiği meyveleri gösteren veri tablosu hazırla, ardından tabloyla ilgili sorular ekle."}, {"e": "Dönüşüm Makinesi", "t": "on_sonra_makine", "m": "2. sınıf matematik için girdi-çıktı dönüşüm makinesi hazırla. Kural belli olsun, öğrenci eksik çıktıları bulsun."}, {"e": "Sırala ve Yapıştır", "t": "sirala_yapistir", "m": "Okul öncesi için bir hikayenin karışık verilmiş olaylarını doğru sıraya koyma çalışması hazırla."}]}, {"grup": "✨ Yaratıcı & Motivasyon", "items": [{"e": "Başarı Sertifikası", "t": "sertifika", "m": "Bir öğrenci için renkli ve motive edici bir başarı sertifikası hazırla. İsim alanı boş kalsın, altında tarih ve öğretmen imzası olsun."}, {"e": "Karikatür / Diyalog", "t": "karikatur_diyalog", "m": "3. sınıf için iki karakter arasında geçen kısa, eğitici bir diyalog hazırla. Sonuna anlama soruları ekle."}, {"e": "Tersine Eğitim", "t": "tersine_egitim", "m": "5. sınıf için 'sen öğret' formatında bir çalışma hazırla. Öğrenci bir konuyu kendisi anlatacakmış gibi doldursun."}, {"e": "Bilgi Kartları", "t": "flashcard", "m": "4. sınıf İngilizce için kesilebilir bilgi kartları hazırla. Bir yüzünde İngilizce kelime, diğer yüzünde Türkçesi olsun. 8 kart olsun."}]}, {"grup": "🎲 Veli & Ev", "items": [{"e": "Ev Görevi Tombalası", "t": "veli_tombalasi", "m": "Okul öncesi çocuk ve velisi için birlikte yapılacak ev görevlerini içeren 9 kareli bir tombala hazırla."}, {"e": "Renkli Konu Anlatımı", "t": "konu_anlatimi", "m": "3. sınıf için toplama işlemini örneklerle anlatan renkli bir konu özeti hazırla."}, {"e": "Konu + Mini Quiz", "t": "karma", "m": "3. sınıf için çarpma işlemini anlatan renkli konu özeti hazırla, ardından 5 soruluk mini quiz ekle. Cevap anahtarı olsun."}]}, {"grup": "🧩 Özel Eğitim · BEP & Destek", "items": [{"e": "BEP Destek Çalışması", "t": "Fark Etmez (Yapay Zeka Seçsin)", "m": "Hafif düzeyde öğrenme güçlüğü olan 3. sınıf öğrencisi için, toplama işleminde BEP hedefine yönelik basitten zora sıralanmış destek çalışması hazırla. Her adımda görsel ipucu ve kısa yönerge olsun."}, {"e": "Dikkat & Odaklanma", "t": "emoji", "m": "Dikkat eksikliği olan 2. sınıf öğrencisi için farklı olanı bulma, aynısını işaretleme ve sayma içeren dikkat çalışması hazırla."}, {"e": "Sosyal Öykü", "t": "okuma", "m": "Sıra beklemekte zorlanan bir okul öncesi çocuk için birinci ağızdan yazılmış, kısa cümleli, olumlu dille biten bir sosyal öykü hazırla."}, {"e": "Duygu Tanıma Kartları", "t": "flashcard", "m": "Duygu tanımayı destekleyen bilgi kartları hazırla: ön yüzde emoji ve duygu adı, arka yüzde o duygunun ne zaman hissedildiğine dair çocuk diliyle bir örnek olsun."}, {"e": "Günlük Rutin Çizelgesi", "t": "tablo", "m": "Otizmli bir ilkokul öğrencisi için sabah okula gelişten eve dönüşe kadar görsel destekli günlük rutin çizelgesi hazırla. Her adımda emoji ve kısa yönerge olsun."}, {"e": "İnce Motor Çalışması", "t": "cizgi_calismasi", "m": "Kalem tutmayı yeni öğrenen bir çocuk için kolaydan zora giden, en az 6 farklı desende ince motor çizgi çalışması hazırla."}, {"e": "Eşleştirme (Görsel)", "t": "eslestirme", "m": "Özel eğitim öğrencisi için nesne-gölge eşleştirme çalışması hazırla. Sol sütunda nesne adları, sağ sütunda karışık şekilde tanımları olsun."}, {"e": "Sıralama Becerisi", "t": "sirala", "m": "El yıkama basamaklarını karışık verip doğru sıraya koyduran, görsel destekli sıralama çalışması hazırla."}]}, {"grup": "🎨 Okul Öncesi · Kavram", "items": [{"e": "Renk & Şekil", "t": "Fark Etmez (Yapay Zeka Seçsin)", "m": "5 yaş grubu için temel renkleri ve şekilleri tanıtan, boyama ve eşleştirme içeren kavram çalışması hazırla."}, {"e": "Sayı Çalışması 1-10", "t": "Fark Etmez (Yapay Zeka Seçsin)", "m": "Okul öncesi için 1'den 10'a kadar sayıları tanıtan, sayma ve rakam yazma alıştırmalı çalışma hazırla."}, {"e": "Boyut & Konum", "t": "Fark Etmez (Yapay Zeka Seçsin)", "m": "Okul öncesi için büyük-küçük, uzun-kısa, altında-üstünde kavramlarını öğreten görsel çalışma hazırla."}, {"e": "Görsel Dikte", "t": "dikte", "m": "İlk okuma öğrenen öğrenci için emoji ve kelime eşli görsel dikte çalışması hazırla."}, {"e": "Farkı Bul", "t": "emoji", "m": "Okul öncesi için emoji matrisinde farklı olanı bulma çalışması hazırla. Kolaydan zora doğru 6 satır olsun."}]}, {"grup": "📖 Türkçe & İlk Okuma", "items": [{"e": "Ba-Sa-Ra Hece", "t": "basara", "m": "İlk okuma öğrenen bir öğrenci için Ba-Sa-Ra hece yöntemiyle çalışma hazırla. A ve E sesli harfleriyle heceler oluştur."}, {"e": "Okuduğunu Anlama", "t": "okuma", "m": "3. sınıf için 150 kelimelik bir okuma parçası ve ardından 5 anlama sorusu hazırla. Cevap anahtarı ekle."}, {"e": "Hikâye Haritası", "t": "zihin", "m": "Bir hikâyenin kahraman, yer, zaman, olay ve sonuç ögelerini çıkaran hikâye haritası çalışması hazırla."}, {"e": "Yazım & Noktalama", "t": "bosluk", "m": "4. sınıf için yazım yanlışlarını buldurma ve noktalama işaretlerini tamamlatma çalışması hazırla. Cevap anahtarı ekle."}, {"e": "Kelime Dağarcığı", "t": "flashcard", "m": "3. sınıf için 10 yeni kelimeyi anlamı ve örnek cümlesiyle tanıtan bilgi kartları hazırla."}, {"e": "Ses Çalışması", "t": "Fark Etmez (Yapay Zeka Seçsin)", "m": "R sesini doğru çıkaramayan bir öğrenci için başta, ortada ve sonda R sesi geçen kelimelerle artikülasyon çalışması hazırla."}]}, {"grup": "🔢 Matematik", "items": [{"e": "Problem Kurma", "t": "Fark Etmez (Yapay Zeka Seçsin)", "m": "4. sınıf için verilen işlemden problem kurdurma çalışması hazırla. 6 işlem ver, her biri için problem yazdır."}, {"e": "Ritmik Sayma", "t": "Fark Etmez (Yapay Zeka Seçsin)", "m": "2. sınıf için 2'şer, 5'er ve 10'ar ritmik sayma çalışması hazırla. Boşluk doldurmalı olsun."}, {"e": "Saat Okuma", "t": "Fark Etmez (Yapay Zeka Seçsin)", "m": "3. sınıf için tam, buçuk ve çeyrek saatleri okuma ve yazma çalışması hazırla."}, {"e": "Para & Alışveriş", "t": "fatura", "m": "3. sınıf için market alışverişi üzerinden para hesabı yaptıran fiş/fatura çalışması hazırla."}, {"e": "İşlem Şeridi", "t": "makine", "m": "2. sınıf için kuralı verilen dönüşüm makinesiyle toplama-çıkarma alıştırması hazırla."}, {"e": "Hata Dedektifi", "t": "hatali", "m": "5. sınıf kesirler konusunda kasten hatalı çözülmüş bir işlem ver; öğrenci hatayı bulup doğrusunu yazsın."}, {"e": "Ölçme (Uzunluk)", "t": "tablo", "m": "4. sınıf için uzunluk ölçme birimleri dönüşüm tablosu ve alıştırmaları hazırla. Cevap anahtarı ekle."}]}, {"grup": "🔬 Fen & Sosyal", "items": [{"e": "Deney Raporu", "t": "recete", "m": "5. sınıf fen bilimleri için basit bir deneyin malzeme listesi, adımları ve gözlem-sonuç bölümü olan deney raporu şablonu hazırla."}, {"e": "Kavram Haritası", "t": "zihin", "m": "6. sınıf fen bilimleri 'maddenin hâlleri' konusu için merkez kavram ve yan kavramlardan oluşan zihin haritası çalışması hazırla."}, {"e": "Zaman Şeridi", "t": "sirala", "m": "4. sınıf sosyal bilgiler için Kurtuluş Savaşı olaylarını karışık verip zaman şeridine sıralatan çalışma hazırla."}, {"e": "Karşılaştırma (Venn)", "t": "venn", "m": "5. sınıf fen için 'bitki hücresi ve hayvan hücresi' karşılaştırmalı Venn şeması çalışması hazırla."}, {"e": "İnfografik Özet", "t": "gorsel_veri", "m": "6. sınıf için 'geri dönüşüm' konulu, sayısal verilerle desteklenmiş infografik tarzı özet materyali hazırla."}]}, {"grup": "🏫 Sınıf Yönetimi", "items": [{"e": "Sınıf Kuralları Afişi", "t": "Fark Etmez (Yapay Zeka Seçsin)", "m": "İlkokul 1. sınıf için olumlu dille yazılmış, 6 maddelik görsel sınıf kuralları afişi hazırla."}, {"e": "Davranış Takip Çizelgesi", "t": "tablo", "m": "Bir öğrencinin haftalık hedef davranışlarını gün gün takip edebileceğim çizelge hazırla. Değerlendirme ölçütleri net olsun."}, {"e": "Ödül / Pekiştireç Tablosu", "t": "tombala", "m": "Sınıf içi olumlu davranışları pekiştirmek için çocukların seçebileceği ödül görevlerinden oluşan tombala kartı hazırla."}, {"e": "Nöbet & Görev Çizelgesi", "t": "tablo", "m": "Sınıf içi haftalık görev dağılımı çizelgesi hazırla: tahta, çiçek, sıra düzeni gibi görevler olsun."}]}, {"grup": "👨‍👩‍👧 Veli & Ev", "items": [{"e": "Ev Çalışma Programı", "t": "tablo", "m": "3. sınıf öğrencisi için hafta içi akşamlarına uygun, 30 dakikayı geçmeyen ev çalışma programı çizelgesi hazırla."}, {"e": "Okuma Takip Çizelgesi", "t": "tablo", "m": "Her gün 15 dakika okuma yapan bir öğrenci için veli imzalı aylık okuma takip çizelgesi hazırla."}, {"e": "Veli Bilgilendirme Notu", "t": "okuma", "m": "Velilere çocuklarının ekran süresini yönetmeleri için pratik önerileri olan kısa bir bilgilendirme notu hazırla."}, {"e": "Tatil Etkinlik Paketi", "t": "tombala", "m": "Ara tatilde ailece yapılabilecek, ekran gerektirmeyen eğitici etkinliklerden oluşan tombala kartı hazırla."}]}, {"grup": "🌍 İngilizce & Değerler", "items": [{"e": "İngilizce Kelime Kartı", "t": "flashcard", "m": "4. sınıf İngilizce 'animals' ünitesi için ön yüzde İngilizce kelime, arka yüzde Türkçe karşılığı ve örnek cümle olan kartlar hazırla."}, {"e": "İngilizce Boşluk Doldurma", "t": "bosluk", "m": "5. sınıf İngilizce present simple konusundan 10 cümlelik boşluk doldurma çalışması hazırla. Cevap anahtarı ekle."}, {"e": "Değerler Eğitimi", "t": "okuma", "m": "İlkokul için 'yardımlaşma' değerini işleyen kısa bir öykü ve ardından 3 tartışma sorusu hazırla."}]}];
+
+function sablonYukle(){
+  try{ const r=localStorage.getItem('zirve_sablonlar');
+       if(r){ const d=JSON.parse(r); if(Array.isArray(d)&&d.length) return d; } }catch(e){}
+  return JSON.parse(JSON.stringify(VARSAYILAN_SABLONLAR));
+}
+function sablonKaydet(d){ try{ localStorage.setItem('zirve_sablonlar', JSON.stringify(d)); }catch(e){} }
+// React bu diziyi okuyacak (uygulamadaki liste yerine geçer)
+window.ZIRVE_SABLONLAR = sablonYukle();
+
+// ---------- Şablon düzenleyici (modal) ----------
+function sablonDuzenleyiciAc(){
+  let ov=document.getElementById('zirve-sablon-ov');
+  if(ov){ ov.style.display='flex'; sablonListeCiz(); return; }
+  ov=document.createElement('div'); ov.id='zirve-sablon-ov';
+  ov.style.cssText='position:fixed;inset:0;z-index:2147483600;background:rgba(15,23,42,.72);display:flex;align-items:center;justify-content:center;padding:14px';
+  ov.innerHTML=`<div style="background:#fff;border-radius:18px;width:min(760px,100%);max-height:90vh;display:flex;flex-direction:column;font:400 13px system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#0f172a;overflow:hidden">
+    <div style="padding:14px 16px;border-bottom:2px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center;gap:8px">
+      <div><b style="font-size:16px">🧩 Şablon Kütüphanesi</b><div id="zirve-sablon-say" style="font-size:11px;font-weight:700;opacity:.65"></div></div>
+      <div style="display:flex;gap:6px">
+        <button id="zirve-sablon-yeni" style="background:#dcfce7;color:#166534;border:none;border-radius:9px;padding:7px 11px;font-weight:800;cursor:pointer;font-size:12px">+ Yeni</button>
+        <button id="zirve-sablon-sifirla" style="background:#fef3c7;color:#92400e;border:none;border-radius:9px;padding:7px 11px;font-weight:800;cursor:pointer;font-size:12px">Varsayılana Dön</button>
+        <button id="zirve-sablon-kapat" style="background:#fee2e2;color:#991b1b;border:none;border-radius:9px;padding:7px 11px;font-weight:800;cursor:pointer;font-size:12px">Kapat</button>
+      </div>
+    </div>
+    <div style="padding:9px 16px;background:#f8fafc;border-bottom:1px solid #e2e8f0;font-size:11px;font-weight:600">
+      Promptu değiştir → <b>Kaydet</b>. Değişiklik tarayıcında saklanır, sayfayı kapatsan da durur.
+      <input id="zirve-sablon-ara" placeholder="Şablon ara..." style="width:100%;margin-top:7px;padding:7px 9px;border:2px solid #e2e8f0;border-radius:9px;font-weight:600">
+    </div>
+    <div id="zirve-sablon-liste" style="overflow:auto;padding:12px 16px;flex:1"></div>
+  </div>`;
+  document.body.appendChild(ov);
+  document.getElementById('zirve-sablon-kapat').onclick=()=>{ ov.style.display='none'; };
+  document.getElementById('zirve-sablon-ara').oninput=sablonListeCiz;
+  document.getElementById('zirve-sablon-sifirla').onclick=()=>{
+    if(!confirm('Tüm şablonlar fabrika ayarına dönecek. Kendi eklediklerin silinecek. Emin misin?')) return;
+    try{ localStorage.removeItem('zirve_sablonlar'); }catch(e){}
+    window.ZIRVE_SABLONLAR = sablonYukle(); sablonListeCiz();
+    toast('↩️ Şablonlar varsayılana döndü. Sayfa yenileniyor...','green'); setTimeout(()=>location.reload(),1400);
+  };
+  document.getElementById('zirve-sablon-yeni').onclick=()=>{
+    const d=window.ZIRVE_SABLONLAR;
+    let g=d.find(x=>x.grup==='⭐ Benim Şablonlarım');
+    if(!g){ g={grup:'⭐ Benim Şablonlarım', items:[]}; d.unshift(g); }
+    g.items.unshift({e:'Yeni Şablon', t:'Fark Etmez (Yapay Zeka Seçsin)', m:'Buraya kendi isteğini yaz. Örn: 3. sınıf matematik toplama işleminden 10 soruluk çalışma hazırla, cevap anahtarı ekle.'});
+    sablonKaydet(d); sablonListeCiz();
+  };
+  sablonListeCiz();
+}
+function sablonListeCiz(){
+  const kutu=document.getElementById('zirve-sablon-liste'); if(!kutu) return;
+  const ara=((document.getElementById('zirve-sablon-ara')||{}).value||'').toLocaleLowerCase('tr');
+  const d=window.ZIRVE_SABLONLAR;
+  let n=0; d.forEach(g=>n+=g.items.length);
+  const sy=document.getElementById('zirve-sablon-say'); if(sy) sy.textContent=n+' şablon · '+d.length+' grup';
+  let h='';
+  d.forEach((g,gi)=>{
+    const gorunen=g.items.map((it,ii)=>({it,ii})).filter(({it})=>!ara || (it.e+' '+it.m).toLocaleLowerCase('tr').indexOf(ara)!==-1);
+    if(!gorunen.length) return;
+    h+=`<div style="font-weight:800;font-size:12px;margin:10px 0 6px;color:#334155">${g.grup}</div>`;
+    gorunen.forEach(({it,ii})=>{
+      h+=`<div style="border:2px solid #e2e8f0;border-radius:11px;padding:9px;margin-bottom:8px;background:#fff">
+        <input value="${String(it.e).replace(/"/g,'&quot;')}" data-g="${gi}" data-i="${ii}" data-f="e" class="zs-in" style="width:100%;border:none;font-weight:800;font-size:13px;outline:none;margin-bottom:5px">
+        <textarea data-g="${gi}" data-i="${ii}" data-f="m" class="zs-in" rows="3" style="width:100%;border:1px solid #e2e8f0;border-radius:8px;padding:6px;font:600 11px system-ui;resize:vertical">${String(it.m)}</textarea>
+        <div style="display:flex;justify-content:flex-end;gap:6px;margin-top:5px">
+          <button data-g="${gi}" data-i="${ii}" class="zs-sil" style="background:#fee2e2;color:#991b1b;border:none;border-radius:7px;padding:4px 9px;font-weight:800;cursor:pointer;font-size:11px">Sil</button>
+        </div></div>`;
+    });
+  });
+  kutu.innerHTML = h || '<div style="padding:18px;text-align:center;font-weight:700;opacity:.6">Eşleşen şablon yok.</div>';
+  kutu.querySelectorAll('.zs-in').forEach(el=>{
+    el.onchange=()=>{ const g=+el.dataset.g,i=+el.dataset.i,f=el.dataset.f;
+      window.ZIRVE_SABLONLAR[g].items[i][f]=el.value; sablonKaydet(window.ZIRVE_SABLONLAR);
+      toast('💾 Şablon kaydedildi. Matbaa\'da görmek için sayfayı yenile.','green'); };
+  });
+  kutu.querySelectorAll('.zs-sil').forEach(el=>{
+    el.onclick=()=>{ const g=+el.dataset.g,i=+el.dataset.i;
+      window.ZIRVE_SABLONLAR[g].items.splice(i,1);
+      if(!window.ZIRVE_SABLONLAR[g].items.length) window.ZIRVE_SABLONLAR.splice(g,1);
+      sablonKaydet(window.ZIRVE_SABLONLAR); sablonListeCiz(); };
+  });
+}
+window.ZIRVE_SABLON_AC = sablonDuzenleyiciAc;
+
+// Matbaa'daki "Hazır Şablonlar" başlığına düzenleme düğmesi iliştir
+function sablonDugmesiYerlestir(){
+  const ps=document.querySelectorAll('p');
+  for(let i=0;i<ps.length;i++){
+    if((ps[i].textContent||'').indexOf('Hazır Şablonlar')!==-1){
+      if(ps[i].querySelector('.zs-duzenle')) return;
+      const b=document.createElement('button');
+      b.className='zs-duzenle';
+      b.textContent='✏️ Düzenle / Ekle';
+      b.style.cssText='margin-left:8px;background:#fde047;color:#713f12;border:none;border-radius:999px;padding:2px 9px;font-weight:800;font-size:10px;cursor:pointer;vertical-align:middle';
+      b.onclick=(e)=>{ e.preventDefault(); e.stopPropagation(); sablonDuzenleyiciAc(); };
+      ps[i].appendChild(b);
+      return;
+    }
+  }
+}
+
+// ============================================================
 //  FETCH SARMALAYICI — uygulamanın 15 çağrısı da buradan geçer
 // ============================================================
 const ORIG_FETCH = window.fetch.bind(window);
@@ -432,13 +537,28 @@ window.fetch = async function(input, init){
       const jsonIster = orjGovde.generationConfig && orjGovde.generationConfig.responseMimeType==='application/json';
       if(jsonIster){
         let temizMetin = metin.replace(/^```(?:json)?/i,'').replace(/```$/,'').trim();
-        let gecerli=true; try{ JSON.parse(temizMetin); }catch(e){ gecerli=false; }
-        if(!gecerli){
+        let nesne=null; try{ nesne=JSON.parse(temizMetin); }catch(e){ nesne=null; }
+        if(nesne===null){
           if(vi < govdeVar.length-1){ vi++; continue; }
           sonHata = new Error('KESIK_JSON');
           toast('⚠️ '+netHatasi(sonHata),'red');
           return r;
         }
+        // --- Sertifika, AÇIKÇA istenmedikçe eklenmez ---
+        try{
+          const istek = JSON.stringify(orjGovde.contents||'');
+          const sertifikaIstendi = /sertifika|başarı belgesi|basari belgesi|başarı sertifikası|takdir belgesi/i.test(istek);
+          if(!sertifikaIstendi && nesne && Array.isArray(nesne.icerik_bloklari)){
+            const once = nesne.icerik_bloklari.length;
+            nesne.icerik_bloklari = nesne.icerik_bloklari.filter(b => !b || b.blok_tipi!=='sertifika');
+            if(nesne.icerik_bloklari.length !== once && typeof Response!=='undefined'){
+              const kopya = JSON.parse(JSON.stringify(d));
+              kopya.candidates[0].content.parts = [{text: JSON.stringify(nesne)}];
+              CFG_OK[model]=vi;
+              return new Response(JSON.stringify(kopya), {status:200, headers:{'Content-Type':'application/json'}});
+            }
+          }
+        }catch(e){}
       }
     }
     CFG_OK[model] = vi;   // çalışan varyantı hatırla
@@ -563,6 +683,7 @@ function yerlestir(){
     const t=(btns[i].textContent||'');
     if(t.indexOf('Kaydet ve Doğrula')!==-1){ hedef=btns[i]; break; }
   }
+  try{ sablonDugmesiYerlestir(); }catch(e){}
   if(!hedef){ p.style.display='none'; return; }          // Ayarlar ekranında değiliz
   if(p.previousSibling!==hedef && hedef.parentNode){
     hedef.parentNode.insertBefore(p, hedef.nextSibling);
@@ -578,7 +699,8 @@ else panelKur();
 // Dışarıdan erişim (konsoldan bakmak istersen)
 window.ZIRVE = { RING, get model(){return MODEL;}, set model(m){ MODEL=m; localStorage.setItem(LS.model,m); panelYenile(); },
                  netHatasi, listModels, ringHazir, ringLoad, ringSet, ringSave, modelSonraki, testEt, panelYenile,
-                 modelHavuzu, get modeller(){return KULLANILABILIR;},
+                 modelHavuzu, sablonYukle, sablonKaydet, sablonDuzenleyiciAc,
+                 get modeller(){return KULLANILABILIR;},
                  set modeller(l){ KULLANILABILIR=l; try{localStorage.setItem('zirve_models',JSON.stringify(l));}catch(e){} } };
 })();
 </script>
@@ -1106,7 +1228,7 @@ const generateMaterial = async () => {
     const studentContext = matStudentName.trim() ? `Öğrenci: ${matStudentName.trim()}. İlgi alanları: ${matInterests.trim() || 'belirtilmedi'}.` : '';
     const testContract = `Bu bir TEST isteğidir. SADECE tam ${questionCount} adet standart_soru bloğu üret; bilgi_kutusu veya Materyal Notu ekleme. Her soru zorunlu olarak şu JSON biçiminde olmalı: {"blok_tipi":"standart_soru","soru_metni":"...","secenekler":["birinci seçenek","ikinci seçenek","üçüncü seçenek","dördüncü seçenek"],"cevap_anahtari":"Doğru cevap: A. Kısa açıklama."}. secenekler dizisinde TAM DÖRT metin olmalı. Genel değerlendirme istendiyse dersleri dengeli dağıt.`;
     const formatContext = (materialType && !materialType.startsWith('Fark')) ? ('İstenen materyal formatı: ' + materialType + '.') : '';
-    const blokRehberi = 'Kullanabileceğin blok tipleri ve zorunlu alanları:\n- "bilgi_kutusu": {baslik, icerik_metni}\n- "okuma_parcasi": {baslik, icerik_metni}\n- "standart_soru": {soru_metni, secenekler (boşluk/açık uçluda boş bırak), cevap_anahtari}\n- "eslestirme_tablosu": {soru_metni, sol_sutun, sag_sutun_karisik, cevap_anahtari}\n- "cizgi_calismasi": {baslik, cizim_adimlari}. cizim_adimlari her elemanı, satır boyunca en az 30 kez TEKRARLAYAN tek bir çizgi deseni olmalı. Örnek elemanlar: "∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿", "________________________________", "oOoOoOoOoOoOoOoOoOoOoOoOoOoOoO", "/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\", "⌒⌒⌒⌒⌒⌒⌒⌒⌒⌒⌒⌒⌒⌒⌒⌒⌒⌒⌒⌒", "cccccccccccccccccccccccccccccc". En az 6 farklı desen satırı üret.\n- "yonergeli_cizim": {baslik, cizim_adimlari}\n- "gorsel_dikte": {baslik, dikte_kelimeleri:[{emoji, kelime}]}\n- "basara_hece_tablosu": {baslik, hece_gruplari}\n- "tombala_grid": {baslik, tombala_gorevleri}\n- "emoji_matrisi": {soru_metni, emojiler}\n- "sertifika": {sertifika_ogrenci, sertifika_metni}\n- "venn_semasi": {kavram1, kavram2, kavram1_ozellikler, kavram2_ozellikler, ortak_ozellikler}\n- "zihin_haritasi": {baslik, merkez_kavram, yan_kavramlar}\n- "flashcard_grid": {baslik, kartlar:[{on_yuz, arka_yuz}]}\n- "recete_adimlari": {baslik, malzemeler, adimlar}\n- "gorsel_veri": {baslik, sutunlar, satirlar:[{hucreler}]}\n- "donusum_makinesi": {baslik, kural, girdiler, ciktilar}\n- "sirala_yapistir": {baslik, karisik_adimlar}\n- "hatali_islem": {hatali_cozum}\n- "gazete_manseti": {manset, haber_metni}\n- "zengin_metin": {baslik, html_icerik}\nBlok tipini TAM olarak yukarıdaki gibi yaz. En az 3-6 blok üret. Okul öncesi/özel eğitim istenirse bolca cizgi_calismasi, yonergeli_cizim, gorsel_dikte, emoji_matrisi kullan. Her blokta uygunsa cevap_anahtari ekle.';
+    const blokRehberi = 'Kullanabileceğin blok tipleri ve zorunlu alanları:\n- "bilgi_kutusu": {baslik, icerik_metni}\n- "okuma_parcasi": {baslik, icerik_metni}\n- "standart_soru": {soru_metni, secenekler (boşluk/açık uçluda boş bırak), cevap_anahtari}\n- "eslestirme_tablosu": {soru_metni, sol_sutun, sag_sutun_karisik, cevap_anahtari}\n- "cizgi_calismasi": {baslik, cizim_adimlari}. cizim_adimlari her elemanı, satır boyunca en az 30 kez TEKRARLAYAN tek bir çizgi deseni olmalı. Örnek elemanlar: "∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿", "________________________________", "oOoOoOoOoOoOoOoOoOoOoOoOoOoOoO", "/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\", "⌒⌒⌒⌒⌒⌒⌒⌒⌒⌒⌒⌒⌒⌒⌒⌒⌒⌒⌒⌒", "cccccccccccccccccccccccccccccc". En az 6 farklı desen satırı üret.\n- "yonergeli_cizim": {baslik, cizim_adimlari}\n- "gorsel_dikte": {baslik, dikte_kelimeleri:[{emoji, kelime}]}\n- "basara_hece_tablosu": {baslik, hece_gruplari}\n- "tombala_grid": {baslik, tombala_gorevleri}\n- "emoji_matrisi": {soru_metni, emojiler}\n- "sertifika": {sertifika_ogrenci, sertifika_metni}\n- "venn_semasi": {kavram1, kavram2, kavram1_ozellikler, kavram2_ozellikler, ortak_ozellikler}\n- "zihin_haritasi": {baslik, merkez_kavram, yan_kavramlar}\n- "flashcard_grid": {baslik, kartlar:[{on_yuz, arka_yuz}]}\n- "recete_adimlari": {baslik, malzemeler, adimlar}\n- "gorsel_veri": {baslik, sutunlar, satirlar:[{hucreler}]}\n- "donusum_makinesi": {baslik, kural, girdiler, ciktilar}\n- "sirala_yapistir": {baslik, karisik_adimlar}\n- "hatali_islem": {hatali_cozum}\n- "gazete_manseti": {manset, haber_metni}\n- "zengin_metin": {baslik, html_icerik}\nBlok tipini TAM olarak yukarıdaki gibi yaz. ÇOK ÖNEMLİ: Kullanıcı isteğinde açıkça \"sertifika\", \"başarı belgesi\" ya da \"takdir belgesi\" GEÇMİYORSA sertifika bloğunu ASLA ekleme; materyali sertifikayla bitirme. Açıkça istenirse en sona ekle. En az 3-6 blok üret. Okul öncesi/özel eğitim istenirse bolca cizgi_calismasi, yonergeli_cizim, gorsel_dikte, emoji_matrisi kullan. Her blokta uygunsa cevap_anahtari ekle.';
     const blokEsitle = {'coktan_secmeli':'standart_soru','test_sorusu':'standart_soru','soru':'standart_soru','klasik_soru':'standart_soru','acik_uclu':'standart_soru','bosluk':'standart_soru','bosluk_doldurma':'standart_soru','dogru_yanlis':'standart_soru','yeni_nesil':'standart_soru','eslestirme':'eslestirme_tablosu','bilgi':'bilgi_kutusu','konu_anlatimi':'bilgi_kutusu','konu_ozeti':'bilgi_kutusu','ozet':'bilgi_kutusu','aciklama':'bilgi_kutusu','okuma':'okuma_parcasi','metin':'okuma_parcasi','cizgi':'cizgi_calismasi','cizgi_calismalari':'cizgi_calismasi','yonergeli':'yonergeli_cizim','cizim':'yonergeli_cizim','dikte':'gorsel_dikte','hece':'basara_hece_tablosu','basara':'basara_hece_tablosu','tombala':'tombala_grid','bingo':'tombala_grid','emoji':'emoji_matrisi','gorsel_fark':'emoji_matrisi','basari_belgesi':'sertifika','venn':'venn_semasi','zihin':'zihin_haritasi','flashcard':'flashcard_grid','bilgi_karti':'flashcard_grid','kartlar':'flashcard_grid','recete':'recete_adimlari','adim_adim':'recete_adimlari','tarif':'recete_adimlari','tablo':'gorsel_veri','veri_tablosu':'gorsel_veri','makine':'donusum_makinesi','on_sonra_makine':'donusum_makinesi','sirala':'sirala_yapistir','hatali':'hatali_islem','hata_dedektifi':'hatali_islem','sifre':'sifre_kirici','fatura':'fatura_tablosu','fis':'fatura_tablosu','gazete':'gazete_manseti','haber':'gazete_manseti','manset':'gazete_manseti','diyalog':'karikatur_diyalog','karikatur':'karikatur_diyalog','sudoku':'sudoku_bulmaca','bulmaca':'sudoku_bulmaca','degerlendirme':'degerlendirme_tablosu','degerlendirme_formu':'degerlendirme_tablosu','html':'zengin_metin','serbest':'zengin_metin'};
     const normalizeBloklar = (r) => { if (r && Array.isArray(r.icerik_bloklari)) { r.icerik_bloklari.forEach((b) => { if (b && typeof b.blok_tipi === 'string') { const k = b.blok_tipi.toLowerCase().trim(); if (blokEsitle[k]) b.blok_tipi = blokEsitle[k]; } }); } return r; };
     const prompt = `KULLANICININ İSTEĞİ: ${instruction}\nHEDEF KİTLE: ${targetGroup}\n${formatContext}\n${studentContext}\n${isTestRequest ? testContract : blokRehberi + '\n\nİsteği eksiksiz, zengin ve yazdırılabilir bir çalışma kâğıdına dönüştür.'}\n\nSadece JSON döndür. Biçim: {"dokuman_basligi":"...","alt_baslik":"...","icerik_bloklari":[...]}. Markdown, açıklama ve kod çiti yazma.`;
@@ -2197,7 +2319,7 @@ title="Veli ödevi yaptıysa buraya tıklayın."
 {/* HAZIR ŞABLON BUTONLARI - TÜM TÜRLER */}
 <div className="mb-3 bg-teal-800/20 p-3 rounded-xl border border-teal-500/20">
   <p className="text-[11px] font-bold text-teal-300 uppercase mb-2"><i className="fa-solid fa-bolt mr-1"></i> Hazır Şablonlar — tıkla, sınıfı/konuyu değiştir, üret</p>
-  {[
+  {(window.ZIRVE_SABLONLAR || [
     { grup: "📝 Testler & Değerlendirme", items: [
       { e: "Genel Değerlendirme Testi", t: "test", m: "4. sınıf için tüm derslerden dengeli dağılmış 10 soruluk çoktan seçmeli genel değerlendirme testi hazırla. Her sorunun cevap anahtarını ve kısa açıklamasını ekle." },
       { e: "Çoktan Seçmeli Test", t: "test", m: "5. sınıf matematik kesirler konusundan 10 soruluk çoktan seçmeli test hazırla. Cevap anahtarı ekle." },
@@ -2256,7 +2378,7 @@ title="Veli ödevi yaptıysa buraya tıklayın."
       { e: "Renkli Konu Anlatımı", t: "konu_anlatimi", m: "3. sınıf için toplama işlemini örneklerle anlatan renkli bir konu özeti hazırla." },
       { e: "Konu + Mini Quiz", t: "karma", m: "3. sınıf için çarpma işlemini anlatan renkli konu özeti hazırla, ardından 5 soruluk mini quiz ekle. Cevap anahtarı olsun." }
     ]}
-  ].map((kategori, ki) => (
+  ]).map((kategori, ki) => (
     <div key={ki} className="mb-2">
       <p className="text-[10px] font-bold text-teal-400/80 mb-1">{kategori.grup}</p>
       <div className="flex flex-wrap gap-1.5">
