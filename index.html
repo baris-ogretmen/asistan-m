@@ -81,7 +81,7 @@ body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; color: #1f29
 <body>
 <div id="root"></div>
 
-<!-- ===== ZİRVE API KATMANI · çoklu anahtar + otomatik model + Türkçe teşhis ===== -->
+<!-- ===== ZİRVE API KATMANI · çoklu anahtar + otomatik model + düşünme modu düzeltmesi + Türkçe teşhis ===== -->
 <script>
 /* ============================================================
    ZİRVE API KATMANI  ·  çoklu anahtar + otomatik model + teşhis
@@ -172,23 +172,29 @@ function aile(m){
   if(/pro/.test(m)) return 'pro';
   return 'diger';
 }
-// Gövde dönüşümleri: sırayla denenir, çalışan hatırlanır
+// Gövde dönüşümleri: sırayla denenir, çalışan hatırlanır.
+// ASIL ARIZA: Gemini 2.5+ modellerde "düşünme modu" varsayılan AÇIK. responseMimeType:json ve
+// maxOutputTokens:16000 ile istek atılınca bütçe düşünmeye gidiyor, JSON YARIDA KESİLİYOR,
+// uygulamanın JSON.parse'ı patlıyor ve hata catch{} ile yutulduğu için ekranda hiçbir şey olmuyor.
+// Aşağıdaki varyantlar düşünmeyi kapatır/asgariye indirir.
 function govdeVaryantlari(m){
   const f=aile(m);
-  const temiz = (b)=>{ const c=JSON.parse(JSON.stringify(b)); if(c.generationConfig){ delete c.generationConfig.thinkingConfig; } return c; };
-  if(f==='yeni') return [
-    (b)=>{ const c=temiz(b); c.generationConfig=Object.assign({},c.generationConfig,{thinkingConfig:{thinkingLevel:"low"}}); delete c.generationConfig.temperature; return c; },
-    (b)=>temiz(b),
-    (b)=>b
-  ];
-  if(f==='flash25') return [
-    (b)=>{ const c=temiz(b); c.generationConfig=Object.assign({maxOutputTokens:8192},c.generationConfig,{thinkingConfig:{thinkingBudget:0}}); return c; },
-    (b)=>temiz(b),
-    (b)=>b
-  ];
+  const temiz=(b)=>{ const c=JSON.parse(JSON.stringify(b)); if(c.generationConfig){ delete c.generationConfig.thinkingConfig; } return c; };
+  const dusunme=(b,cfg)=>{ const c=temiz(b); c.generationConfig=Object.assign({}, c.generationConfig, {thinkingConfig:cfg}); return c; };
+  if(f==='yeni')    return [ (b)=>{ const c=dusunme(b,{thinkingLevel:"low"}); delete c.generationConfig.temperature; return c; }, (b)=>temiz(b), (b)=>b ];
+  if(f==='flash25') return [ (b)=>dusunme(b,{thinkingBudget:0}), (b)=>temiz(b), (b)=>b ];
+  if(f==='pro')     return [ (b)=>dusunme(b,{thinkingBudget:128}), (b)=>temiz(b), (b)=>b ];   // pro'da tamamen kapatılamaz, asgariye indir
   return [ (b)=>temiz(b), (b)=>b ];
 }
 const CFG_OK = {};   // model -> çalıştığı bilinen varyant
+
+// ---------- Zaman aşımlı istek (sonsuz bekleme yok) ----------
+const ZAMAN_ASIMI = 150000;   // 150 sn
+function fetchZamanAsimli(u, init){
+  const ac = new AbortController();
+  const t = setTimeout(()=>ac.abort(), ZAMAN_ASIMI);
+  return ORIG_FETCH(u, Object.assign({}, init, {signal: ac.signal})).finally(()=>clearTimeout(t));
+}
 
 // ---------- Google'ın gerçek hata mesajını oku ----------
 async function googleErr(r){
@@ -214,8 +220,12 @@ function netHatasi(e){
     return 'SORUN: İSTEK BİÇİMİ. Model bu parametreleri kabul etmiyor. Katman otomatik uyarlamayı deniyor; sürerse modeli gemini-2.5-flash yap.';
   if(/429|quota|RESOURCE_EXHAUSTED/i.test(m))
     return 'SORUN: KOTA (429). Hız sınırını düşür ya da gemini-2.5-flash-lite dene. Günlük kota Pasifik saatiyle gece yarısı sıfırlanır.';
+  if(/aborted|AbortError|zaman aşımı/i.test(m))
+    return 'SORUN: SÜRE. Model 150 saniyede yanıt vermedi. Genelde çok uzun materyal istendiğinde olur: istediğin soru/etkinlik sayısını azalt ya da modeli gemini-2.5-flash yap.';
   if(/Failed to fetch|NetworkError|ERR_/i.test(m))
     return 'SORUN: BAĞLANTI. İnternete ulaşılamadı. Reklam engelleyici/VPN/güvenlik duvarı Google\'a erişimi kesiyor olabilir.';
+  if(/KESIK_JSON/i.test(m))
+    return 'SORUN: ÇIKTI KESİLDİ. Model JSON\'ı tamamlayamadı (istek çok büyük). İstediğin soru/blok sayısını azalt ya da modeli gemini-2.5-flash yap; katman bütçeyi büyütüp tekrar denedi ama yetmedi.';
   if(/BOŞ_YANIT|MAX_TOKENS/i.test(m))
     return 'SORUN: MODEL/ÇIKTI. Model boş ya da kesik yanıt döndü (düşünme modu çıktı bütçesini yiyor). Katman bunu otomatik kapatmayı denedi; sürerse gemini-2.5-flash-lite dene.';
   return m || 'Bilinmeyen hata.';
@@ -289,7 +299,7 @@ window.fetch = async function(input, init){
     const eski = model;
     model = yeni; denenenModeller.push(yeni);
     MODEL = yeni; localStorage.setItem(LS.model, yeni);
-    if(init && init.body) govdeVar = govdeVaryantlari(model);   // yeni modelin ailesi farklı olabilir
+    if(init && init.body) govdeVar = govdeVaryantlari(model);
     vi = (CFG_OK[model]!==undefined) ? CFG_OK[model] : 0;
     RING.aktif = null;
     panelYenile();
@@ -318,7 +328,7 @@ window.fetch = async function(input, init){
 
     await rateGate();
     let r;
-    try{ r = await ORIG_FETCH(yeniUrl, yeniInit); }
+    try{ r = await fetchZamanAsimli(yeniUrl, yeniInit); }
     catch(e){ rateRelease(); toast('🌐 '+netHatasi(e),'red'); throw e; }
     rateRelease();
 
@@ -356,13 +366,34 @@ window.fetch = async function(input, init){
       let d=null; try{ d = await r.clone().json(); }catch(e){}
       const cand = d && d.candidates && d.candidates[0];
       const metin = ((cand && cand.content && cand.content.parts)||[]).map(x=>x.text||'').join('').trim();
+      const bitis = cand && cand.finishReason;
+      // Çıktı kesildiyse bütçeyi büyüt ve tekrar dene (JSON yarıda kalmasın)
+      if(bitis==='MAX_TOKENS' && orjGovde.generationConfig){
+        const eskiTok = orjGovde.generationConfig.maxOutputTokens || 8192;
+        if(eskiTok < 30000){
+          orjGovde.generationConfig.maxOutputTokens = Math.min(32000, Math.round(eskiTok*1.7));
+          if(vi < govdeVar.length-1) vi++;
+          continue;
+        }
+      }
       if(!metin){
         const blok = d && d.promptFeedback && d.promptFeedback.blockReason;
-        const bitis = cand && cand.finishReason;
         if(!blok && vi < govdeVar.length-1){ vi++; continue; }   // varyant değiştirip tekrar dene
         sonHata = new Error(blok ? ('SAFETY · '+blok) : ('BOŞ_YANIT'+(bitis?' · '+bitis:'')));
         toast('⚠️ '+netHatasi(sonHata),'red');
         return r;
+      }
+      // JSON istendiyse gerçekten ayrıştırılabiliyor mu? Değilse tekrar dene.
+      const jsonIster = orjGovde.generationConfig && orjGovde.generationConfig.responseMimeType==='application/json';
+      if(jsonIster){
+        let temizMetin = metin.replace(/^```(?:json)?/i,'').replace(/```$/,'').trim();
+        let gecerli=true; try{ JSON.parse(temizMetin); }catch(e){ gecerli=false; }
+        if(!gecerli){
+          if(vi < govdeVar.length-1){ vi++; continue; }
+          sonHata = new Error('KESIK_JSON');
+          toast('⚠️ '+netHatasi(sonHata),'red');
+          return r;
+        }
       }
     }
     CFG_OK[model] = vi;   // çalışan varyantı hatırla
@@ -432,35 +463,32 @@ async function testEt(){
 
 function panelKur(){
   if(document.getElementById('zirve-panel')) return;
-  const btn=document.createElement('button');
-  btn.id='zirve-fab'; btn.innerHTML='🔑 API';
-  btn.style.cssText='position:fixed;right:16px;bottom:16px;z-index:2147483000;background:#1e293b;color:#fff;border:none;border-radius:999px;padding:11px 17px;font:800 13px system-ui,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.3);cursor:pointer';
-  btn.onclick=()=>{ const p=document.getElementById('zirve-panel'); p.style.display = p.style.display==='block'?'none':'block'; panelYenile(); };
-  document.body.appendChild(btn);
-
   const p=document.createElement('div');
   p.id='zirve-panel';
-  p.style.cssText='position:fixed;right:16px;bottom:66px;z-index:2147483000;width:min(430px,94vw);max-height:78vh;overflow:auto;background:#fff;border:2px solid #e2e8f0;border-radius:18px;box-shadow:0 22px 60px rgba(0,0,0,.28);padding:16px;display:none;font:400 13px system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#0f172a';
+  p.style.cssText='margin-top:18px;border:2px solid #e2e8f0;border-radius:16px;padding:16px;background:#f8fafc;font:400 13px system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#0f172a';
   p.innerHTML = `
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-      <b style="font-size:15px">🔑 API Anahtarı & Model</b>
-      <button id="zirve-kapat" style="border:none;background:#fee2e2;color:#991b1b;font-weight:800;border-radius:8px;padding:4px 10px;cursor:pointer">Kapat</button>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+      <b style="font-size:15px">🔑 Gelişmiş API Ayarları</b>
+      <span style="background:#dbeafe;color:#1d4ed8;font-weight:800;font-size:10px;padding:2px 7px;border-radius:999px">ÇOKLU ANAHTAR</span>
     </div>
+    <div style="font-size:11px;font-weight:600;opacity:.7;margin-bottom:11px">Birden fazla anahtar ekle; biri dolunca diğerine, gerekirse başka modele otomatik geçilir.</div>
     <label style="font-weight:800;font-size:12px">Anahtarların — her satıra bir tane</label>
-    <textarea id="zirve-keys" rows="4" placeholder="AIza...&#10;AIza...&#10;AIza..." style="width:100%;margin:5px 0 8px;padding:8px;border:2px solid #e2e8f0;border-radius:10px;font:600 12px ui-monospace,monospace;resize:vertical"></textarea>
-    <div style="font-size:11px;font-weight:600;opacity:.75;margin-bottom:9px">Ücretsiz anahtar: <b>aistudio.google.com/apikey</b> · Biri dolunca diğerine otomatik geçilir.</div>
+    <textarea id="zirve-keys" rows="4" placeholder="AIza...&#10;AIza...&#10;AIza..." style="width:100%;margin:5px 0 8px;padding:9px;border:2px solid #e2e8f0;border-radius:10px;font:600 12px ui-monospace,monospace;resize:vertical;background:#fff"></textarea>
+    <div style="font-size:11px;font-weight:600;opacity:.7;margin-bottom:10px">Ücretsiz anahtar: <b>aistudio.google.com/apikey</b></div>
     <label style="font-weight:800;font-size:12px">Model</label>
-    <input id="zirve-model" list="zirve-model-list" style="width:100%;margin:5px 0 4px;padding:8px;border:2px solid #e2e8f0;border-radius:10px;font-weight:700">
+    <input id="zirve-model" list="zirve-model-list" style="width:100%;margin:5px 0 4px;padding:9px;border:2px solid #e2e8f0;border-radius:10px;font-weight:700;background:#fff">
     <datalist id="zirve-model-list"></datalist>
-    <div style="font-size:11px;font-weight:600;opacity:.75;margin-bottom:9px">Bilmiyorsan dokunma. <b>Kota dolarsa otomatik olarak flash-lite'a geçerim.</b></div>
+    <div style="font-size:11px;font-weight:600;opacity:.7;margin-bottom:10px">Bilmiyorsan dokunma. Materyal üretimi için en güvenlisi <b>gemini-2.5-flash</b>.</div>
     <label style="font-weight:800;font-size:12px">Dakikadaki istek sınırı: <span id="zirve-rpm-v"></span></label>
-    <input id="zirve-rpm" type="range" min="2" max="30" style="width:100%;margin:5px 0 10px">
-    <button id="zirve-test" style="width:100%;background:#1d4ed8;color:#fff;border:none;border-radius:11px;padding:11px;font-weight:800;cursor:pointer;font-size:13px">Test Et ve Kaydet</button>
+    <input id="zirve-rpm" type="range" min="2" max="30" style="width:100%;margin:5px 0 12px">
+    <button id="zirve-test" style="width:100%;background:#1d4ed8;color:#fff;border:none;border-radius:11px;padding:12px;font-weight:800;cursor:pointer;font-size:13px">Anahtarları Tek Tek Test Et ve Kaydet</button>
     <div id="zirve-test-out" style="margin-top:10px;font-size:12px;line-height:1.5"></div>
-    <div style="margin-top:12px;border-top:2px solid #f1f5f9;padding-top:9px">
+    <div style="margin-top:12px;border-top:2px solid #e2e8f0;padding-top:9px">
       <b style="font-size:12px">Anahtar durumu</b>
       <div id="zirve-key-status" style="margin-top:6px;font-size:11px"></div>
     </div>`;
+  // Panel DOM'da dursun; aşağıdaki yerleştirici onu Ayarlar ekranına taşıyacak
+  p.style.display='none';
   document.body.appendChild(p);
 
   document.getElementById('zirve-keys').value = RING.keys.join('\n');
@@ -468,11 +496,29 @@ function panelKur(){
   const rp=document.getElementById('zirve-rpm'); rp.value=RPM;
   document.getElementById('zirve-rpm-v').textContent=RPM;
   rp.oninput=()=>{ RPM=parseInt(rp.value,10); document.getElementById('zirve-rpm-v').textContent=RPM; localStorage.setItem(LS.rpm,RPM); };
-  document.getElementById('zirve-kapat').onclick=()=>{ p.style.display='none'; };
   document.getElementById('zirve-test').onclick=testEt;
   document.getElementById('zirve-model').onchange=(e)=>{ MODEL=e.target.value.trim()||'gemini-2.5-flash'; localStorage.setItem(LS.model,MODEL); panelYenile(); };
   panelYenile();
   setInterval(panelYenile, 20000);
+  yerlestir();
+  // React sekme değiştirince Ayarlar ekranı yeniden çizilir → paneli tekrar yerine koy
+  try{ new MutationObserver(yerlestir).observe(document.body,{childList:true,subtree:true}); }catch(e){}
+}
+
+// Paneli, Ayarlar sekmesindeki "TAMAM (Kaydet ve Doğrula)" düğmesinin altına yerleştirir.
+function yerlestir(){
+  const p=document.getElementById('zirve-panel'); if(!p) return;
+  let hedef=null;
+  const btns=document.querySelectorAll('button');
+  for(let i=0;i<btns.length;i++){
+    const t=(btns[i].textContent||'');
+    if(t.indexOf('Kaydet ve Doğrula')!==-1){ hedef=btns[i]; break; }
+  }
+  if(!hedef){ p.style.display='none'; return; }          // Ayarlar ekranında değiliz
+  if(p.previousSibling!==hedef && hedef.parentNode){
+    hedef.parentNode.insertBefore(p, hedef.nextSibling);
+  }
+  p.style.display='block';
 }
 
 // ---------- Başlat ----------
