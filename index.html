@@ -81,7 +81,7 @@ body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; color: #1f29
 <body>
 <div id="root"></div>
 
-<!-- ===== ZİRVE KATMANI · API dayanıklılığı + 82 düzenlenebilir şablon ===== -->
+<!-- ===== ZİRVE KATMANI ===== -->
 <script>
 /* ============================================================
    ZİRVE API KATMANI  ·  çoklu anahtar + otomatik model + teşhis
@@ -201,9 +201,17 @@ function govdeVaryantlari(m){
   const f=aile(m);
   const temiz=(b)=>{ const c=JSON.parse(JSON.stringify(b)); if(c.generationConfig){ delete c.generationConfig.thinkingConfig; } return c; };
   const dusunme=(b,cfg)=>{ const c=temiz(b); c.generationConfig=Object.assign({}, c.generationConfig, {thinkingConfig:cfg}); return c; };
-  if(f==='yeni')    return [ (b)=>{ const c=dusunme(b,{thinkingLevel:"low"}); delete c.generationConfig.temperature; return c; }, (b)=>temiz(b), (b)=>b ];
-  if(f==='flash25') return [ (b)=>dusunme(b,{thinkingBudget:0}), (b)=>temiz(b), (b)=>b ];
-  if(f==='pro')     return [ (b)=>dusunme(b,{thinkingBudget:128}), (b)=>temiz(b), (b)=>b ];   // pro'da tamamen kapatılamaz, asgariye indir
+  // SON ÇARE: responseSchema'yı at. Şema devasa olduğunda model bazen tıkanıyor;
+  // uygulamanın promptu istenen JSON biçimini zaten ayrıntısıyla anlatıyor, o yüzden şemasız da çalışır.
+  const semasiz=(b,cfg)=>{ const c=dusunme(b,cfg); if(c.generationConfig) delete c.generationConfig.responseSchema; return c; };
+  if(f==='yeni') return [
+    (b)=>{ const c=dusunme(b,{thinkingLevel:"low"}); delete c.generationConfig.temperature; return c; },
+    (b)=>{ const c=semasiz(b,{thinkingLevel:"low"}); delete c.generationConfig.temperature; return c; },
+    (b)=>temiz(b), (b)=>b ];
+  if(f==='flash25') return [
+    (b)=>dusunme(b,{thinkingBudget:0}), (b)=>semasiz(b,{thinkingBudget:0}), (b)=>temiz(b), (b)=>b ];
+  if(f==='pro') return [
+    (b)=>dusunme(b,{thinkingBudget:128}), (b)=>semasiz(b,{thinkingBudget:128}), (b)=>temiz(b), (b)=>b ];
   return [ (b)=>temiz(b), (b)=>b ];
 }
 const CFG_OK = {};   // model -> çalıştığı bilinen varyant
@@ -292,9 +300,12 @@ function sablonYukle(){
        if(r){ const d=JSON.parse(r); if(Array.isArray(d)&&d.length) return d; } }catch(e){}
   return JSON.parse(JSON.stringify(VARSAYILAN_SABLONLAR));
 }
-function sablonKaydet(d){ try{ localStorage.setItem('zirve_sablonlar', JSON.stringify(d)); }catch(e){} }
-// React bu diziyi okuyacak (uygulamadaki liste yerine geçer)
-window.ZIRVE_SABLONLAR = sablonYukle();
+function sablonKaydet(d){ SABLONLAR=d; try{ localStorage.setItem('zirve_sablonlar', JSON.stringify(d)); }catch(e){} }
+// Şablonlar artık dağınık çipler yerine tek düğme + ızgara panelde.
+// React'e BOŞ dizi veriyoruz ki eski çip yığını çizilmesin; seçiciyi biz koyuyoruz.
+// (Bu katman çökerse dizi undefined kalır ve uygulama kendi eski listesini çizer — güvenli.)
+let SABLONLAR = sablonYukle();
+window.ZIRVE_SABLONLAR = [];
 
 // ---------- Şablon düzenleyici (modal) ----------
 function sablonDuzenleyiciAc(){
@@ -323,11 +334,11 @@ function sablonDuzenleyiciAc(){
   document.getElementById('zirve-sablon-sifirla').onclick=()=>{
     if(!confirm('Tüm şablonlar fabrika ayarına dönecek. Kendi eklediklerin silinecek. Emin misin?')) return;
     try{ localStorage.removeItem('zirve_sablonlar'); }catch(e){}
-    window.ZIRVE_SABLONLAR = sablonYukle(); sablonListeCiz();
+    SABLONLAR = sablonYukle(); sablonListeCiz();
     toast('↩️ Şablonlar varsayılana döndü. Sayfa yenileniyor...','green'); setTimeout(()=>location.reload(),1400);
   };
   document.getElementById('zirve-sablon-yeni').onclick=()=>{
-    const d=window.ZIRVE_SABLONLAR;
+    const d=SABLONLAR;
     let g=d.find(x=>x.grup==='⭐ Benim Şablonlarım');
     if(!g){ g={grup:'⭐ Benim Şablonlarım', items:[]}; d.unshift(g); }
     g.items.unshift({e:'Yeni Şablon', t:'Fark Etmez (Yapay Zeka Seçsin)', m:'Buraya kendi isteğini yaz. Örn: 3. sınıf matematik toplama işleminden 10 soruluk çalışma hazırla, cevap anahtarı ekle.'});
@@ -338,7 +349,7 @@ function sablonDuzenleyiciAc(){
 function sablonListeCiz(){
   const kutu=document.getElementById('zirve-sablon-liste'); if(!kutu) return;
   const ara=((document.getElementById('zirve-sablon-ara')||{}).value||'').toLocaleLowerCase('tr');
-  const d=window.ZIRVE_SABLONLAR;
+  const d=SABLONLAR;
   let n=0; d.forEach(g=>n+=g.items.length);
   const sy=document.getElementById('zirve-sablon-say'); if(sy) sy.textContent=n+' şablon · '+d.length+' grup';
   let h='';
@@ -358,34 +369,142 @@ function sablonListeCiz(){
   kutu.innerHTML = h || '<div style="padding:18px;text-align:center;font-weight:700;opacity:.6">Eşleşen şablon yok.</div>';
   kutu.querySelectorAll('.zs-in').forEach(el=>{
     el.onchange=()=>{ const g=+el.dataset.g,i=+el.dataset.i,f=el.dataset.f;
-      window.ZIRVE_SABLONLAR[g].items[i][f]=el.value; sablonKaydet(window.ZIRVE_SABLONLAR);
+      SABLONLAR[g].items[i][f]=el.value; sablonKaydet(SABLONLAR);
       toast('💾 Şablon kaydedildi. Matbaa\'da görmek için sayfayı yenile.','green'); };
   });
   kutu.querySelectorAll('.zs-sil').forEach(el=>{
     el.onclick=()=>{ const g=+el.dataset.g,i=+el.dataset.i;
-      window.ZIRVE_SABLONLAR[g].items.splice(i,1);
-      if(!window.ZIRVE_SABLONLAR[g].items.length) window.ZIRVE_SABLONLAR.splice(g,1);
-      sablonKaydet(window.ZIRVE_SABLONLAR); sablonListeCiz(); };
+      SABLONLAR[g].items.splice(i,1);
+      if(!SABLONLAR[g].items.length) SABLONLAR.splice(g,1);
+      sablonKaydet(SABLONLAR); sablonListeCiz(); };
   });
 }
 window.ZIRVE_SABLON_AC = sablonDuzenleyiciAc;
 
-// Matbaa'daki "Hazır Şablonlar" başlığına düzenleme düğmesi iliştir
+// Matbaa'daki "Hazır Şablonlar" başlığının yerine TEK düğme koy
 function sablonDugmesiYerlestir(){
   const ps=document.querySelectorAll('p');
   for(let i=0;i<ps.length;i++){
-    if((ps[i].textContent||'').indexOf('Hazır Şablonlar')!==-1){
-      if(ps[i].querySelector('.zs-duzenle')) return;
-      const b=document.createElement('button');
-      b.className='zs-duzenle';
-      b.textContent='✏️ Düzenle / Ekle';
-      b.style.cssText='margin-left:8px;background:#fde047;color:#713f12;border:none;border-radius:999px;padding:2px 9px;font-weight:800;font-size:10px;cursor:pointer;vertical-align:middle';
-      b.onclick=(e)=>{ e.preventDefault(); e.stopPropagation(); sablonDuzenleyiciAc(); };
-      ps[i].appendChild(b);
-      return;
-    }
+    if((ps[i].textContent||'').indexOf('Hazır Şablonlar')===-1) continue;
+    if(ps[i].dataset.zs) return;
+    ps[i].dataset.zs='1';
+    let n=0; SABLONLAR.forEach(function(g){ n+=g.items.length; });
+    ps[i].innerHTML='';
+    const b=document.createElement('button');
+    b.textContent='🧩 Hazır Şablon Seç ('+n+')';
+    b.style.cssText='width:100%;background:#fde047;color:#713f12;border:none;border-radius:12px;padding:11px;font-weight:900;font-size:13.5px;cursor:pointer;box-shadow:0 3px 10px rgba(0,0,0,.18)';
+    b.onclick=function(e){ e.preventDefault(); e.stopPropagation(); sablonSeciciAc(); };
+    ps[i].appendChild(b);
+    const alt=document.createElement('div');
+    alt.style.cssText='margin-top:5px;font-size:10.5px;font-weight:700;color:#5eead4;text-align:center';
+    alt.textContent='Ya da aşağıya doğrudan kendi isteğini yaz.';
+    ps[i].appendChild(alt);
+    return;
   }
 }
+
+// ---------- React'in kontrol ettiği alana dışarıdan değer yazma ----------
+function reactYaz(el, val){
+  if(!el) return false;
+  const proto = (el.tagName==='SELECT') ? window.HTMLSelectElement.prototype
+              : (el.tagName==='TEXTAREA') ? window.HTMLTextAreaElement.prototype
+              : window.HTMLInputElement.prototype;
+  const d = Object.getOwnPropertyDescriptor(proto,'value');
+  if(d && d.set) d.set.call(el, val); else el.value = val;
+  el.dispatchEvent(new Event('input',{bubbles:true}));
+  el.dispatchEvent(new Event('change',{bubbles:true}));
+  return true;
+}
+function matbaaAlanlari(){
+  let ta=null, sel=null;
+  const tas=document.querySelectorAll('textarea');
+  for(let i=0;i<tas.length;i++){ if((tas[i].placeholder||'').indexOf('İsteğini doğal biçimde')!==-1){ ta=tas[i]; break; } }
+  const sels=document.querySelectorAll('select');
+  for(let i=0;i<sels.length;i++){
+    const o=sels[i].querySelectorAll('option');
+    for(let j=0;j<o.length;j++){ if((o[j].value||'').indexOf('Fark Etmez')!==-1){ sel=sels[i]; break; } }
+    if(sel) break;
+  }
+  return {ta:ta, sel:sel};
+}
+function sablonUygula(it){
+  const alan = matbaaAlanlari();
+  if(alan.sel && it.t){
+    let mevcut=false;
+    const ops=alan.sel.querySelectorAll('option');
+    for(let j=0;j<ops.length;j++) if(ops[j].value===it.t) mevcut=true;
+    if(mevcut) reactYaz(alan.sel, it.t);      // listede yoksa dokunma (uygulama bozulmasın)
+  }
+  if(alan.ta){ reactYaz(alan.ta, it.m); try{ alan.ta.scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){} }
+  const ov=document.getElementById('zirve-sec-ov'); if(ov) ov.style.display='none';
+  toast('✅ <b>'+it.e+'</b> yüklendi. Sınıfı/konuyu değiştirip <b>Dökümanı Üret</b>e bas.','green');
+}
+
+// ---------- ŞABLON SEÇİCİ: tek düğme → ızgara panel ----------
+let SEC_GRUP='hepsi';
+function sablonSeciciAc(){
+  let ov=document.getElementById('zirve-sec-ov');
+  if(ov){ ov.style.display='flex'; secListeCiz(); return; }
+  ov=document.createElement('div'); ov.id='zirve-sec-ov';
+  ov.style.cssText='position:fixed;inset:0;z-index:2147483500;background:rgba(15,23,42,.75);display:flex;align-items:center;justify-content:center;padding:12px';
+  ov.innerHTML='<div style="background:#fff;border-radius:18px;width:min(920px,100%);max-height:88vh;display:flex;flex-direction:column;overflow:hidden;font:400 13px system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#0f172a">'
+    +'<div style="padding:13px 15px;border-bottom:2px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">'
+    +'<div><b style="font-size:16px">🧩 Şablon Seç</b><div id="zirve-sec-say" style="font-size:11px;font-weight:700;opacity:.65"></div></div>'
+    +'<div style="display:flex;gap:6px"><button id="zirve-sec-duzenle" style="background:#fde047;color:#713f12;border:none;border-radius:9px;padding:7px 11px;font-weight:800;cursor:pointer;font-size:12px">✏️ Düzenle / Ekle</button>'
+    +'<button id="zirve-sec-kapat" style="background:#fee2e2;color:#991b1b;border:none;border-radius:9px;padding:7px 11px;font-weight:800;cursor:pointer;font-size:12px">Kapat</button></div></div>'
+    +'<div style="padding:9px 15px;border-bottom:1px solid #e2e8f0;background:#f8fafc">'
+    +'<input id="zirve-sec-ara" placeholder="Ara: bep, hece, kesir, tombala, veli..." style="width:100%;padding:9px 11px;border:2px solid #e2e8f0;border-radius:10px;font-weight:600">'
+    +'<div id="zirve-sec-grup" style="display:flex;gap:5px;flex-wrap:wrap;margin-top:8px"></div></div>'
+    +'<div id="zirve-sec-liste" style="overflow:auto;padding:12px 15px;flex:1"></div></div>';
+  document.body.appendChild(ov);
+  ov.addEventListener('click', function(e){ if(e.target===ov) ov.style.display='none'; });
+  document.getElementById('zirve-sec-kapat').onclick=function(){ ov.style.display='none'; };
+  document.getElementById('zirve-sec-duzenle').onclick=function(){ ov.style.display='none'; sablonDuzenleyiciAc(); };
+  document.getElementById('zirve-sec-ara').oninput=secListeCiz;
+  secListeCiz();
+}
+function secListeCiz(){
+  const kutu=document.getElementById('zirve-sec-liste'); if(!kutu) return;
+  const ara=((document.getElementById('zirve-sec-ara')||{}).value||'').toLocaleLowerCase('tr');
+  let n=0; SABLONLAR.forEach(function(g){ n+=g.items.length; });
+  const sy=document.getElementById('zirve-sec-say'); if(sy) sy.textContent=n+' hazır şablon · tıkla, konuyu değiştir, üret';
+  const gk=document.getElementById('zirve-sec-grup');
+  if(gk){
+    if(!gk.dataset.hazir){
+      gk.dataset.hazir='1';
+      gk.innerHTML = ['hepsi'].concat(SABLONLAR.map(function(g){return g.grup;})).map(function(g){
+        return '<button data-g="'+String(g).replace(/"/g,'&quot;')+'" class="zs-g" style="border:2px solid #e2e8f0;background:#fff;border-radius:999px;padding:4px 10px;font-weight:800;font-size:11px;cursor:pointer">'+(g==='hepsi'?'Hepsi':g)+'</button>';
+      }).join('');
+      gk.querySelectorAll('.zs-g').forEach(function(b){ b.onclick=function(){ SEC_GRUP=b.dataset.g; secListeCiz(); }; });
+    }
+    gk.querySelectorAll('.zs-g').forEach(function(b){
+      const s=(b.dataset.g===SEC_GRUP);
+      b.style.background=s?'#1d4ed8':'#fff'; b.style.color=s?'#fff':'#0f172a'; b.style.borderColor=s?'#1d4ed8':'#e2e8f0';
+    });
+  }
+  let h='';
+  SABLONLAR.forEach(function(g,gi){
+    if(SEC_GRUP!=='hepsi' && g.grup!==SEC_GRUP) return;
+    const gor=[];
+    g.items.forEach(function(it,ii){ if(!ara || (it.e+' '+it.m).toLocaleLowerCase('tr').indexOf(ara)!==-1) gor.push({it:it,ii:ii}); });
+    if(!gor.length) return;
+    h+='<div style="font-weight:800;font-size:12px;margin:8px 0 7px;color:#334155">'+g.grup+'</div>'
+      +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:9px;margin-bottom:6px">';
+    gor.forEach(function(o){
+      h+='<button class="zs-kart" data-g="'+gi+'" data-i="'+o.ii+'" style="text-align:left;border:2px solid #e2e8f0;border-radius:12px;padding:10px;background:#fff;cursor:pointer">'
+        +'<div style="font-weight:800;font-size:12.5px;margin-bottom:4px;color:#0f172a">'+o.it.e+'</div>'
+        +'<div style="font-size:10.5px;font-weight:600;opacity:.62;line-height:1.4">'+String(o.it.m).slice(0,88)+(String(o.it.m).length>88?'…':'')+'</div></button>';
+    });
+    h+='</div>';
+  });
+  kutu.innerHTML = h || '<div style="padding:24px;text-align:center;font-weight:700;opacity:.6">Eşleşen şablon yok. Kendi isteğini doğrudan yazabilirsin.</div>';
+  kutu.querySelectorAll('.zs-kart').forEach(function(b){
+    b.onmouseenter=function(){ b.style.borderColor='#1d4ed8'; b.style.background='#eff6ff'; };
+    b.onmouseleave=function(){ b.style.borderColor='#e2e8f0'; b.style.background='#fff'; };
+    b.onclick=function(){ sablonUygula(SABLONLAR[+b.dataset.g].items[+b.dataset.i]); };
+  });
+}
+window.ZIRVE_SABLON_SEC = sablonSeciciAc;
 
 // ============================================================
 //  FETCH SARMALAYICI — uygulamanın 15 çağrısı da buradan geçer
@@ -699,7 +818,7 @@ else panelKur();
 // Dışarıdan erişim (konsoldan bakmak istersen)
 window.ZIRVE = { RING, get model(){return MODEL;}, set model(m){ MODEL=m; localStorage.setItem(LS.model,m); panelYenile(); },
                  netHatasi, listModels, ringHazir, ringLoad, ringSet, ringSave, modelSonraki, testEt, panelYenile,
-                 modelHavuzu, sablonYukle, sablonKaydet, sablonDuzenleyiciAc,
+                 modelHavuzu, sablonYukle, sablonKaydet, sablonDuzenleyiciAc, sablonSeciciAc, sablonUygula, reactYaz,
                  get modeller(){return KULLANILABILIR;},
                  set modeller(l){ KULLANILABILIR=l; try{localStorage.setItem('zirve_models',JSON.stringify(l));}catch(e){} } };
 })();
