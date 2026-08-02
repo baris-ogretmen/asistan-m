@@ -1707,12 +1707,40 @@ const generateMaterial = async () => {
 
     const askModel = async (retry = false) => {
         setMaterialProgress(retry ? '🔄 Sorular ve seçenekler yeniden tamamlanıyor…' : '✍️ Materyal hazırlanıyor…');
-        // Canlı bilgilendirme: bekleme sırasında ne olduğunu göster
+        // CANLI BİLGİLENDİRME: isteğin türünü tanı, ne yapıldığını adım adım söyle.
+        // Aşamalar İLERİYE gider, 'Neredeyse hazır'da DURUR; asla başa sarmaz.
+        const _t = String(instruction || '').toLowerCase();
+        const _fasikul = /fasik[üu]l|dev |kapsaml|4 sayfa|sayfal[ıi]k|bol (örnek|alıştırma|alistirma)|zengin/.test(_t);
+        const asamalariKur = () => {
+            const a = ['🔎 İsteğin çözümleniyor…'];
+            if (isTestRequest) {
+                a.push(`❓ ${questionCount} soru yazılıyor…`, '🔤 Seçenekler (A-B-C-D) hazırlanıyor…', '✅ Cevap anahtarı oluşturuluyor…');
+            } else {
+                if (_fasikul) a.push('📚 Fasikülün bölümleri planlanıyor…');
+                if (/oku(ma|du)|parça|parca|metin|hikaye|masal|öykü|oyku/.test(_t)) a.push('📖 Okuma parçası yazılıyor…');
+                if (/bilgi|konu anlat|konu özet|konu ozet|açıkla|acikla|özet|ozet/.test(_t)) a.push('📝 Konu anlatımı hazırlanıyor…');
+                if (/çizgi|cizgi|motor|kalem|el.?göz|el.?goz|boyama/.test(_t)) a.push('✏️ Çizgi/motor çalışması çiziliyor…');
+                if (/eşleş|eslest|eşleştir|eslestir/.test(_t)) a.push('🔗 Eşleştirme kurgulanıyor…');
+                if (/boşluk|bosluk|doldur/.test(_t)) a.push('✍️ Boşluk doldurma yazılıyor…');
+                if (/dikte/.test(_t)) a.push('🔊 Dikte kelimeleri seçiliyor…');
+                if (/hece|ba.?sa.?ra|okuma.?yazma|ses temelli/.test(_t)) a.push('🔡 Hece tablosu hazırlanıyor…');
+                if (/venn|zihin har|kavram har|infografik|şema|sema|harita|görsel|gorsel|svg|satranç|satranc|saat|kesir|sayı doğ|sayi dog|geometri/.test(_t)) a.push('🎨 Görsel/şema çiziliyor…');
+                if (/tombala|bingo/.test(_t)) a.push('🎲 Tombala kartı hazırlanıyor…');
+                if (/flashcard|kart/.test(_t)) a.push('🃏 Kartlar hazırlanıyor…');
+                if (/soru|etkinlik|alıştırma|alistirma|quiz/.test(_t)) a.push('❓ Sorular ve etkinlikler hazırlanıyor…');
+                if (/cevap anahtar/.test(_t)) a.push('✅ Cevap anahtarı yazılıyor…');
+                if (a.length === 1) a.push('✍️ İçerik hazırlanıyor…');
+            }
+            a.push('🎨 Sayfa güzelce düzenleniyor…', '✅ Neredeyse hazır…');
+            return a.filter((x, i) => i === 0 || x !== a[i - 1]);
+        };
         const asamalar = retry
-            ? ['🔄 Eksik kısımlar tamamlanıyor…', '📝 Sorular yeniden yazılıyor…', '✅ Son kontrol yapılıyor…']
-            : ['✍️ Yapay zeka içeriği hazırlıyor…', '📐 Görseller ve şemalar çiziliyor…', '📋 Sorular ve cevap anahtarı oluşturuluyor…', '🎨 Sayfa güzelce düzenleniyor…', '✅ Neredeyse hazır…'];
+            ? ['🔄 Eksik kısımlar tamamlanıyor…', '📝 Yeniden yazılıyor…', '✅ Son kontrol yapılıyor…', '✅ Neredeyse hazır…']
+            : asamalariKur();
         let ai = 0;
-        const asamaTimer = setInterval(() => { ai = (ai + 1) % asamalar.length; setMaterialProgress(asamalar[ai]); }, 2200);
+        setMaterialProgress(asamalar[0]);
+        // İLERİ git; son aşamada KAL (başa sarma yok → 'neredeyse hazır' sonrası gerçek bitiş gelir)
+        const asamaTimer = setInterval(() => { if (ai < asamalar.length - 1) { ai += 1; setMaterialProgress(asamalar[ai]); } }, 1400);
         const temizle = () => { try { clearInterval(asamaTimer); } catch(e){} };
         const parts = [{ text: prompt + (retry ? `\n\nÖNCEKİ CEVAP GEÇERSİZDİ. ${isTestRequest ? `Kesin olarak ${questionCount} adet standart_soru ve her birinde dört seçenek ver.` : 'Tek, eksiksiz JSON nesnesi ver. Her blokta ilgili alanları MUTLAKA doldur, ASLA boş blok gönderme. cizgi_calismasi istenirse cizim_adimlari dizisine her biri en az 25 kez tekrarlayan desen dizeleri koy.'}` : '') }];
         if (uploadedFileData) parts.push({ inline_data: { mime_type: uploadedFileData.mimeType, data: uploadedFileData.base64 } });
