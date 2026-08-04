@@ -1191,6 +1191,10 @@ const [uploadedFilePreview, setUploadedFilePreview] = useState(null); // DOSYA �
 const [uploadedFileData, setUploadedFileData] = useState(null); // DOSYA VERİSİ İÇİN
 const [matGrade, setMatGrade] = useState('');
 const [matVAK, setMatVAK] = useState('Otomatik (AI belirlesin)');
+const [sablonAcik, setSablonAcik] = useState(false);
+const [planAcik, setPlanAcik] = useState(false);
+const [planSinif, setPlanSinif] = useState('');
+const [planDers, setPlanDers] = useState('');
 
 const [parentMessage, setParentMessage] = useState('');
 const [selectedStudentForMsg, setSelectedStudentForMsg] = useState('');
@@ -1659,6 +1663,29 @@ const dnaCikar = () => {
     if (typeof setMaterialType === 'function') setMaterialType('Fark Etmez (Yapay Zeka Seçsin)');
     try { setMaterialError(''); } catch(e){}
     showToast("🧬 Öğrenme DNA'sı istemi hazır — şimdi 'Üret'e bas!");
+    setTimeout(() => { try { document.querySelector('textarea')?.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {} }, 150);
+};
+// 📅 DERS PLANI: günlük/haftalık/aylık/yıllık, öğrenci özelliklerine + materyal/yöntem önerilerine göre
+const dersPlaniOlustur = (tur) => {
+    const sinif = (planSinif.trim() || matGrade.trim() || (activityCategory && !String(activityCategory).startsWith('Fark') ? activityCategory : '')).trim();
+    const ders = planDers.trim();
+    if (!sinif && !ders) { showToast('En az sınıf/düzey ya da ders/konu yaz.'); return; }
+    const kim = matStudentName.trim() ? (matStudentName.trim() + ' adlı öğrenci') : 'sınıf';
+    const ilgi = matInterests.trim() ? ('Öğrencinin ilgi alanları: ' + matInterests.trim() + ' (örnek ve temaları buna göre seç). ') : '';
+    const vak = (matVAK && !String(matVAK).startsWith('Otomatik')) ? ('Öğrenme stili: ' + matVAK + '; etkinlikleri bu stile göre kurgula. ') : '';
+    const kapsam = { 'Günlük': 'BİR DERS SAATLİK (40 dk) günlük ders planı', 'Haftalık': 'BİR HAFTALIK ders planı (o haftanın günlerine bölünmüş)', 'Aylık': 'BİR AYLIK ders planı (haftalara bölünmüş)', 'Yıllık': 'BİR YILLIK ünitelendirilmiş ders planı (aylara ve ünitelere bölünmüş)' }[tur];
+    const detay = {
+        'Günlük': 'Bölümler: Kazanımlar, Süre, Yöntem-Teknikler, Kullanılacak Araç-Gereç/Materyaller, Giriş (dikkat çekme + güdüleme), Gelişme (etkinlikler adım adım), Sonuç (özet), Ölçme-Değerlendirme ve Ödev.',
+        'Haftalık': 'Günlere (Pazartesi–Cuma) bölünmüş bir tablo; her gün için konu/kazanım, etkinlik ve materyal yaz. Sonda haftalık değerlendirme olsun.',
+        'Aylık': 'Haftalara (1.–4. hafta) bölünmüş tablo; her hafta için konular, kazanımlar, yöntem-teknikler, materyaller ve değerlendirme olsun.',
+        'Yıllık': 'Aylara (Eylül–Haziran) ve ünitelere bölünmüş bir tablo; her ay için üniteler, kazanımlar, süre (ders saati), yöntem-teknikler, kullanılacak materyaller ve ölçme-değerlendirme sütunları olsun. Resmî yıllık plan formatına yakın olsun.'
+    }[tur];
+    const p = sinif + ' düzeyi için ' + (ders ? ('"' + ders + '" dersinde/konusunda ') : '') + kim + ' hedefli ' + kapsam + ' hazırla. ' + ilgi + vak + detay +
+        ' Ayrıca bu öğrenciye/sınıfa ÖZEL olarak şunları net belirt: (1) hangi somut MATERYALLERİN kullanılacağı, (2) öğrenmeyi daha da etkinleştirecek YÖNTEM ve YOLLAR, (3) farklılaştırma — zorlanan ve ileri düzey öğrenciye uyarlama önerileri. MEB kazanım diline uygun, uygulanabilir ve öğretmenin doğrudan kullanabileceği profesyonel bir plan olsun. Tabloları düzenli, başlıkları renkli kullan.';
+    setMaterialTopic(p);
+    if (typeof setMaterialType === 'function') setMaterialType('Fark Etmez (Yapay Zeka Seçsin)');
+    try { setMaterialError(''); } catch(e){}
+    showToast('📅 ' + tur + ' ders planı istemi hazır — şimdi "Üret"e bas!');
     setTimeout(() => { try { document.querySelector('textarea')?.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {} }, 150);
 };
 // ── (EK) Çıktıyı düz metne çevir → Kopyala / Prompta geri ekle ──
@@ -2857,6 +2884,25 @@ title="Veli ödevi yaptıysa buraya tıklayın."
 </select>
 </div>
 <button onClick={dnaCikar} className="w-full mt-2 px-3 py-2 bg-gradient-to-r from-fuchsia-500 to-purple-600 hover:from-fuchsia-400 hover:to-purple-500 rounded-lg text-white text-xs font-black transition shadow"><i className="fa-solid fa-dna mr-1.5"></i> 🧬 Öğrenme DNA'sı Çıkar</button>
+<button onClick={()=>setPlanAcik(a=>!a)} className="w-full mt-2 flex items-center justify-between bg-teal-800/40 hover:bg-teal-700/50 border border-teal-500/30 rounded-lg px-3 py-2 transition">
+<span className="text-[11px] font-bold text-teal-100 uppercase"><i className="fa-solid fa-calendar-days mr-1.5 text-yellow-400"></i>Ders Planı (Günlük / Aylık / Yıllık)</span>
+<i className={`fa-solid ${planAcik ? 'fa-chevron-up' : 'fa-chevron-down'} text-teal-300 text-xs`}></i>
+</button>
+{planAcik && (
+<div className="mt-2 space-y-2 animate-fade-in">
+<div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+<input type="text" value={planSinif} onChange={e=>setPlanSinif(e.target.value)} placeholder="Sınıf/Düzey (Örn: 1. sınıf, Lise 12)" className="w-full px-3 py-2 bg-white/10 border border-teal-400/50 rounded outline-none text-white placeholder-teal-200/50 text-xs" />
+<input type="text" value={planDers} onChange={e=>setPlanDers(e.target.value)} placeholder="Ders/Konu (Örn: Matematik, Kesirler)" className="w-full px-3 py-2 bg-white/10 border border-teal-400/50 rounded outline-none text-white placeholder-teal-200/50 text-xs" />
+</div>
+<div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+<button onClick={()=>dersPlaniOlustur('Günlük')} className="px-2 py-2 bg-sky-600 hover:bg-sky-500 rounded text-white text-[11px] font-bold transition">📅 Günlük</button>
+<button onClick={()=>dersPlaniOlustur('Haftalık')} className="px-2 py-2 bg-indigo-600 hover:bg-indigo-500 rounded text-white text-[11px] font-bold transition">🗓️ Haftalık</button>
+<button onClick={()=>dersPlaniOlustur('Aylık')} className="px-2 py-2 bg-violet-600 hover:bg-violet-500 rounded text-white text-[11px] font-bold transition">📆 Aylık</button>
+<button onClick={()=>dersPlaniOlustur('Yıllık')} className="px-2 py-2 bg-fuchsia-600 hover:bg-fuchsia-500 rounded text-white text-[11px] font-bold transition">📚 Yıllık</button>
+</div>
+<p className="text-[10px] text-teal-300/80 leading-snug"><i className="fa-solid fa-circle-info mr-1"></i> Öğrenci bilgilerini yukarı yazarsan plan o öğrenciye göre uyarlanır. Bir türe bas, sonra "Üret"e bas.</p>
+</div>
+)}
 </div>
 </div>
 
@@ -2907,8 +2953,12 @@ title="Veli ödevi yaptıysa buraya tıklayın."
 </div>
 {/* HAZIR ŞABLON BUTONLARI - TÜM TÜRLER */}
 <div className="mb-3 bg-teal-800/20 p-3 rounded-xl border border-teal-500/20">
-  <p className="text-[11px] font-bold text-teal-300 uppercase mb-2"><i className="fa-solid fa-bolt mr-1"></i> Hazır Şablonlar — grubu aç, tıkla, sınıfı/konuyu değiştir, üret</p>
-  <div className="relative mb-2">
+  <button onClick={()=>setSablonAcik(s=>!s)} className="w-full flex items-center justify-between transition">
+    <span className="text-[11px] font-bold text-teal-300 uppercase"><i className="fa-solid fa-bolt mr-1 text-yellow-400"></i> Hazır Şablonlar — tıkla-seç, konuyu değiştir</span>
+    <i className={`fa-solid ${sablonAcik ? 'fa-chevron-up' : 'fa-chevron-down'} text-teal-300 text-xs`}></i>
+  </button>
+  {sablonAcik && (<>
+  <div className="relative mb-2 mt-2">
     <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-teal-400/70 text-xs"></i>
     <input value={sablonAra} onChange={(e) => setSablonAra(e.target.value)} placeholder="Şablon ara... (ör. satranç, LGS, kesir)" className="w-full pl-8 pr-8 py-2 text-xs bg-white/10 border border-teal-400/30 rounded-lg outline-none text-teal-50 placeholder:text-teal-400/50 focus:border-yellow-400" />
     {sablonAra && <button onClick={() => setSablonAra('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-teal-400/70 hover:text-yellow-400 text-xs"><i className="fa-solid fa-xmark"></i></button>}
@@ -3020,6 +3070,7 @@ title="Veli ödevi yaptıysa buraya tıklayın."
       </div>
       );
     })}
+</>)}
 </div>
 {uploadedFileData && (
 <div className="mb-2 bg-orange-500/10 border-2 border-orange-400/40 rounded-xl p-2.5 animate-fade-in">
