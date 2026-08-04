@@ -1710,21 +1710,26 @@ const matbaaKopyala = async () => {
     } catch (e) { showToast('Kopyalama başarısız; tarayıcı izin vermedi.'); }
 };
 const matbaaPromptaEkle = () => {
-    const t = matbaaMetneCevir(materialResult);
+    let t = matbaaMetneCevir(materialResult);
     if (!t) { showToast('Aktarılacak içerik yok.'); return; }
-    const yonerge = 'AŞAĞIDA senin ÜRETTİĞİN materyal var. Şu hataları TESPİT ET ve DÜZELTEREK yeniden üret: boş/eksik şıklar, boş eşleştirme sağ sütunu, tekrar eden/bozuk sorular, var olmayan görsele atıf, yanlış cevap anahtarı. Sağlam kısımları koru.\n\n----- ÜRETİLEN MATERYAL -----\n';
+    // Uzun materyal üretimi tıkıyordu: metni kısalt + konuyu açıkça ver (her seferinde çıksın)
+    if (t.length > 1800) t = t.slice(0, 1800) + ' …';
+    const konu = (materialResult && materialResult.dokuman_basligi) ? String(materialResult.dokuman_basligi) : (materialTopic.trim() || 'aynı konu');
+    const yonerge = 'Konu: "' + konu + '". Daha önce ürettiğin aşağıdaki materyali BAŞTAN, temiz ve HATASIZ olarak yeniden üret. Şu hataları düzelt: boş/eksik şıklar, boş bırakılmış eşleştirme sütunu, tekrar eden veya bozuk sorular, var olmayan görsele atıf, yanlış cevap anahtarı. Aynı konu ve formatta kal, sağlam kısımları koru. Aşağıdaki metin yalnızca ÖNCEKİ çıktının örneğidir:\n\n----- ÖNCEKİ ÇIKTI (örnek) -----\n';
     setMaterialTopic(yonerge + t);
     setMaterialResult(null);
     try { setMaterialError(''); } catch(e){}
-    showToast('✏️ Materyal düzeltme talimatıyla prompt kutusuna aktarıldı. Şimdi "Üret"e bas.');
+    showToast('✏️ Düzeltme istemi hazır — "Üret"e bas.');
     setTimeout(() => { try { document.querySelector('textarea')?.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {} }, 200);
 };
 // ── (EK) AL destekli: sonucu başka sınıfa uyarla / yeniden üret ──
 const matbaaUyarla = (not) => {
-    const t = matbaaMetneCevir(materialResult);
+    let t = matbaaMetneCevir(materialResult);
     if (!t) { showToast('Uyarlanacak içerik yok.'); return; }
+    if (t.length > 1800) t = t.slice(0, 1800) + ' …';
+    const konu = (materialResult && materialResult.dokuman_basligi) ? String(materialResult.dokuman_basligi) : (materialTopic.trim() || 'aynı konu');
     const yon = (not && String(not).trim()) ? String(not).trim() : 'Aynı konuda daha iyi, farklı bir versiyon üret.';
-    setMaterialTopic('AŞAĞIDAKİ materyali şu isteğe göre YENİDEN üret: ' + yon + '. Sağlam kısımları koru, istenen değişikliği uygula, gerekirse zorluğu ve dili hedef sınıfa göre ayarla.\n\n----- MEVCUT MATERYAL -----\n' + t);
+    setMaterialTopic('Konu: "' + konu + '". Aşağıdaki materyali şu isteğe göre YENİDEN üret: ' + yon + '. Sağlam kısımları koru, istenen değişikliği uygula, gerekirse zorluğu ve dili hedef sınıfa göre ayarla. Aşağıdaki metin yalnızca önceki çıktının örneğidir:\n\n----- ÖNCEKİ ÇIKTI (örnek) -----\n' + t);
     setMaterialResult(null);
     try { setMaterialError(''); } catch(e){}
     showToast('🤖 İstem hazır — "Üret"e bas!');
@@ -3108,12 +3113,36 @@ title="Veli ödevi yaptıysa buraya tıklayın."
 <span className="text-[10px] font-bold text-teal-300 uppercase mr-1"><i className="fa-solid fa-wand-magic-sparkles mr-1"></i>Hızlı ekle:</span>
 {[
 {e:'✔ Cevap anahtarlı', m:'Cevap anahtarı ve kısa çözümlerini ekle.'},
+{e:'✍️ Üzerinden geçmeli yazı', m:'Harf/hece/kelimeleri noktalı-kesik çizgili (üzerinden geçilecek) yazı çalışması olarak ver; öğrenci kalemle üzerinden geçebilsin.'},
+{e:'🔤 Harf tanıma', m:'Verilen harfi tanıma ve o harfle başlayan kelime/görsel eşleştirme etkinliği ekle.'},
+{e:'📖 Okuma parçası + sorular', m:'Yaş düzeyine uygun kısa bir okuma parçası ve anlama soruları ekle.'},
+{e:'🧩 Hece/kelime çalışması', m:'Hecelere ayırma ve hecelerden kelime oluşturma etkinliği ekle.'},
+{e:'✏️ Çizgi çalışması', m:'El-göz koordinasyonu için çizgi/örüntü tamamlama çalışması ekle.'},
+{e:'🟦 2D şekiller', m:'Konuyu 2 boyutlu basit şekillerle (kare, üçgen, daire) renkli SVG olarak görselleştir.'},
+{e:'🧊 3D cisimler', m:'Konuyu 3 boyutlu cisimlerle (küp, küre, silindir, prizma, koni) SVG çizimlerle anlat ve etkinleştir.'},
+{e:'🗺️ Kavram haritası', m:'Konuyu kavram/zihin haritası olarak görselleştir.'},
+{e:'📊 Tablo/grafik', m:'Uygun yere düzenli bir tablo veya basit grafik ekle.'},
 {e:'🎨 Görsel/SVG', m:'Uygun yerlere renkli inline SVG görsel/şema ekle.'},
+{e:'🖍️ Boyama/renklendirme', m:'Basit SVG çizgi görseli ekle; öğrenci boyayabilsin.'},
+{e:'🔀 Eşleştirme', m:'Bir eşleştirme etkinliği ekle.'},
+{e:'⬜ Boşluk doldurma', m:'Boşluk doldurma soruları ekle.'},
+{e:'✅ Doğru-Yanlış', m:'Doğru-yanlış soruları ekle.'},
+{e:'🃏 Kesilebilir kart', m:'Kesilip kullanılabilecek flashcard kartlar ekle.'},
+{e:'🎲 Oyun/bulmaca', m:'Konuyla ilgili eğlenceli bir bulmaca/oyun ekle (kelime avı, şifre çözme vb.).'},
+{e:'🧠 Açık uçlu', m:'Düşündüren açık uçlu sorular ekle.'},
 {e:'😀 Bol emoji', m:'Bol emoji ve renkli başlıklarla eğlenceli hale getir.'},
 {e:'🟢 Kolay', m:'Zorluk seviyesi kolay olsun.'},
+{e:'🟡 Orta', m:'Zorluk seviyesi orta olsun.'},
 {e:'🔴 Zor', m:'Zorluk seviyesi zor olsun.'},
+{e:'5️⃣ 5 soru', m:'Toplam 5 soru olsun.'},
 {e:'🔟 10 soru', m:'Toplam 10 soru olsun.'},
 {e:'2️⃣0️⃣ 20 soru', m:'Toplam 20 soru olsun.'},
+{e:'🎯 Kazanım ekle', m:'Materyalin başına konuya uygun MEB kazanımlarını ekle.'},
+{e:'⏱️ Süre + yönerge', m:'Etkinlik süresi ve öğrenciye net yönerge ekle.'},
+{e:'🔁 Pekiştirme', m:'Sonunda konuyu pekiştiren tekrar sorularıyla bitir.'},
+{e:'📖 Hikâye temalı', m:'Konuyu bir hikâye/karakter etrafında kurgula.'},
+{e:'🏆 Rozet/sertifika', m:'Sonuna motive edici rozet/sertifika alanı ekle.'},
+{e:'🧒 Öğrenciye uyarla', m:'Yukarıdaki öğrenci bilgilerine göre birebir kişiselleştir.'},
 {e:'📄 Yazdırmaya hazır', m:'A4 yazdırmaya uygun, sade ve düzenli olsun.'},
 ].map((c,i)=>(<button key={i} onClick={()=>promptaEkleChip(c.m)} className="text-[11px] bg-white/10 hover:bg-yellow-400 hover:text-teal-900 text-teal-50 px-2 py-1 rounded-md font-semibold transition border border-teal-400/20 hover:border-yellow-400">{c.e}</button>))}
 </div>
