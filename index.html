@@ -1045,7 +1045,8 @@ try{
 (function(){
   function uyariGoster(){
     try{
-      // Uyarı her açılışta gösterilsin (kalıcı gizleme kaldırıldı; "Anladım" yalnızca o oturum için kapatır).
+      // KALICI: kullanıcı bir kez "Anladım" derse uyarı bir daha ASLA çıkmaz (localStorage).
+      try{ if(localStorage.getItem('zirve_uyari_gizli')==='1') return; }catch(e){}
       if(document.getElementById('zirve-ai-uyari')) return;
       var b=document.createElement('div'); b.id='zirve-ai-uyari';
       b.style.cssText='position:fixed;left:8px;right:8px;bottom:8px;z-index:2147482000;background:rgba(15,23,42,.94);color:#e2e8f0;border:1px solid #334155;border-radius:12px;padding:9px 12px;font:600 11px system-ui,-apple-system,Segoe UI,Roboto,sans-serif;display:flex;align-items:center;gap:8px;box-shadow:0 6px 20px rgba(0,0,0,.35);max-width:660px;margin:0 auto';
@@ -1065,6 +1066,33 @@ try{
 
 <script type="text/babel">
 const { useState, useEffect, useRef, useMemo } = React;
+
+// ==== GÜVENLİK AĞI: Herhangi bir render hatasında UYGULAMA KOMPLE ÇIKMASIN ====
+// Bozuk/eksik blok gelse bile ekran beyaz kalmaz; nazik bir hata kutusu gösterip
+// kullanıcının çalışmaya devam etmesini sağlar.
+class HataSiniri extends React.Component {
+  constructor(props){ super(props); this.state = { hata: false, mesaj: '' }; }
+  static getDerivedStateFromError(err){ return { hata: true, mesaj: (err && err.message) ? err.message : 'Beklenmeyen bir sorun oluştu.' }; }
+  componentDidCatch(err, info){ try{ console.error('Yakalanan hata:', err, info); }catch(e){} }
+  render(){
+    if(this.state.hata){
+      const geri = this.props.onReset;
+      return (
+        <div className="max-w-xl mx-auto my-8 bg-white border-2 border-red-200 rounded-2xl p-6 shadow-lg text-center no-print">
+          <div className="text-4xl mb-2">🛟</div>
+          <h3 className="text-lg font-black text-red-700 mb-1">Bu çıktı görüntülenirken bir sorun oldu</h3>
+          <p className="text-sm text-gray-600 mb-4">Uygulama kapanmadı, güvendesin. Çoğu zaman <b>“Yeniden Üret”</b> ya da isteği biraz sadeleştirmek sorunu çözer.</p>
+          <div className="flex gap-2 justify-center flex-wrap">
+            <button onClick={()=>{ this.setState({hata:false, mesaj:''}); if(typeof geri==='function') geri(); }} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-bold text-sm"><i className="fa-solid fa-arrow-left mr-1"></i> Geri Dön</button>
+            <button onClick={()=>{ this.setState({hata:false, mesaj:''}); }} className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-lg font-bold text-sm">Tekrar Dene</button>
+          </div>
+          {this.state.mesaj && <p className="text-[10px] text-gray-400 mt-3 break-all">{String(this.state.mesaj).slice(0,160)}</p>}
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 const CATEGORIES = [
 { id: 'okul_oncesi', name: 'Özel Eğitim & Okul Öncesi', icon: 'fa-child', color: 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100', activeColor: 'bg-blue-600 text-white border-blue-600', reportTitle: 'Özel Eğitim Seans Raporu' },
@@ -1654,6 +1682,16 @@ const markAsSent = (id) => setBulkMessages(prev => prev.map(m => m.id === id ? {
 // BARIŞ HOCA MEGA DOSYA/PDF UYARLAMA VE DÖNÜŞTÜRME MOTORU
 // ── (EK) Hızlı çip ──
 const promptaEkleChip = (metin) => { setMaterialTopic(t => (t && t.trim() ? t.trim() + ' ' : '') + metin); try { setMaterialError(''); } catch(e){} };
+// BAĞLANTILI AKIŞ: Şablonu matbaa kutusuna DÜŞÜR (biriktirir). Kutuda içerik varsa üstüne ekler,
+// böylece şablon + hızlı eklemeler birbirine bağlı çalışır. Boşsa temel isteği yazar.
+const sablonKutuyaAl = (sablon) => {
+  if (sablon && sablon.t && typeof setMaterialType === 'function') { try { setMaterialType(sablon.t); } catch(_){} }
+  const yeni = (sablon && sablon.m) ? String(sablon.m) : '';
+  setMaterialTopic(t => { const cur = (t || '').trim(); return cur ? (cur + '\n+ ' + yeni) : yeni; });
+  try { setMaterialError(''); } catch(e){}
+  showToast('✅ Matbaa kutusuna eklendi — hızlı eklemelerle zenginleştirebilirsin.');
+  setTimeout(() => { try { document.querySelector('textarea')?.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {} }, 120);
+};
 // 📅 DERS PLANI: günlük/haftalık/aylık/yıllık, öğrenci özelliklerine + materyal/yöntem önerilerine göre
 const dersPlaniOlustur = (tur) => {
     const sinif = (planSinif.trim() || matGrade.trim() || (activityCategory && !String(activityCategory).startsWith('Fark') ? activityCategory : '')).trim();
@@ -1724,16 +1762,66 @@ const matbaaPromptaEkle = () => {
 };
 // ── (EK) AL destekli: sonucu başka sınıfa uyarla / yeniden üret ──
 const matbaaUyarla = (not) => {
+    if (isGeneratingMaterial) { showToast('⏳ Şu an üretiliyor, bir saniye…'); return; }
     let t = matbaaMetneCevir(materialResult);
     if (!t) { showToast('Uyarlanacak içerik yok.'); return; }
     if (t.length > 1800) t = t.slice(0, 1800) + ' …';
     const konu = (materialResult && materialResult.dokuman_basligi) ? String(materialResult.dokuman_basligi) : (materialTopic.trim() || 'aynı konu');
     const yon = (not && String(not).trim()) ? String(not).trim() : 'Aynı konuda daha iyi, farklı bir versiyon üret.';
-    setMaterialTopic('Konu: "' + konu + '". Aşağıdaki materyali şu isteğe göre YENİDEN üret: ' + yon + '. Sağlam kısımları koru, istenen değişikliği uygula, gerekirse zorluğu ve dili hedef sınıfa göre ayarla. Aşağıdaki metin yalnızca önceki çıktının örneğidir:\n\n----- ÖNCEKİ ÇIKTI (örnek) -----\n' + t);
-    setMaterialResult(null);
+    const istem = 'Konu: "' + konu + '". Aşağıdaki materyali şu isteğe göre YENİDEN üret: ' + yon + '. Sağlam kısımları koru, istenen değişikliği uygula, gerekirse zorluğu ve dili hedef sınıfa göre ayarla. Aşağıdaki metin yalnızca önceki çıktının örneğidir:\n\n----- ÖNCEKİ ÇIKTI (örnek) -----\n' + t;
     try { setMaterialError(''); } catch(e){}
-    showToast('🤖 İstem hazır — "Üret"e bas!');
-    setTimeout(() => { try { document.querySelector('textarea')?.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {} }, 150);
+    showToast('🤖 Uyarlanıyor… mevcut çalışman kaybolmaz, yenisi gelince değişecek.');
+    try { document.getElementById('printable-material')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) {}
+    generateMaterial(istem);   // YERİNDE yenile: ekrandaki çıktı durur, yenisi hazır olunca yerine geçer
+};
+
+// ⚡ ANINDA ÜRET: Kutudaki mevcut istekle (varsa) birleştirip tek tıkla üretir.
+const anindaUret = (comboIstem, tip) => {
+    if (isGeneratingMaterial) { showToast('⏳ Şu an üretiliyor, bir saniye…'); return; }
+    if (tip && typeof setMaterialType === 'function') { try { setMaterialType(tip); } catch(e){} }
+    const mevcut = (materialTopic || '').trim();
+    const istem = mevcut ? (mevcut + '\n\n' + comboIstem) : comboIstem;
+    try { setMaterialError(''); } catch(e){}
+    if (typeof setActiveTab === 'function') { try { setActiveTab('tools'); } catch(e){} }
+    showToast('⚡ Anında çalışma üretiliyor…');
+    generateMaterial(istem);
+};
+
+// ✍️ İZLİ (ÜZERİNDEN GEÇMELİ) ÇALIŞMA — çevrimdışı, yapay zeka gerektirmez, kota harcamaz.
+// Çizgili satırda noktalı/kesik harflerin üzerinden geçilir; altına boş satır bırakılır.
+// Bu çalışmanın tasarımı uygulamanın matbaa çıktısıyla birebir uyumludur.
+const izGeciCalismasi = (baslik, yonerge, aciklama, kelimeler) => {
+    const kelimeSatiri = (kelime) => {
+        const tekrar = (String(kelime) + '&nbsp;&nbsp;&nbsp;&nbsp;').repeat(3);
+        return (
+            '<div style="margin:14px 0 24px 0;break-inside:avoid;">' +
+                '<div style="display:inline-block;background:#eef2ff;border:1px solid #c7d2fe;border-radius:8px;padding:2px 10px;font-size:15px;color:#4338ca;font-weight:800;margin-bottom:6px;">' + String(kelime) + '</div>' +
+                // İZLİ satır (üzerinden geçilecek — noktalı/açık gri harfler)
+                '<div style="position:relative;height:72px;border-top:2px solid #cbd5e1;border-bottom:3px solid #475569;">' +
+                    '<div style="position:absolute;left:0;right:0;top:50%;border-top:2px dashed #cbd5e1;"></div>' +
+                    '<div style="position:absolute;left:12px;top:2px;font-size:46px;line-height:64px;letter-spacing:10px;color:#cbd5e1;font-weight:700;white-space:nowrap;">' + tekrar + '</div>' +
+                '</div>' +
+                // BOŞ satır (çocuk kendi yazar)
+                '<div style="position:relative;height:72px;margin-top:8px;border-top:2px solid #e2e8f0;border-bottom:3px solid #94a3b8;">' +
+                    '<div style="position:absolute;left:0;right:0;top:50%;border-top:2px dashed #e2e8f0;"></div>' +
+                '</div>' +
+            '</div>'
+        );
+    };
+    const html =
+        '<div style="text-align:center;margin-bottom:10px;">' +
+            '<div style="font-size:13px;letter-spacing:3px;color:#0ea5e9;font-weight:800;text-transform:uppercase;">İLK OKUMA-YAZMA ÇALIŞMASI</div>' +
+        '</div>' +
+        '<div style="background:#eff6ff;border:2px solid #bfdbfe;border-radius:12px;padding:10px 14px;margin-bottom:10px;">' +
+            '<div style="font-size:16px;color:#1d4ed8;font-weight:800;">📌 Yönerge: ' + yonerge + '</div>' +
+        '</div>' +
+        '<p style="font-size:15px;color:#334155;margin:0 0 12px 0;line-height:1.5;">' + aciklama + '</p>' +
+        (kelimeler || []).map(kelimeSatiri).join('');
+    setMaterialResult({ dokuman_basligi: baslik, alt_baslik: yonerge, icerik_bloklari: [{ blok_tipi: 'zengin_metin', baslik: '', html_icerik: html }] });
+    try { setShowAnswerKey(false); } catch(e){}
+    if (typeof setActiveTab === 'function') { try { setActiveTab('tools'); } catch(e){} }
+    showToast('✍️ Çalışma hazır! PDF/Yazdır ile alabilirsin.');
+    setTimeout(() => { try { document.getElementById('printable-material')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch(e){} }, 120);
 };
 // ── (EK) Toplu fasikül: birden çok bölümü tek pakette üret ──
 const fasikulBolumToggle = (b) => setFasikulBolumler(prev => prev.includes(b) ? prev.filter(x => x !== b) : [...prev, b]);
@@ -1766,9 +1854,12 @@ const promptSorunlari = (metin) => {
     return bulunan;
 };
 
-const generateMaterial = async () => {
+const generateMaterial = async (istekOverride) => {
     // Matbaa: serbest isteği güvenilir yazdırılabilir materyale dönüştürür.
-    const instruction = materialTopic.trim() || 'Yüklenen dosyayı yaş düzeyine uygun çalışma kâğıdına dönüştür.';
+    // istekOverride bir metinse (uyarla/yeniden üret/anında çalışma butonlarından), onu kullan ve kutuya da yaz.
+    const _override = (typeof istekOverride === 'string' && istekOverride.trim()) ? istekOverride.trim() : '';
+    if(_override){ try{ setMaterialTopic(_override); }catch(e){} }
+    const instruction = _override || (materialTopic.trim() || 'Yüklenen dosyayı yaş düzeyine uygun çalışma kâğıdına dönüştür.');
     if (!apiKey.trim()) {
         setMaterialError('Üretim için Ayarlar bölümünden Gemini API anahtarı girilmelidir.');
         showToast('Matbaa için önce API anahtarını ekleyin.');
@@ -1795,7 +1886,8 @@ const generateMaterial = async () => {
     const blokRehberi = 'Kullanabileceğin blok tipleri ve zorunlu alanları:\n- "bilgi_kutusu": {baslik, icerik_metni}\n- "okuma_parcasi": {baslik, icerik_metni}\n- "standart_soru": {soru_metni, secenekler (boşluk/açık uçluda boş bırak), cevap_anahtari}\n- "eslestirme_tablosu": {soru_metni, sol_sutun, sag_sutun_karisik, cevap_anahtari}\n- "cizgi_calismasi": {baslik, cizim_adimlari}. cizim_adimlari her elemanı, satır boyunca en az 30 kez TEKRARLAYAN tek bir çizgi deseni olmalı. Örnek elemanlar: "∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿", "________________________________", "oOoOoOoOoOoOoOoOoOoOoOoOoOoOoO", "/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\", "⌒⌒⌒⌒⌒⌒⌒⌒⌒⌒⌒⌒⌒⌒⌒⌒⌒⌒⌒⌒", "cccccccccccccccccccccccccccccc". En az 6 farklı desen satırı üret.\n- "yonergeli_cizim": {baslik, cizim_adimlari}\n- "gorsel_dikte": {baslik, dikte_kelimeleri:[{emoji, kelime}]}\n- "basara_hece_tablosu": {baslik, hece_gruplari}\n- "tombala_grid": {baslik, tombala_gorevleri}\n- "emoji_matrisi": {soru_metni, emojiler}\n- "sertifika": {sertifika_ogrenci, sertifika_metni}\n- "venn_semasi": {kavram1, kavram2, kavram1_ozellikler, kavram2_ozellikler, ortak_ozellikler}\n- "zihin_haritasi": {baslik, merkez_kavram, yan_kavramlar}\n- "flashcard_grid": {baslik, kartlar:[{on_yuz, arka_yuz}]}\n- "recete_adimlari": {baslik, malzemeler, adimlar}\n- "gorsel_veri": {baslik, sutunlar, satirlar:[{hucreler}]}\n- "donusum_makinesi": {baslik, kural, girdiler, ciktilar}\n- "sirala_yapistir": {baslik, karisik_adimlar}\n- "hatali_islem": {hatali_cozum}\n- "gazete_manseti": {manset, haber_metni}\n- "zengin_metin": {baslik, html_icerik}\nBlok tipini TAM olarak yukarıdaki gibi yaz. ÇOK ÖNEMLİ: Kullanıcı isteğinde açıkça \"sertifika\", \"başarı belgesi\" ya da \"takdir belgesi\" GEÇMİYORSA sertifika bloğunu ASLA ekleme; materyali sertifikayla bitirme. Açıkça istenirse en sona ekle. En az 3-6 blok üret. Okul öncesi/özel eğitim istenirse bolca cizgi_calismasi, yonergeli_cizim, gorsel_dikte, emoji_matrisi kullan. Her blokta uygunsa cevap_anahtari ekle.\n\nGÖRSEL ÇİZİM (çok önemli): İstek bir GÖRSEL gerektiriyorsa (satranç tahtası ve taş dizilimi, Scratch/blok kodlama şeması, geometrik şekil, harita, diyagram, akış şeması, saat, kesir modeli, sayı doğrusu vb.) bunu "zengin_metin" bloğunda html_icerik içine DOĞRUDAN INLINE SVG çizerek üret. SVG renkli, net ve yazdırmaya uygun olsun; <svg viewBox=...> kullan, uygun <rect>, <circle>, <line>, <text>, <polygon> ile çiz. Örnek: satranç tahtası için 8x8 kareli bir <svg> çiz, kareleri açık/koyu renklerle doldur ve taşları Unicode sembolleriyle (beyaz K Q R B N P, siyah k q r b n p Unicode satranç sembolleri) <text> olarak yerleştir; Scratch için blokları renkli yuvarlatılmış <rect> ve içine <text> ile göster. Sadece emoji sıralamak YETERLİ DEĞİLDİR; gerçek bir SVG şekil çiz. html_icerik geçerli, kendi kendine yeten HTML+SVG olsun.\n\nSORU KURALI (çok önemli): Bir bölümde soru/etkinlik istediysen (dogru-yanlis, bosluk doldur, eslestir) o sorularin METNINI MUTLAKA yaz; ASLA sorulari atlayip dogrudan cevap anahtarina gecme. Dogru-yanlis icin her maddeyi acik cumle olarak yaz ve yanina D/Y isaretlenecek yer birak. Bos, yarim veya uc nokta iceren madde birakma.';
     const blokEsitle = {'coktan_secmeli':'standart_soru','test_sorusu':'standart_soru','soru':'standart_soru','klasik_soru':'standart_soru','acik_uclu':'standart_soru','bosluk':'standart_soru','bosluk_doldurma':'standart_soru','dogru_yanlis':'standart_soru','yeni_nesil':'standart_soru','eslestirme':'eslestirme_tablosu','bilgi':'bilgi_kutusu','konu_anlatimi':'bilgi_kutusu','konu_ozeti':'bilgi_kutusu','ozet':'bilgi_kutusu','aciklama':'bilgi_kutusu','okuma':'okuma_parcasi','metin':'okuma_parcasi','cizgi':'cizgi_calismasi','cizgi_calismalari':'cizgi_calismasi','yonergeli':'yonergeli_cizim','cizim':'yonergeli_cizim','dikte':'gorsel_dikte','hece':'basara_hece_tablosu','basara':'basara_hece_tablosu','tombala':'tombala_grid','bingo':'tombala_grid','emoji':'emoji_matrisi','gorsel_fark':'emoji_matrisi','basari_belgesi':'sertifika','venn':'venn_semasi','zihin':'zihin_haritasi','flashcard':'flashcard_grid','bilgi_karti':'flashcard_grid','kartlar':'flashcard_grid','recete':'recete_adimlari','adim_adim':'recete_adimlari','tarif':'recete_adimlari','tablo':'gorsel_veri','veri_tablosu':'gorsel_veri','makine':'donusum_makinesi','on_sonra_makine':'donusum_makinesi','sirala':'sirala_yapistir','hatali':'hatali_islem','hata_dedektifi':'hatali_islem','sifre':'sifre_kirici','fatura':'fatura_tablosu','fis':'fatura_tablosu','gazete':'gazete_manseti','haber':'gazete_manseti','manset':'gazete_manseti','diyalog':'karikatur_diyalog','karikatur':'karikatur_diyalog','sudoku':'sudoku_bulmaca','bulmaca':'sudoku_bulmaca','degerlendirme':'degerlendirme_tablosu','degerlendirme_formu':'degerlendirme_tablosu','html':'zengin_metin','serbest':'zengin_metin'};
     const normalizeBloklar = (r) => { if (r && Array.isArray(r.icerik_bloklari)) { r.icerik_bloklari.forEach((b) => { if (b && typeof b.blok_tipi === 'string') { const k = b.blok_tipi.toLowerCase().trim(); if (blokEsitle[k]) b.blok_tipi = blokEsitle[k]; } }); } return r; };
-    const prompt = `KULLANICININ İSTEĞİ: ${instruction}\nHEDEF KİTLE: ${targetGroup}\n${formatContext}\n${studentContext}\nÖNEMLİ KİŞİSELLEŞTİRME KURALI: Kullanıcının yazdığı sınıf düzeyi, soru sayısı, zorluk ve konu KESİN önceliklidir; şablonun varsayılan sayılarını/sınıfını EZER. Şablonda "4. sınıf, 3 soru" yazsa bile kullanıcı "5. sınıf, 10 soru" dediyse onu uygula. Kullanıcı dosya yükleyip "aynısını üret" dediyse yüklenen dokümanı olabildiğince aynı yapıda yeniden üret; "uyarla" dediyse ona göre uyarla.\nBİÇİM ZENGİNLİĞİ: İçeriği gözü şenlendirecek şekilde hazırla; önemli kelimeleri renkli ve kalın vurgula (zengin_metin bloklarında <strong>, <em>, <mark>, <span style=color> kullan). Okul öncesi/küçük yaş için bol emoji, büyük renkli başlıklar kullan. Uygun her yerde (şekil, satranç, saat, harita, kavram haritası) zengin_metin bloğunda INLINE SVG ile renkli görsel çiz.\n${isTestRequest ? testContract : blokRehberi + '\n\nİsteği eksiksiz ama ÖZ ve NET bir çalışma kâğıdına dönüştür; gereksiz uzun paragraflar, tekrarlar ve dolgu metin YAZMA — doğrudan işe yarar içerik üret (hız için önemli).'}\n\nSadece JSON döndür. Biçim: {"dokuman_basligi":"...","alt_baslik":"...","icerik_bloklari":[...]}. Markdown, açıklama ve kod çiti yazma.`;
+    const gorselTalimati = uploadedFileData ? '\n\n🖼️ YÜKLENEN DOSYA/GÖRSEL KURALI (EN YÜKSEK ÖNCELİK): Kullanıcı bir GÖRSEL veya PDF yükledi ve bunu sana gönderdim. Bu dosyayı DİKKATLE incele. İçindeki metinleri, soruları, kelimeleri, şekilleri, tablo ve düzeni ESAS AL. Kullanıcı "uyarla/düzenle" dediyse dosyanın YAPISINA ve İÇERİĞİNE BİREBİR SADIK kal; yalnızca istenen değişikliği uygula, dosyada olmayan bir konuya ASLA kayma, içerik uydurma. "Aynısını çıkar" dediyse birebir aynı yapı ve soru sayısıyla yeniden üret. Yüklenen görseldeki bilgileri sakın görmezden gelme; çıktı görselle tutarlı olmalı.' : '';
+    const prompt = `KULLANICININ İSTEĞİ: ${instruction}${gorselTalimati}\nHEDEF KİTLE: ${targetGroup}\n${formatContext}\n${studentContext}\nÖNEMLİ KİŞİSELLEŞTİRME KURALI: Kullanıcının yazdığı sınıf düzeyi, soru sayısı, zorluk ve konu KESİN önceliklidir; şablonun varsayılan sayılarını/sınıfını EZER. Şablonda "4. sınıf, 3 soru" yazsa bile kullanıcı "5. sınıf, 10 soru" dediyse onu uygula. Kullanıcı dosya yükleyip "aynısını üret" dediyse yüklenen dokümanı olabildiğince aynı yapıda yeniden üret; "uyarla" dediyse ona göre uyarla.\nBİÇİM ZENGİNLİĞİ: İçeriği gözü şenlendirecek şekilde hazırla; önemli kelimeleri renkli ve kalın vurgula (zengin_metin bloklarında <strong>, <em>, <mark>, <span style=color> kullan). Okul öncesi/küçük yaş için bol emoji, büyük renkli başlıklar kullan. Uygun her yerde (şekil, satranç, saat, harita, kavram haritası) zengin_metin bloğunda INLINE SVG ile renkli görsel çiz.\n${isTestRequest ? testContract : blokRehberi + '\n\nİsteği eksiksiz ama ÖZ ve NET bir çalışma kâğıdına dönüştür; gereksiz uzun paragraflar, tekrarlar ve dolgu metin YAZMA — doğrudan işe yarar içerik üret (hız için önemli).'}\n\nSadece JSON döndür. Biçim: {"dokuman_basligi":"...","alt_baslik":"...","icerik_bloklari":[...]}. Markdown, açıklama ve kod çiti yazma.`;
 
     const parseJson = (raw) => {
         const text = String(raw || '').replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
@@ -1961,7 +2053,8 @@ const generateMaterial = async () => {
     };
 
     setIsGeneratingMaterial(true);
-    setMaterialResult(null);
+    // NOT: Eski sonucu burada SİLMİYORUZ. Böylece "uyarla / yeniden üret" sırasında
+    // mevcut çalışma ve PDF ekranda kalır; yenisi hazır olunca yerine geçer, hata olsa bile KAYBOLMAZ.
     setMaterialError('');
     try {
         let result;
@@ -1980,9 +2073,9 @@ const generateMaterial = async () => {
         }
         setMaterialResult(result);
         setShowAnswerKey(true);
-        setUploadedFilePreview(null);
-        setUploadedFileData(null);
-        showToast('Materyal hazırlandı! ✨');
+        // Yüklenen görsel/PDF EKLİ KALIR: aynı dosyaya tekrar tekrar "uyarla" diyebilesin diye.
+        // Bittiğinde önizlemedeki ✕ ile kaldırabilirsin.
+        showToast(uploadedFileData ? 'Materyal hazır! ✨ (Yüklediğin görsel hâlâ ekli — istersen tekrar uyarlayabilirsin)' : 'Materyal hazırlandı! ✨');
     } catch (error) {
         const _detay = (error && error.message) ? (' (' + error.message + ')') : '';
         const message = error?.status === 401 || error?.status === 403 ? 'API anahtarı veya model erişimi geçersiz.' : error?.status === 429 ? 'Yapay zekâ kullanım sınırına ulaşıldı; biraz sonra yeniden deneyin.' : ('Materyal üretilemedi, lütfen tekrar deneyin.' + _detay);
@@ -2975,6 +3068,36 @@ title="Veli ödevi yaptıysa buraya tıklayın."
 <button onClick={() => { setMaterialTopic('5. sınıf için Türkçe, Matematik, Fen Bilimleri, Sosyal Bilgiler ve İngilizce derslerinden dengeli 10 soruluk genel değerlendirme testi hazırla.'); setMaterialType('test'); setMatQuestionCount('10'); setMaterialError(''); }} className="text-xs bg-white/10 hover:bg-white/20 border border-teal-300/40 px-3 py-1.5 rounded-full transition">5. sınıf genel test</button>
 <button onClick={() => { setMaterialTopic('4. sınıf için genel değerlendirme testi hazırla.'); setMaterialType('test'); setMatQuestionCount('10'); setMaterialError(''); }} className="text-xs bg-white/10 hover:bg-white/20 border border-teal-300/40 px-3 py-1.5 rounded-full transition">4. sınıf genel test</button>
 </div>
+
+{/* ⚡ ANINDA HAZIR ÇALIŞMALAR — tek tıkla üretim */}
+<div className="mb-3 bg-gradient-to-br from-fuchsia-600/25 to-indigo-600/20 p-3 rounded-xl border border-fuchsia-400/30">
+  <div className="flex items-center justify-between mb-2">
+    <span className="text-xs font-black text-fuchsia-100 uppercase tracking-wide"><i className="fa-solid fa-bolt text-yellow-300 mr-1"></i> Anında Hazır Çalışmalar</span>
+    <span className="text-[10px] text-fuchsia-200/70">tek tıkla üretilir</span>
+  </div>
+  <div className="flex flex-wrap gap-1.5">
+    {[
+      {e:'✍️ isa · masa · kasa · para', f:()=>izGeciCalismasi('Kelime Çalışması: isa · masa · kasa · para', 'Kelimeleri önce noktalı harflerin üzerinden geç, sonra boş satıra kendin yaz.', 'Aşağıdaki kelimeleri çizgiye dikkat ederek, harfleri düzgün oturtarak yaz. Acele etme, güzel yaz. 👇', ['isa','masa','kasa','para'])},
+      {e:'ɑ Küçük "a" yazımı', f:()=>izGeciCalismasi('Küçük "a" Yazıyorum', 'Küçük a harfinin ve kelimelerin üzerinden geç, sonra kendin yaz.', 'Kalemini noktalı harften başlat. Önce üzerinden geç, sonra boş satıra sen yaz. 🖊️', ['a','al','at','ana','ata','ada'])},
+      {e:'🔤 Harf: seçtiğin harf', f:()=>{ const h=(window.prompt('Hangi küçük harf? (ör. e, l, m, o)','e')||'').trim(); if(!h) return; izGeciCalismasi('Küçük "'+h+'" Yazıyorum', '“'+h+'” harfinin ve kelimelerinin üzerinden geç, sonra kendin yaz.', 'Harfi çocukların ilk öğrendiği biçimde, çizgiye dikkat ederek yaz. 🖊️', [h, h+h, h+h+h]); }},
+      {e:'🎨 Renk kavramı (görsel)', f:()=>anindaUret('Okul öncesi için RENK kavramını öğreten görsel bir çalışma hazırla: temel renkleri (kırmızı, mavi, sarı, yeşil, turuncu, mor) renkli inline SVG kutucuklarla tanıt; renk-nesne eşleştirme, "hangi renk?" etkinliği ve bir boyama bölümü ekle. Bol emoji ve büyük renkli başlık kullan.', 'Fark Etmez (Yapay Zeka Seçsin)')},
+      {e:'🔢 Sayılar 1–10', f:()=>anindaUret('Okul öncesi için 1’den 10’a kadar sayıları tanıtan görsel bir çalışma hazırla: her sayının yanına o kadar nesne/emoji, rakamın üzerinden geçmeli yazımı ve sayma etkinliği olsun.', 'Fark Etmez (Yapay Zeka Seçsin)')},
+      {e:'📖 Ses temelli: "e" sesi', f:()=>anindaUret('Güncel MEB Ses Temelli Cümle Yöntemiyle "e" sesi için ilk okuma-yazma çalışması hazırla: sesi hissettirme, e ile hece tablosu (el, ev, et...), kelime ve basit cümle oluşturma aşamaları, bol emoji ve renkli görsel olsun.', 'Fark Etmez (Yapay Zeka Seçsin)')},
+      {e:'🐢 Çizgi çalışması', f:()=>anindaUret('Okul öncesi için el-göz koordinasyonu çizgi çalışması hazırla: her satırda kalemle üzerinden geçilecek farklı bir desen (düz, dalgalı, zikzak, yay, halka) olsun; en az 6 satır.', 'cizgi_calismasi')},
+      {e:'🕐 Saat okuma (görsel)', f:()=>anindaUret('Saati öğreten çalışma hazırla: birkaç analog saati renkli inline SVG ile farklı saatleri gösterecek şekilde çiz, altlarına "saat kaç?" boşluğu bırak; cevapları en sona koy.', 'Fark Etmez (Yapay Zeka Seçsin)')},
+      {e:'🍕 Kesir modeli (görsel)', f:()=>anindaUret('Kesirleri görselleştiren çalışma hazırla: pizza/çubuk modellerini renkli inline SVG ile parçalara bölünmüş çiz (1/2, 1/3, 1/4, 3/4), her modelin altına kesri yaz; bir eşleştirme/boyama görevi ekle.', 'Fark Etmez (Yapay Zeka Seçsin)')},
+      {e:'📚 4 sayfalık fasikül', f:()=>anindaUret('Seçili konuda renkli, heceli açıklamalı, bol örnek ve alıştırmalı 4 sayfalık DEV bir fasikül hazırla; her bölüm kendi renkli başlığıyla ayrılsın. Cevap gerektiren bölümlerin anahtarını ekle.', 'Fark Etmez (Yapay Zeka Seçsin)')},
+      {e:'❓ 10 soruluk quiz', f:()=>anindaUret('Seçili konudan 10 soruluk çoktan seçmeli bir quiz hazırla; her soruda dört seçenek olsun, sonuna cevap anahtarı ve kısa açıklama ekle.', 'test')},
+      {e:'📗 Konu + mini quiz', f:()=>anindaUret('Seçili konuyu renkli, örnekli bir konu özetiyle anlat; ardından 5 soruluk mini quiz ve cevap anahtarı ekle.', 'karma')},
+      {e:'🧩 Farkı bul', f:()=>anindaUret('Okul öncesi için emoji matrisinde farklı olanı bulma çalışması hazırla; kolaydan zora doğru 6 satır olsun.', 'emoji')},
+      {e:'🔁 Son çalışmanın aynısı', f:()=>{ if(materialResult){ matbaaUyarla('Aynı yöntem, düzen ve biçimi koruyarak birebir benzer, yeni bir versiyon üret.'); } else { const son=(lastPromptContext|| (function(){try{return localStorage.getItem('mat_memory_genel')||'';}catch(e){return '';}})()); if(son){ anindaUret('Daha önce ürettiğim şu çalışmanın YÖNTEM ve DÜZENİNİN aynısını kullanarak yeniden hazırla: '+son); } else { showToast('Önce bir çalışma üret, sonra bu buton onun aynısını çıkarır.'); } } }},
+    ].map((k,i)=>(
+      <button key={i} onClick={k.f} className="text-[11px] bg-white/10 hover:bg-fuchsia-400 hover:text-slate-900 text-fuchsia-50 px-2.5 py-1.5 rounded-md font-bold transition border border-fuchsia-300/30">{k.e}</button>
+    ))}
+  </div>
+  <p className="text-[10px] text-fuchsia-100/70 mt-2"><i className="fa-solid fa-lightbulb text-yellow-300 mr-1"></i>İpucu: Yukarıya sınıf/konu yazarsan ya da bir şablon + hızlı ekleme seçersen, bu çalışmalar onun üstüne kurulur. 🎯</p>
+</div>
+
 {/* HAZIR ŞABLON BUTONLARI - TÜM TÜRLER */}
 <div className="mb-3 bg-teal-800/20 p-3 rounded-xl border border-teal-500/20">
   <button onClick={()=>setSablonAcik(s=>!s)} className="w-full flex items-center justify-between transition">
@@ -3086,7 +3209,7 @@ title="Veli ödevi yaptıysa buraya tıklayın."
         </button>
         {acik && <div className="flex flex-wrap gap-1.5 p-2 bg-teal-900/20">
           {items.map((sablon, i) => (
-            <button key={i} onClick={() => { if (typeof setMaterialType === 'function') { try { setMaterialType(sablon.t); } catch(_){} } setMaterialTopic(sablon.m); setMaterialError(''); }} className="text-[11px] bg-white/10 hover:bg-yellow-400 hover:text-teal-900 text-teal-50 px-2.5 py-1 rounded-md font-semibold transition border border-teal-400/20 hover:border-yellow-400">
+            <button key={i} onClick={() => sablonKutuyaAl(sablon)} className="text-[11px] bg-white/10 hover:bg-yellow-400 hover:text-teal-900 text-teal-50 px-2.5 py-1 rounded-md font-semibold transition border border-teal-400/20 hover:border-yellow-400">
               {sablon.e}
             </button>
           ))}
@@ -3144,6 +3267,37 @@ title="Veli ödevi yaptıysa buraya tıklayın."
 {e:'🏆 Rozet/sertifika', m:'Sonuna motive edici rozet/sertifika alanı ekle.'},
 {e:'🧒 Öğrenciye uyarla', m:'Yukarıdaki öğrenci bilgilerine göre birebir kişiselleştir.'},
 {e:'📄 Yazdırmaya hazır', m:'A4 yazdırmaya uygun, sade ve düzenli olsun.'},
+/* ===== YENİ EKLENEN HIZLI EKLEMELER ===== */
+{e:'🎨 Renk kavramı', m:'Renk kavramını öğreten bir bölüm ekle: temel renkleri (kırmızı, mavi, sarı, yeşil, turuncu, mor) tanıtan, renk-nesne eşleştirme, "hangi renk?" ve boyama etkinlikleri içersin. Her rengi renkli inline SVG kutucukla göster.'},
+{e:'🌈 Renkleri boya', m:'Öğrencinin belirtilen renklerle boyayacağı, her bölümü etiketlenmiş basit bir renkli boyama/renklendirme etkinliği ekle.'},
+{e:'ɑ Küçük "a" yazımı', m:'Küçük "a" harfinin yazımını öğreten üzerinden geçmeli (noktalı/kesik) yazı çalışması ekle. Harfi çocukların ilk öğrendiği TEK KATLI (ɑ) biçimde düşün; çizgili satır üzerinde en az 3 satır boyunca tekrarlı, üzerinden geçilecek biçimde ver. Yazım yönünü ok ile belirt.'},
+{e:'✒️ Küçük harf yazımı', m:'Belirtilen küçük harfin (ör. a, e, l, m) üzerinden geçmeli yazımını, çizgili satırda noktalı/kesik biçimde, ilk okuma-yazmadaki tek katlı el yazısı görünümüne uygun hazırla.'},
+{e:'🔁 Son yöntemi uygula', m:'Daha önce/son ürettiğim yöntemin AYNISINI kullan: aynı yöntem, aynı bölüm sırası ve aynı biçimle, sadece bu konuya uyarlayarak hazırla.'},
+{e:'📝 Ses temelli cümle', m:'Güncel MEB Ses Temelli Cümle Yöntemine uygun aşamalarla (sesi hissettirme, hece tablosu, kelime, cümle) bir bölüm ekle.'},
+{e:'🔤 Hece tablosu', m:'Seçilen ünsüzün tüm ünlülerle hecelerini renkli, düzenli bir hece tablosu olarak ekle (ba-be-bı-bi-bo-bö-bu-bü gibi).'},
+{e:'📖 Serbest okuma', m:'Kısa, akıcı ve heceli okunabilen bir ilk okuma metni ekle; altına 3 anlama sorusu koy.'},
+{e:'✍️ Dik temel yazı', m:'Örnekleri dik temel (bitişik olmayan) yazı biçiminde, çizgili satır üzerinde ver.'},
+{e:'🔢 Rakam yazımı', m:'Belirtilen rakamların (ör. 1-10) üzerinden geçmeli, noktalı yazım çalışmasını çizgili satırda ekle.'},
+{e:'➕ Toplama alıştırması', m:'Konuya uygun, kolaydan zora sıralı toplama işlemi alıştırmaları ekle.'},
+{e:'➖ Çıkarma alıştırması', m:'Konuya uygun, kolaydan zora sıralı çıkarma işlemi alıştırmaları ekle.'},
+{e:'✖️ Çarpım tablosu', m:'İlgili çarpım tablosunu renkli bir tablo olarak ve birkaç alıştırmayla ekle.'},
+{e:'🧮 Problem kur', m:'Verilen işlemlerden problem kurdurma etkinliği ekle.'},
+{e:'📐 Geometrik şekiller', m:'Konuyla ilgili geometrik şekilleri renkli inline SVG ile çiz, adlarını ve bir özelliğini yaz.'},
+{e:'🕐 Saat okuma', m:'Analog saatleri renkli inline SVG ile çiz, "saat kaç?" boşlukları bırak; cevapları en sona koy.'},
+{e:'🍕 Kesir modeli', m:'Kesirleri pizza/çubuk modelleriyle renkli inline SVG olarak görselleştir ve kısa bir eşleştirme ekle.'},
+{e:'💰 Para & alışveriş', m:'Market alışverişi temalı, para hesabı yaptıran bir fiş/fatura etkinliği ekle.'},
+{e:'🧩 Farkı bul', m:'Emoji/şekil matrisinde farklı olanı bulma etkinliği ekle (kolaydan zora).'},
+{e:'🔗 Sırala', m:'Karışık verilen adımları/olayları doğru sıraya koydurma etkinliği ekle.'},
+{e:'🎭 Sosyal hikâye', m:'Kısa cümleli, olumlu dille biten, birinci ağızdan bir sosyal hikâye ekle; sonuna 3 basit soru koy.'},
+{e:'🧠 P4C sorusu', m:'Konuyla ilgili, düşündüren açık uçlu 3 felsefi sorgulama sorusu (P4C) ekle.'},
+{e:'😌 Nefes/sakinleşme', m:'Etkinliğe uygun, adım adım bir nefes/sakinleşme molası ekle.'},
+{e:'🏅 Değerlendirme rubriği', m:'Materyalin sonuna öğretmen için kısa, ölçülebilir bir değerlendirme rubriği ekle.'},
+{e:'🗂️ Kazanım kodu', m:'İçeriğe uygun MEB kazanım kodlarını ve açıklamalarını başa ekle.'},
+{e:'✂️ Kesme-yapıştırma', m:'İçeriği kesilip yapıştırılabilecek kartlar/parçalar biçiminde hazırla.'},
+{e:'🎲 Zar/çark oyunu', m:'Konuyla ilgili sınıfta oynanacak bir zar/çark oyunu ekle; oyun tahtasını inline SVG ile çiz.'},
+{e:'👨‍👩‍👧 Veliye not', m:'Sonuna, etkinliği evde nasıl pekiştireceğine dair kısa bir veli notu ekle.'},
+{e:'🔡 Disleksi dostu', m:'Karıştırılan harfleri (b-d, p-q) ayırt eden, sade, seyrek ve çok tekrarlı bir disleksi-dostu düzen kullan.'},
+{e:'🅰️ BÜYÜK punto', m:'Yazıları büyük puntolu, seyrek ve az öğeli tut; küçük yaş/özel eğitim için sadeleştir.'},
 ].map((c,i)=>(<button key={i} onClick={()=>promptaEkleChip(c.m)} className="text-[11px] bg-white/10 hover:bg-yellow-400 hover:text-teal-900 text-teal-50 px-2 py-1 rounded-md font-semibold transition border border-teal-400/20 hover:border-yellow-400">{c.e}</button>))}
 </div>
 <textarea value={materialTopic} onChange={(e) => { setMaterialTopic(e.target.value); setMaterialError(''); }} rows="6" placeholder={uploadedFileData ? "📎 Dosya yüklendi! Bu dokümanda nasıl bir değişiklik istersin?\n\n• Aynısını istiyorsan: “aynısını üret” yaz\n• Uyarlamak istiyorsan: “5. sınıfa göre uyarla”, “10 soruya çıkar”, “daha kolay yap” gibi yaz\n• Boş bırakırsan dosyayı yaş düzeyine uygun çalışma kâğıdına dönüştürürüm." : "İsteğini doğal biçimde yaz: “5. sınıf için genel değerlendirme testi istiyorum”. (Şablona tıklayıp buradan kişiselleştirebilirsin: sınıf, soru sayısı, zorluk...)"} className="w-full px-4 py-3 bg-white/10 border border-teal-400/50 rounded-xl outline-none text-white placeholder-teal-200/50 resize-y focus:bg-white focus:text-teal-900 transition mb-2"></textarea>
@@ -3555,7 +3709,14 @@ title="Veli ödevi yaptıysa buraya tıklayın."
 
 {/* YAZDIRILABİLİR MATERYAL EKRANI (BLOK TABANLI MEGA MATBAA ÇIKTISI) */}
 {materialResult && (
+<HataSiniri key={(materialResult.dokuman_basligi||'') + '|' + ((materialResult.icerik_bloklari&&materialResult.icerik_bloklari.length)||0)} onReset={() => setMaterialResult(null)}>
 <div className="animate-fade-in print-container mt-0">
+{isGeneratingMaterial && (
+<div className="no-print sticky top-2 z-40 mb-3 mx-auto max-w-xl bg-indigo-600 text-white rounded-xl px-4 py-3 shadow-lg flex items-center gap-3 animate-fade-in">
+<i className="fa-solid fa-spinner fa-spin text-lg"></i>
+<div className="flex-1 text-sm font-bold">{materialProgress || 'Yeni sürüm hazırlanıyor…'} <span className="font-normal opacity-80">— mevcut çalışman aşağıda duruyor, kaybolmaz.</span></div>
+</div>
+)}
 <div className="no-print flex flex-col md:flex-row justify-between items-center mb-4 bg-gray-800 p-4 rounded-xl text-white shadow-lg gap-4">
 <div className="flex items-center space-x-4">
 <button onClick={() => setMaterialResult(null)} className="hover:text-gray-300 transition font-bold"><i className="fa-solid fa-arrow-left mr-2"></i>Geri Dön</button>
@@ -3613,6 +3774,7 @@ title="Veli ödevi yaptıysa buraya tıklayın."
 {/* DINAMIK BLOK RENDER MOTORU */}
 <div className="space-y-6">
 {materialResult.icerik_bloklari && Array.isArray(materialResult.icerik_bloklari) && materialResult.icerik_bloklari.map((blok, idx) => {
+if(!blok || typeof blok !== 'object') return null;
 switch(blok.blok_tipi) {
 
 // 1. DEĞERLENDİRME FORMU (Yeni Şov Modülü)
@@ -4288,6 +4450,7 @@ return (
 <BrandFooter />
 </div>
 </div>
+</HataSiniri>
 )}
 </div>
 )}
@@ -4467,7 +4630,7 @@ notes.map(n => (
 };
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(<App />);
+root.render(<HataSiniri onReset={() => { try{ window.location.reload(); }catch(e){} }}><App /></HataSiniri>);
 </script>
 </body>
 </html>
