@@ -1206,7 +1206,9 @@ const [activityCategory, setActivityCategory] = useState('Fark Etmez (Yapay Zeka
 
 const [materialTopic, setMaterialTopic] = useState('');
 const [materialType, setMaterialType] = useState('Fark Etmez (Yapay Zeka Seçsin)');
-const [materialResult, setMaterialResult] = useState(null);
+const [materialResult, setMaterialResult] = useState(() => { try { const r = localStorage.getItem('zirve_matbaa_son'); if (r) { const d = JSON.parse(r); if (d && Array.isArray(d.icerik_bloklari) && d.icerik_bloklari.length) return d; } } catch(e){} return null; });
+// KALICI HAFIZA: üretilen çalışmalar kaybolmaz; geri dönsen/yeni üretsen bile öncekilere dönebilirsin.
+const [matbaaGecmisi, setMatbaaGecmisi] = useState(() => { try { const r = localStorage.getItem('zirve_matbaa_gecmis'); if (r) { const d = JSON.parse(r); if (Array.isArray(d)) return d; } } catch(e){} return []; });
 const [isGeneratingMaterial, setIsGeneratingMaterial] = useState(false);
 const [materialProgress, setMaterialProgress] = useState('');
 const [sablonAra, setSablonAra] = useState('');
@@ -1775,16 +1777,61 @@ const matbaaUyarla = (not) => {
     generateMaterial(istem);   // YERİNDE yenile: ekrandaki çıktı durur, yenisi hazır olunca yerine geçer
 };
 
-// ⚡ ANINDA ÜRET: Kutudaki mevcut istekle (varsa) birleştirip tek tıkla üretir.
+// KALICI HAFIZA: aktif çalışmayı tarayıcıya yaz (yenilesen bile durur, geçmişten geri gelir).
+useEffect(() => { try { if (materialResult && Array.isArray(materialResult.icerik_bloklari) && materialResult.icerik_bloklari.length) localStorage.setItem('zirve_matbaa_son', JSON.stringify(materialResult)); else localStorage.removeItem('zirve_matbaa_son'); } catch(e){} }, [materialResult]);
+
+// Üretilen her çalışmayı geçmişe ekler (en yeni başta, en çok 10 kayıt). Böylece HİÇBİRİ kaybolmaz.
+const gecmiseEkle = (res) => {
+    if (!res || !Array.isArray(res.icerik_bloklari) || !res.icerik_bloklari.length) return;
+    setMatbaaGecmisi(prev => {
+        const kayit = { id: Date.now() + '_' + Math.random().toString(36).slice(2, 7), zaman: Date.now(), sonuc: res };
+        const suz = prev.filter(x => !(x.sonuc && x.sonuc.dokuman_basligi === res.dokuman_basligi && (x.sonuc.icerik_bloklari || []).length === (res.icerik_bloklari || []).length));
+        const yeni = [kayit, ...suz].slice(0, 10);
+        try { localStorage.setItem('zirve_matbaa_gecmis', JSON.stringify(yeni)); } catch(e){ /* kota dolarsa oturum içi hafıza yeter */ }
+        return yeni;
+    });
+};
+const gecmistenGetir = (res) => {
+    if (!res) return;
+    setMaterialResult(res);
+    try { setShowAnswerKey(true); } catch(e){}
+    if (typeof setActiveTab === 'function') { try { setActiveTab('tools'); } catch(e){} }
+    showToast('↩️ Çalışma geri getirildi.');
+    setTimeout(() => { try { document.getElementById('printable-material')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch(e){} }, 120);
+};
+const gecmistenSil = (id) => { setMatbaaGecmisi(prev => { const yeni = prev.filter(x => x.id !== id); try { localStorage.setItem('zirve_matbaa_gecmis', JSON.stringify(yeni)); } catch(e){} return yeni; }); };
+const gecmisiTemizle = () => { if (!window.confirm('Son çalışmalar listesi tamamen silinsin mi? (Ekrandaki çalışma kalır)')) return; setMatbaaGecmisi([]); try { localStorage.removeItem('zirve_matbaa_gecmis'); } catch(e){} showToast('🗑️ Geçmiş temizlendi.'); };
+// Son çalışmalar şeridi (hem Matbaa formunda hem çıktı ekranında gösterilir).
+const gecmisSeridi = () => {
+    if (!matbaaGecmisi.length) return null;
+    return (
+        <div className="mb-3 bg-white/90 border border-slate-200 rounded-xl p-2.5 shadow-sm no-print">
+            <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[10px] font-black text-slate-600 uppercase"><i className="fa-solid fa-clock-rotate-left mr-1 text-indigo-500"></i> Son Çalışmalarım <span className="text-slate-400 font-bold">({matbaaGecmisi.length})</span></span>
+                <button onClick={gecmisiTemizle} className="text-[9px] text-slate-400 hover:text-red-500 font-bold"><i className="fa-solid fa-trash-can mr-0.5"></i> Temizle</button>
+            </div>
+            <div className="flex gap-2 overflow-x-auto pb-1">
+                {matbaaGecmisi.map(k => (
+                    <div key={k.id} className="relative shrink-0">
+                        <button onClick={() => gecmistenGetir(k.sonuc)} className="max-w-[175px] text-left text-[11px] bg-slate-100 hover:bg-indigo-500 hover:text-white text-slate-700 pl-2.5 pr-6 py-1.5 rounded-md font-semibold transition border border-slate-200 truncate block">
+                            {(k.sonuc && k.sonuc.dokuman_basligi) ? k.sonuc.dokuman_basligi : 'Çalışma'}
+                        </button>
+                        <button onClick={() => gecmistenSil(k.id)} title="Listeden sil" className="absolute -top-1.5 -right-1.5 bg-red-500 hover:bg-red-600 text-white rounded-full w-4 h-4 flex items-center justify-center text-[9px]"><i className="fa-solid fa-times"></i></button>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
+
+// ⚡ ANINDA: Seçimi Matbaa "Üret" kutusuna DÜŞÜRÜR (biriktirir). İstersen orada düzenle, sonra Üret'e bas.
 const anindaUret = (comboIstem, tip) => {
-    if (isGeneratingMaterial) { showToast('⏳ Şu an üretiliyor, bir saniye…'); return; }
     if (tip && typeof setMaterialType === 'function') { try { setMaterialType(tip); } catch(e){} }
-    const mevcut = (materialTopic || '').trim();
-    const istem = mevcut ? (mevcut + '\n\n' + comboIstem) : comboIstem;
+    setMaterialTopic(t => { const cur = (t || '').trim(); return cur ? (cur + '\n+ ' + comboIstem) : comboIstem; });
     try { setMaterialError(''); } catch(e){}
     if (typeof setActiveTab === 'function') { try { setActiveTab('tools'); } catch(e){} }
-    showToast('⚡ Anında çalışma üretiliyor…');
-    generateMaterial(istem);
+    showToast('✅ Üret kutusuna eklendi — istersen düzenle, sonra “Üret”e bas.');
+    setTimeout(() => { try { document.querySelector('textarea')?.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch(e){} }, 120);
 };
 
 // ✍️ İZLİ (ÜZERİNDEN GEÇMELİ) ÇALIŞMA — çevrimdışı, yapay zeka gerektirmez, kota harcamaz.
@@ -1818,6 +1865,7 @@ const izGeciCalismasi = (baslik, yonerge, aciklama, kelimeler) => {
         '<p style="font-size:15px;color:#334155;margin:0 0 12px 0;line-height:1.5;">' + aciklama + '</p>' +
         (kelimeler || []).map(kelimeSatiri).join('');
     setMaterialResult({ dokuman_basligi: baslik, alt_baslik: yonerge, icerik_bloklari: [{ blok_tipi: 'zengin_metin', baslik: '', html_icerik: html }] });
+    try { gecmiseEkle({ dokuman_basligi: baslik, alt_baslik: yonerge, icerik_bloklari: [{ blok_tipi: 'zengin_metin', baslik: '', html_icerik: html }] }); } catch(e){}
     try { setShowAnswerKey(false); } catch(e){}
     if (typeof setActiveTab === 'function') { try { setActiveTab('tools'); } catch(e){} }
     showToast('✍️ Çalışma hazır! PDF/Yazdır ile alabilirsin.');
@@ -2072,6 +2120,7 @@ const generateMaterial = async (istekOverride) => {
             }
         }
         setMaterialResult(result);
+        gecmiseEkle(result);
         setShowAnswerKey(true);
         // Yüklenen görsel/PDF EKLİ KALIR: aynı dosyaya tekrar tekrar "uyarla" diyebilesin diye.
         // Bittiğinde önizlemedeki ✕ ile kaldırabilirsin.
@@ -3069,11 +3118,14 @@ title="Veli ödevi yaptıysa buraya tıklayın."
 <button onClick={() => { setMaterialTopic('4. sınıf için genel değerlendirme testi hazırla.'); setMaterialType('test'); setMatQuestionCount('10'); setMaterialError(''); }} className="text-xs bg-white/10 hover:bg-white/20 border border-teal-300/40 px-3 py-1.5 rounded-full transition">4. sınıf genel test</button>
 </div>
 
-{/* ⚡ ANINDA HAZIR ÇALIŞMALAR — tek tıkla üretim */}
+{/* 🗂️ SON ÇALIŞMALARIM — geri getir */}
+{gecmisSeridi()}
+
+{/* ⚡ ANINDA HAZIR ÇALIŞMALAR — Üret kutusuna düşer */}
 <div className="mb-3 bg-gradient-to-br from-fuchsia-600/25 to-indigo-600/20 p-3 rounded-xl border border-fuchsia-400/30">
   <div className="flex items-center justify-between mb-2">
     <span className="text-xs font-black text-fuchsia-100 uppercase tracking-wide"><i className="fa-solid fa-bolt text-yellow-300 mr-1"></i> Anında Hazır Çalışmalar</span>
-    <span className="text-[10px] text-fuchsia-200/70">tek tıkla üretilir</span>
+    <span className="text-[10px] text-fuchsia-200/70">Üret kutusuna düşer</span>
   </div>
   <div className="flex flex-wrap gap-1.5">
     {[
@@ -3095,7 +3147,7 @@ title="Veli ödevi yaptıysa buraya tıklayın."
       <button key={i} onClick={k.f} className="text-[11px] bg-white/10 hover:bg-fuchsia-400 hover:text-slate-900 text-fuchsia-50 px-2.5 py-1.5 rounded-md font-bold transition border border-fuchsia-300/30">{k.e}</button>
     ))}
   </div>
-  <p className="text-[10px] text-fuchsia-100/70 mt-2"><i className="fa-solid fa-lightbulb text-yellow-300 mr-1"></i>İpucu: Yukarıya sınıf/konu yazarsan ya da bir şablon + hızlı ekleme seçersen, bu çalışmalar onun üstüne kurulur. 🎯</p>
+  <p className="text-[10px] text-fuchsia-100/70 mt-2"><i className="fa-solid fa-lightbulb text-yellow-300 mr-1"></i>İpucu: Renkli/quiz/fasikül gibi seçenekler <b>Üret kutusuna düşer</b> — orada düzenleyip “Üret”e basarsın. isa·masa·kasa·para, küçük “a” ve harf çalışmaları ise <b>anında hazır</b> gelir (kotasız). 🎯</p>
 </div>
 
 {/* HAZIR ŞABLON BUTONLARI - TÜM TÜRLER */}
@@ -3752,6 +3804,8 @@ title="Veli ödevi yaptıysa buraya tıklayın."
 {['1. sınıfa uyarla','2. sınıfa uyarla','3. sınıfa uyarla','4. sınıfa uyarla','5. sınıfa uyarla','Daha kolay','Daha zor','Görsel ekle','Kısalt','Uzat'].map((x,i)=>(<button key={i} onClick={()=>matbaaUyarla(x)} className="text-[11px] bg-white hover:bg-purple-500 hover:text-white text-purple-700 border border-purple-200 px-2 py-1 rounded-md font-semibold transition">{x}</button>))}
 </div>
 </div>
+
+<div className="mx-auto mb-4 no-print" style={{maxWidth: '210mm'}}>{gecmisSeridi()}</div>
 
 <div id="printable-material" className="bg-white mx-auto shadow-2xl print:shadow-none min-h-[1050px] p-8 md:p-12 relative print-card" style={{maxWidth: '210mm'}}>
 
