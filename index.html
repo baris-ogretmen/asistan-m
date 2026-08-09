@@ -1059,41 +1059,63 @@ try{
   else setTimeout(uyariGoster,1600);
 })();
 
-// ---- 📺 ZİRVE — CİHAZ/EKRAN UYUMU (telefon · tablet · bilgisayar · akıllı tahta) ----
-// Self-contained (vanilla JS+CSS): katman kopyalanınca her dosyaya taşınır. PDF/yazdırmada ölçek 1'e sıfırlanır.
+// ---- 📺 ZİRVE — CİHAZ/EKRAN UYUMU (OTOMATİK ALGILAR: telefon · tablet · bilgisayar · akıllı tahta) ----
+// Self-contained (vanilla JS+CSS): katman kopyalanınca her dosyaya taşınır.
+// Cihazı otomatik algılar (telefonda ölçek yok, akıllı tahtada büyütür). Silik küçük düğme × ile TAMAMEN kapanır. PDF/yazdırmada ölçek 1.
 (function(){
   try{
-    var MODLAR=[{ad:'Otomatik',z:1},{ad:'Tablet',z:1.15},{ad:'Akıllı Tahta',z:1.35},{ad:'Büyük Tahta',z:1.6}];
-    function oku(){ try{ var v=parseInt(localStorage.getItem('zirve_ekran_modu')||'0',10); return (v>=0&&v<MODLAR.length)?v:0; }catch(e){ return 0; } }
-    function uygula(i){ try{ var z=MODLAR[i].z; document.documentElement.style.zoom=(z===1?'':String(z)); }catch(e){} }
+    var MODLAR=[{ad:'Otomatik',z:1},{ad:'Tablet',z:1.12},{ad:'Akıllı Tahta',z:1.35},{ad:'Büyük Tahta',z:1.6}];
+    function oku(){ try{ var v=parseInt(localStorage.getItem('zirve_ekran_modu'),10); return (v>=0&&v<MODLAR.length)?v:-1; }catch(e){ return -1; } }
+    function manuelMi(){ try{ return localStorage.getItem('zirve_ekran_manuel')==='1'; }catch(e){ return false; } }
+    function gizliMi(){ try{ return localStorage.getItem('zirve_ekran_btn_gizli')==='1'; }catch(e){ return false; } }
+    function dokunmatik(){ try{ return (navigator.maxTouchPoints>0) || (window.matchMedia && window.matchMedia('(pointer: coarse)').matches); }catch(e){ return false; } }
+    function otoMod(){
+      var w=0; try{ w=Math.max(window.innerWidth||0, (window.screen&&window.screen.width)||0); }catch(e){ w=window.innerWidth||0; }
+      var dpr=1; try{ dpr=window.devicePixelRatio||1; }catch(e){}
+      var t=dokunmatik();
+      if(w>=2400) return 3;                  // çok büyük / 4K akıllı tahta
+      if(w>=1550 && t && dpr<=1.6) return 2; // akıllı tahta (büyük, dokunmatik, düşük DPR)
+      return 0;                              // telefon / tablet / dizüstü / masaüstü → ölçek 1 (zaten uyumlu)
+    }
+    function aktifMod(){ return (manuelMi() && oku()>=0) ? oku() : otoMod(); }
+    function uygula(i){ try{ var z=(MODLAR[i]?MODLAR[i].z:1); document.documentElement.style.zoom=(z===1?'':String(z)); }catch(e){} }
     function stilEkle(){
       if(document.getElementById('zirve-ekran-stil')) return;
       var s=document.createElement('style'); s.id='zirve-ekran-stil';
       s.textContent='@media print{html{zoom:1 !important}}'+
-        '.zirve-ekran-btn{position:fixed;left:10px;bottom:86px;z-index:2147481500;background:rgba(79,70,229,.92);color:#fff;border:none;border-radius:999px;padding:8px 12px;font:800 12px system-ui,-apple-system,Segoe UI,Roboto,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.3);cursor:pointer;display:flex;align-items:center;gap:6px}'+
-        '.zirve-ekran-btn:active{transform:scale(.96)}'+
-        '@media print{.zirve-ekran-btn{display:none !important}}'+
-        '@media (min-width:1024px){.zirve-ekran-btn{left:14px;bottom:16px}}'+
-        '@media (pointer:coarse){button,a,[role=button]{touch-action:manipulation}}';
+        '#zirve-ekran-pill{position:fixed;left:8px;bottom:90px;z-index:2147481500;display:flex;align-items:center;gap:3px;background:rgba(30,41,59,.5);color:#fff;border-radius:999px;padding:2px 3px 2px 7px;font:700 10px system-ui,-apple-system,Segoe UI,Roboto,sans-serif;box-shadow:0 2px 8px rgba(0,0,0,.18);opacity:.5;transition:opacity .2s}'+
+        '#zirve-ekran-pill:hover{opacity:1}'+
+        '#zirve-ekran-pill .zm{cursor:pointer;user-select:none;padding:2px 3px}'+
+        '#zirve-ekran-pill .zx{cursor:pointer;width:15px;height:15px;line-height:15px;text-align:center;border-radius:50%;background:rgba(255,255,255,.18);font-size:11px;font-weight:800}'+
+        '#zirve-ekran-pill .zx:hover{background:rgba(239,68,68,.9)}'+
+        '@media print{#zirve-ekran-pill{display:none !important}}'+
+        '@media (min-width:1024px){#zirve-ekran-pill{left:12px;bottom:14px}}';
       (document.head||document.documentElement).appendChild(s);
     }
-    var mod=oku();
-    function butonYap(){
-      if(document.getElementById('zirve-ekran-btn')) return;
-      var b=document.createElement('button'); b.id='zirve-ekran-btn'; b.className='zirve-ekran-btn';
-      function yaz(){ b.innerHTML='<span style="font-size:14px">📺</span><span>'+MODLAR[mod].ad+'</span>'; }
+    var mod=aktifMod();
+    function pillYap(){
+      if(gizliMi()) return;
+      if(document.getElementById('zirve-ekran-pill')) return;
+      var p=document.createElement('div'); p.id='zirve-ekran-pill';
+      var etiket=document.createElement('span'); etiket.className='zm';
+      function yaz(){ etiket.innerHTML='📺 '+MODLAR[mod].ad; }
       yaz();
-      b.title='Görünüm modu — telefon / tablet / akıllı tahta (dokun: değiştir)';
-      b.onclick=function(){ mod=(mod+1)%MODLAR.length; try{localStorage.setItem('zirve_ekran_modu',String(mod));}catch(e){} uygula(mod); yaz(); };
-      document.body.appendChild(b);
+      etiket.title='Görünümü değiştir (telefon / tablet / akıllı tahta)';
+      etiket.onclick=function(){ mod=(mod+1)%MODLAR.length; try{localStorage.setItem('zirve_ekran_modu',String(mod));localStorage.setItem('zirve_ekran_manuel','1');}catch(e){} uygula(mod); yaz(); };
+      var kapat=document.createElement('span'); kapat.className='zx'; kapat.innerHTML='×'; kapat.title='Bu düğmeyi gizle';
+      kapat.onclick=function(){ try{localStorage.setItem('zirve_ekran_btn_gizli','1');}catch(e){} p.remove(); };
+      p.appendChild(etiket); p.appendChild(kapat);
+      document.body.appendChild(p);
     }
-    uygula(mod); // kayıtlı modu hemen uygula (yanıp sönmeyi azaltır)
-    function baslat(){ stilEkle(); uygula(mod); butonYap(); }
+    uygula(mod); // kayıtlı/otomatik modu hemen uygula (yanıp sönmeyi azaltır)
+    function baslat(){ stilEkle(); mod=aktifMod(); uygula(mod); pillYap(); }
     if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', function(){ setTimeout(baslat,250); });
     else setTimeout(baslat,250);
+    // ekran döndürme / boyut değişince: manuel seçim yoksa yeniden algıla
+    try{ window.addEventListener('resize', function(){ if(!manuelMi()){ mod=otoMod(); uygula(mod); var e=document.querySelector('#zirve-ekran-pill .zm'); if(e) e.innerHTML='📺 '+MODLAR[mod].ad; } }); }catch(e){}
     // PDF/yazdırma için: ölçeği geçici sıfırla / geri al (çıktı bozulmasın)
     window.ZIRVE_ekranReset=function(){ try{ document.documentElement.style.zoom=''; }catch(e){} };
-    window.ZIRVE_ekranGeri=function(){ try{ uygula(oku()); }catch(e){} };
+    window.ZIRVE_ekranGeri=function(){ try{ uygula(aktifMod()); }catch(e){} };
   }catch(e){}
 })();
 })();
