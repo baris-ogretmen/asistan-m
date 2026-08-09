@@ -37,6 +37,7 @@ body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; color: #1f29
 /* GÜÇLENDİRİLMİŞ YAZDIRMA MOTORU - Marka Footer ve Cevap Anahtarı Renk Koruması */
 @media print {
     body { background-color: white !important; color: black !important; margin: 0; padding: 0; }
+    #printable-material { zoom: 1 !important; filter: none !important; }
     .no-print { display: none !important; }
     .print-only { display: block !important; }
     
@@ -1077,7 +1078,9 @@ try{
       if(w>=1550 && t && dpr<=1.6) return 2; // akıllı tahta (büyük, dokunmatik, düşük DPR)
       return 0;                              // telefon / tablet / dizüstü / masaüstü → ölçek 1 (zaten uyumlu)
     }
-    function aktifMod(){ return (manuelMi() && oku()>=0) ? oku() : otoMod(); }
+    try{ localStorage.removeItem('zirve_ekran_manuel'); localStorage.removeItem('zirve_ekran_modu'); }catch(e){} // eski TAKILI kalan manuel modu temizle → daima otomatik
+    var sessManuel=false; // manuel seçim SADECE bu oturum için; yeniden yüklemede tekrar otomatik algılar
+    function aktifMod(){ return sessManuel ? mod : otoMod(); }
     function uygula(i){ try{ var z=(MODLAR[i]?MODLAR[i].z:1); document.documentElement.style.zoom=(z===1?'':String(z)); }catch(e){} }
     function stilEkle(){
       if(document.getElementById('zirve-ekran-stil')) return;
@@ -1101,7 +1104,7 @@ try{
       function yaz(){ etiket.innerHTML='📺 '+MODLAR[mod].ad; }
       yaz();
       etiket.title='Görünümü değiştir (telefon / tablet / akıllı tahta)';
-      etiket.onclick=function(){ mod=(mod+1)%MODLAR.length; try{localStorage.setItem('zirve_ekran_modu',String(mod));localStorage.setItem('zirve_ekran_manuel','1');}catch(e){} uygula(mod); yaz(); };
+      etiket.onclick=function(){ sessManuel=true; mod=(mod+1)%MODLAR.length; uygula(mod); yaz(); };
       var kapat=document.createElement('span'); kapat.className='zx'; kapat.innerHTML='×'; kapat.title='Bu düğmeyi gizle';
       kapat.onclick=function(){ try{localStorage.setItem('zirve_ekran_btn_gizli','1');}catch(e){} p.remove(); };
       p.appendChild(etiket); p.appendChild(kapat);
@@ -1112,10 +1115,76 @@ try{
     if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', function(){ setTimeout(baslat,250); });
     else setTimeout(baslat,250);
     // ekran döndürme / boyut değişince: manuel seçim yoksa yeniden algıla
-    try{ window.addEventListener('resize', function(){ if(!manuelMi()){ mod=otoMod(); uygula(mod); var e=document.querySelector('#zirve-ekran-pill .zm'); if(e) e.innerHTML='📺 '+MODLAR[mod].ad; } }); }catch(e){}
+    try{ window.addEventListener('resize', function(){ if(!sessManuel){ mod=otoMod(); uygula(mod); var e=document.querySelector('#zirve-ekran-pill .zm'); if(e) e.innerHTML='📺 '+MODLAR[mod].ad; } }); }catch(e){}
     // PDF/yazdırma için: ölçeği geçici sıfırla / geri al (çıktı bozulmasın)
     window.ZIRVE_ekranReset=function(){ try{ document.documentElement.style.zoom=''; }catch(e){} };
     window.ZIRVE_ekranGeri=function(){ try{ uygula(aktifMod()); }catch(e){} };
+  }catch(e){}
+})();
+
+// ---- ⚙️ ZİRVE — ARAÇLAR (gece/göz koruma · yüksek kontrast · yedek al/geri yükle · üretim sayacı) ----
+// Self-contained vanilla JS+CSS. Silik ⚙️ düğme, menüden "gizle" ile kapatılabilir. Yazdırmada gizlenir.
+(function(){
+  try{
+    function css(){
+      if(document.getElementById('zirve-arac-stil')) return;
+      var s=document.createElement('style'); s.id='zirve-arac-stil';
+      s.textContent=
+        '#zirve-arac-btn{position:fixed;left:8px;bottom:122px;z-index:2147481502;width:30px;height:30px;border-radius:50%;border:none;background:rgba(30,41,59,.5);color:#fff;font-size:14px;cursor:pointer;opacity:.5;transition:opacity .2s;box-shadow:0 2px 8px rgba(0,0,0,.18)}'+
+        '#zirve-arac-btn:hover{opacity:1}'+
+        '#zirve-arac-menu{position:fixed;left:8px;bottom:158px;z-index:2147481503;background:#0f172a;color:#fff;border-radius:12px;padding:8px;box-shadow:0 8px 30px rgba(0,0,0,.4);display:none;flex-direction:column;gap:4px;min-width:196px;font:600 12px system-ui,-apple-system,Segoe UI,Roboto,sans-serif}'+
+        '#zirve-arac-menu.acik{display:flex}'+
+        '#zirve-arac-menu button{background:rgba(255,255,255,.08);color:#fff;border:none;border-radius:8px;padding:8px 10px;text-align:left;cursor:pointer;font:inherit}'+
+        '#zirve-arac-menu button:hover{background:rgba(255,255,255,.18)}'+
+        '#zirve-arac-menu .zsay{color:#94a3b8;font-size:10px;padding:2px 4px}'+
+        '#zirve-gece{position:fixed;inset:0;background:rgba(255,167,54,.16);mix-blend-mode:multiply;pointer-events:none;z-index:2147480000}'+
+        'html.zirve-kontrast{filter:contrast(1.35) saturate(1.08)}'+
+        '@media print{#zirve-arac-btn,#zirve-arac-menu,#zirve-gece{display:none !important} html.zirve-kontrast{filter:none !important}}'+
+        '@media (min-width:1024px){#zirve-arac-btn{left:12px;bottom:52px}#zirve-arac-menu{left:12px;bottom:88px}}';
+      (document.head||document.documentElement).appendChild(s);
+    }
+    function geceUygula(on){ var g=document.getElementById('zirve-gece'); if(on){ if(!g){ g=document.createElement('div'); g.id='zirve-gece'; document.body.appendChild(g); } } else if(g){ g.remove(); } }
+    function kontrastUygula(on){ try{ document.documentElement.classList[on?'add':'remove']('zirve-kontrast'); }catch(e){} }
+    function yedekAl(){
+      try{
+        var veri={}; for(var i=0;i<localStorage.length;i++){ var k=localStorage.key(i); if(k && (k.indexOf('zirve_')===0 || k.indexOf('gemini_')===0 || k.indexOf('mat_')===0)) veri[k]=localStorage.getItem(k); }
+        var blob=new Blob([JSON.stringify({_zirveYedek:1,tarih:new Date().toISOString(),veri:veri},null,2)],{type:'application/json'});
+        var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='zirve-yedek-'+new Date().toISOString().slice(0,10)+'.json'; a.click();
+      }catch(e){ alert('Yedek alınamadı.'); }
+    }
+    function geriYukle(){
+      try{
+        var inp=document.createElement('input'); inp.type='file'; inp.accept='application/json,.json';
+        inp.onchange=function(){ var f=inp.files&&inp.files[0]; if(!f) return; var r=new FileReader(); r.onload=function(){ try{ var o=JSON.parse(r.result); var v=(o&&o.veri)?o.veri:o; if(!v||typeof v!=='object'){ alert('Geçersiz yedek dosyası.'); return; } if(!confirm('Yedek geri yüklensin mi? Mevcut ayarların üzerine yazılır ve sayfa yenilenir.')) return; Object.keys(v).forEach(function(k){ try{ localStorage.setItem(k, v[k]); }catch(e){} }); location.reload(); }catch(e){ alert('Yedek okunamadı.'); } }; r.readAsText(f); };
+        inp.click();
+      }catch(e){}
+    }
+    function sayac(){ try{ return parseInt(localStorage.getItem('zirve_uretim_sayaci')||'0',10)||0; }catch(e){ return 0; } }
+    function baslat(){
+      css();
+      try{ if(localStorage.getItem('zirve_gece')==='1') geceUygula(true); }catch(e){}
+      try{ if(localStorage.getItem('zirve_kontrast')==='1') kontrastUygula(true); }catch(e){}
+      try{ if(localStorage.getItem('zirve_arac_gizli')==='1') return; }catch(e){}
+      if(document.getElementById('zirve-arac-btn')) return;
+      var b=document.createElement('button'); b.id='zirve-arac-btn'; b.innerHTML='⚙️'; b.title='ZİRVE Araçları';
+      var m=document.createElement('div'); m.id='zirve-arac-menu';
+      function yenile(){
+        var geceOn=false,konOn=false; try{geceOn=localStorage.getItem('zirve_gece')==='1';konOn=localStorage.getItem('zirve_kontrast')==='1';}catch(e){}
+        m.innerHTML='';
+        var say=document.createElement('div'); say.className='zsay'; say.textContent='📊 Üretilen çalışma: '+sayac(); m.appendChild(say);
+        function ekle(txt,fn){ var x=document.createElement('button'); x.textContent=txt; x.onclick=fn; m.appendChild(x); }
+        ekle((geceOn?'✅ ':'🌙 ')+'Gece (göz koruma)', function(){ var y=!geceOn; try{localStorage.setItem('zirve_gece',y?'1':'0');}catch(e){} geceUygula(y); yenile(); });
+        ekle((konOn?'✅ ':'◐ ')+'Yüksek kontrast', function(){ var y=!konOn; try{localStorage.setItem('zirve_kontrast',y?'1':'0');}catch(e){} kontrastUygula(y); yenile(); });
+        ekle('💾 Yedek al (indir)', function(){ yedekAl(); });
+        ekle('⤵️ Yedeği geri yükle', function(){ geriYukle(); });
+        ekle('🙈 Bu düğmeyi gizle', function(){ try{localStorage.setItem('zirve_arac_gizli','1');}catch(e){} m.remove(); b.remove(); });
+        ekle('✖ Kapat', function(){ m.classList.remove('acik'); });
+      }
+      b.onclick=function(){ if(m.classList.contains('acik')){ m.classList.remove('acik'); } else { yenile(); m.classList.add('acik'); } };
+      document.body.appendChild(b); document.body.appendChild(m);
+    }
+    if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', function(){ setTimeout(baslat,300); });
+    else setTimeout(baslat,300);
   }catch(e){}
 })();
 })();
@@ -1251,6 +1320,15 @@ const [lisansOnay, setLisansOnay] = useState('');
 // Akıllı pedagojik öneri paneli
 const [oneriler, setOneriler] = useState([]);
 const [oneriYukleniyor, setOneriYukleniyor] = useState(false);
+// Çıktı (PDF) görünüm ayarları
+const [matbaaZoom, setMatbaaZoom] = useState(1);
+const [matbaaGri, setMatbaaGri] = useState(false);
+const [matbaaFont, setMatbaaFont] = useState('normal');
+const [matbaaSatir, setMatbaaSatir] = useState('normal');
+const [matbaaSayfa, setMatbaaSayfa] = useState('a4');
+const [matbaaDuzenle, setMatbaaDuzenle] = useState(false);
+const [ogrBilgi, setOgrBilgi] = useState(null);
+const [okuyor, setOkuyor] = useState(false);
 const [apiKey, setApiKey] = useState(localStorage.getItem('gemini_api_key') || '');
 const [modelName, setModelName] = useState(localStorage.getItem('gemini_model_name') || 'gemini-2.5-pro');
 const [testModuCalisiyor, setTestModuCalisiyor] = useState(false);
@@ -1569,6 +1647,8 @@ const element = document.getElementById(elementId);
 if (!element) return;
 setIsDownloadingPdf(true);
 try { if (window.ZIRVE_ekranReset) window.ZIRVE_ekranReset(); } catch(e){} // akıllı tahta ölçeği PDF'i bozmasın
+const _elZoom = element.style.zoom, _elFilter = element.style.filter;
+try { element.style.zoom=''; element.style.filter=''; } catch(e){} // çıktı büyütme/gri PDF'i bozmasın
 showToast("PDF hazırlanıyor, lütfen bekleyin...");
 const noPrintElements = element.querySelectorAll('.no-print');
 noPrintElements.forEach(el => el.style.display = 'none');
@@ -1594,6 +1674,7 @@ noPrintElements.forEach(el => el.style.display = '');
 const restoredElements = element.querySelectorAll('[data-pdf-restored="true"]');
 restoredElements.forEach(el => { el.classList.add('print-only'); el.removeAttribute('data-pdf-restored'); });
 try { if (window.ZIRVE_ekranGeri) window.ZIRVE_ekranGeri(); } catch(e){} // ölçeği geri yükle
+try { element.style.zoom=_elZoom; element.style.filter=_elFilter; } catch(e){}
 setIsDownloadingPdf(false);
 }
 };
@@ -1882,6 +1963,7 @@ useEffect(() => { try { if (materialResult && Array.isArray(materialResult.iceri
 // Üretilen her çalışmayı geçmişe ekler (en yeni başta, en çok 10 kayıt). Böylece HİÇBİRİ kaybolmaz.
 const gecmiseEkle = (res) => {
     if (!res || !Array.isArray(res.icerik_bloklari) || !res.icerik_bloklari.length) return;
+    try { var _n = parseInt(localStorage.getItem('zirve_uretim_sayaci') || '0', 10) || 0; localStorage.setItem('zirve_uretim_sayaci', String(_n + 1)); } catch(e){}
     setMatbaaGecmisi(prev => {
         const kayit = { id: Date.now() + '_' + Math.random().toString(36).slice(2, 7), zaman: Date.now(), sonuc: res };
         const suz = prev.filter(x => !(x.sonuc && x.sonuc.dokuman_basligi === res.dokuman_basligi && (x.sonuc.icerik_bloklari || []).length === (res.icerik_bloklari || []).length));
@@ -2140,6 +2222,53 @@ const yaklasimOner = async () => {
         setOneriler(list);
     } catch (err) { try { handleApiError(err); } catch(e){ showToast('Öneri alınamadı.'); } }
     setOneriYukleniyor(false);
+};
+
+// 📷 Çalışmayı PNG (görsel) olarak indir — akıllı tahta/WhatsApp için ideal.
+const matbaaPngIndir = async () => {
+    const el = document.getElementById('printable-material'); if (!el) return;
+    if (typeof window.html2canvas !== 'function') { showToast('Görsel indirme bu ortamda desteklenmiyor, PDF kullanabilirsin.'); return; }
+    showToast('🖼️ Görsel hazırlanıyor…');
+    const z = el.style.zoom; el.style.zoom = '';
+    const gizle = el.querySelectorAll('.no-print'); gizle.forEach(n => n.style.display = 'none');
+    try {
+        const canvas = await window.html2canvas(el, { scale: 2, backgroundColor: '#ffffff', useCORS: true });
+        const a = document.createElement('a');
+        a.href = canvas.toDataURL('image/png');
+        a.download = ((materialResult && materialResult.dokuman_basligi) || 'calisma').replace(/[^a-z0-9ğüşöçİĞÜŞÖÇ]/gi, '_') + '.png';
+        a.click();
+        showToast('📷 Görsel indirildi!');
+    } catch(e){ showToast('Görsel oluşturulamadı.'); }
+    finally { gizle.forEach(n => n.style.display = ''); el.style.zoom = z; }
+};
+// 📲 Çalışma metnini WhatsApp'tan paylaş
+const matbaaWhatsapp = () => {
+    const t = matbaaMetneCevir(materialResult); if (!t) { showToast('Paylaşılacak içerik yok.'); return; }
+    const msg = ((materialResult && materialResult.dokuman_basligi) || 'Çalışma') + '\n\n' + t;
+    try { window.open('https://wa.me/?text=' + encodeURIComponent(msg.slice(0, 1500)), '_blank'); } catch(e){}
+};
+// 🔊 Sesli oku (TTS) — özel eğitim için değerli
+const matbaaSesliOku = () => {
+    try {
+        if (!('speechSynthesis' in window)) { showToast('Bu cihazda sesli okuma yok.'); return; }
+        if (okuyor) { window.speechSynthesis.cancel(); setOkuyor(false); return; }
+        const t = matbaaMetneCevir(materialResult); if (!t) { showToast('Okunacak metin yok.'); return; }
+        const u = new SpeechSynthesisUtterance(t.slice(0, 4000));
+        u.lang = 'tr-TR'; u.rate = 0.95;
+        u.onend = () => setOkuyor(false); u.onerror = () => setOkuyor(false);
+        window.speechSynthesis.cancel(); window.speechSynthesis.speak(u); setOkuyor(true);
+    } catch(e){ showToast('Sesli okuma başlatılamadı.'); }
+};
+// 👦 Öğrenci bilgisi başlığı (çıktının en üstüne bizim eklediğimiz güvenilir alan)
+const ogrBilgiDoldur = () => {
+    const ad = (window.prompt('Öğrenci Adı Soyadı:', (ogrBilgi && ogrBilgi.ad) || '') || '').trim();
+    if (ad === '' && !ogrBilgi) return;
+    const sinif = (window.prompt('Sınıf / No:', (ogrBilgi && ogrBilgi.sinif) || '') || '').trim();
+    const bugun = new Date().toLocaleDateString('tr-TR');
+    const tarih = (window.prompt('Tarih:', (ogrBilgi && ogrBilgi.tarih) || bugun) || '').trim();
+    if (!ad && !sinif && !tarih) { setOgrBilgi(null); return; }
+    setOgrBilgi({ ad, sinif, tarih });
+    showToast('👦 Öğrenci bilgisi eklendi.');
 };
 const fasikulBolumToggle = (b) => setFasikulBolumler(prev => prev.includes(b) ? prev.filter(x => x !== b) : [...prev, b]);
 const fasikulHazirla = () => {
@@ -4217,6 +4346,39 @@ title="Veli ödevi yaptıysa buraya tıklayın."
 </div>
 </div>
 
+{/* 🎛️ ÇIKTI AYARLARI — görünüm büyüt/küçült, mürekkep tasarrufu, PNG, paylaş */}
+<div className="no-print flex flex-wrap items-center gap-2 mb-4 -mt-1">
+  <span className="text-[11px] font-bold text-gray-500"><i className="fa-solid fa-sliders mr-1"></i>Çıktı:</span>
+  <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-lg px-1 py-0.5 shadow-sm">
+    <button onClick={()=>setMatbaaZoom(z=>Math.max(0.7, Math.round((z-0.1)*10)/10))} title="Küçült" className="w-7 h-7 rounded-md hover:bg-gray-100 text-gray-700 font-black">A−</button>
+    <span className="text-[11px] text-gray-500 w-9 text-center">{Math.round(matbaaZoom*100)}%</span>
+    <button onClick={()=>setMatbaaZoom(z=>Math.min(1.8, Math.round((z+0.1)*10)/10))} title="Büyüt" className="w-7 h-7 rounded-md hover:bg-gray-100 text-gray-700 font-black">A+</button>
+    <button onClick={()=>setMatbaaZoom(1)} title="Sıfırla" className="w-7 h-7 rounded-md hover:bg-gray-100 text-gray-400"><i className="fa-solid fa-rotate-left text-xs"></i></button>
+  </div>
+  <button onClick={()=>setMatbaaGri(g=>!g)} className={`text-[11px] px-2.5 py-1.5 rounded-lg font-bold border transition ${matbaaGri ? 'bg-gray-700 text-white border-gray-700' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}><i className="fa-solid fa-droplet-slash mr-1"></i>Mürekkep tasarrufu</button>
+  <select value={matbaaFont} onChange={(e)=>setMatbaaFont(e.target.value)} title="Yazı tipi" className="text-[11px] bg-white border border-gray-200 rounded-lg px-2 py-1.5 font-bold text-gray-600 outline-none">
+    <option value="normal">✍️ Yazı: Normal</option>
+    <option value="yuvarlak">Yuvarlak (çocuk)</option>
+    <option value="okunakli">Okunaklı (disleksi dostu)</option>
+    <option value="elyazisi">El yazısı</option>
+  </select>
+  <select value={matbaaSatir} onChange={(e)=>setMatbaaSatir(e.target.value)} title="Satır aralığı" className="text-[11px] bg-white border border-gray-200 rounded-lg px-2 py-1.5 font-bold text-gray-600 outline-none">
+    <option value="normal">📐 Aralık: Normal</option>
+    <option value="genis">Geniş</option>
+    <option value="cokGenis">Çok geniş</option>
+  </select>
+  <select value={matbaaSayfa} onChange={(e)=>setMatbaaSayfa(e.target.value)} title="Sayfa düzeni" className="text-[11px] bg-white border border-gray-200 rounded-lg px-2 py-1.5 font-bold text-gray-600 outline-none">
+    <option value="a4">📄 A4</option>
+    <option value="a5">A5 (küçük)</option>
+    <option value="2sutun">2 Sütun</option>
+  </select>
+  <button onClick={()=>setMatbaaDuzenle(d=>!d)} className={`text-[11px] px-2.5 py-1.5 rounded-lg font-bold border transition ${matbaaDuzenle ? 'bg-amber-500 text-white border-amber-500' : 'bg-white text-amber-700 border-amber-200 hover:bg-amber-50'}`}><i className="fa-solid fa-pen mr-1"></i>{matbaaDuzenle?'Düzenleme AÇIK':'Elle düzenle'}</button>
+  <button onClick={ogrBilgiDoldur} className={`text-[11px] px-2.5 py-1.5 rounded-lg font-bold border transition ${ogrBilgi ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-blue-700 border-blue-200 hover:bg-blue-50'}`}><i className="fa-solid fa-user-pen mr-1"></i>Öğrenci bilgisi</button>
+  <button onClick={matbaaSesliOku} className={`text-[11px] px-2.5 py-1.5 rounded-lg font-bold border transition ${okuyor ? 'bg-rose-500 text-white border-rose-500' : 'bg-white text-rose-700 border-rose-200 hover:bg-rose-50'}`}><i className={`fa-solid ${okuyor?'fa-stop':'fa-volume-high'} mr-1`}></i>{okuyor?'Durdur':'Sesli oku'}</button>
+  <button onClick={matbaaPngIndir} className="text-[11px] px-2.5 py-1.5 rounded-lg font-bold bg-white text-teal-700 border border-teal-200 hover:bg-teal-50 transition"><i className="fa-solid fa-image mr-1"></i>PNG indir</button>
+  <button onClick={matbaaWhatsapp} className="text-[11px] px-2.5 py-1.5 rounded-lg font-bold bg-white text-green-700 border border-green-200 hover:bg-green-50 transition"><i className="fa-brands fa-whatsapp mr-1"></i>Paylaş</button>
+</div>
+
 <div className="mx-auto mb-4 bg-purple-50 border-2 border-purple-200 rounded-xl p-3 no-print print:hidden" style={{maxWidth: '210mm'}}>
 <p className="text-[11px] font-black text-purple-700 uppercase mb-2"><i className="fa-solid fa-robot mr-1"></i> Memnun kalmadın mı? AL ile uyarla / yeniden üret</p>
 <div className="flex flex-col sm:flex-row gap-2">
@@ -4246,7 +4408,8 @@ title="Veli ödevi yaptıysa buraya tıklayın."
 
 <div className="mx-auto mb-4 no-print" style={{maxWidth: '210mm'}}>{gecmisSeridi()}</div>
 
-<div id="printable-material" className="bg-white mx-auto shadow-2xl print:shadow-none min-h-[1050px] p-8 md:p-12 relative print-card" style={{maxWidth: '210mm'}}>
+<div id="printable-material" contentEditable={matbaaDuzenle} suppressContentEditableWarning={true} className={`bg-white mx-auto shadow-2xl print:shadow-none min-h-[1050px] p-8 md:p-12 relative print-card ${matbaaDuzenle?'ring-2 ring-amber-400':''}`} style={{maxWidth: matbaaSayfa==='a5'?'148mm':'210mm', zoom: matbaaZoom===1?undefined:matbaaZoom, filter: matbaaGri?'grayscale(1)':undefined, fontFamily: matbaaFont==='yuvarlak'?'"Comic Sans MS","Comic Sans",cursive':matbaaFont==='okunakli'?'Verdana,"Segoe UI",Tahoma,sans-serif':matbaaFont==='elyazisi'?'"Segoe Script","Bradley Hand","Comic Sans MS",cursive':undefined, letterSpacing: matbaaFont==='okunakli'?'0.5px':undefined, lineHeight: matbaaSatir==='genis'?2:matbaaSatir==='cokGenis'?2.8:undefined, columnCount: matbaaSayfa==='2sutun'?2:undefined, columnGap: matbaaSayfa==='2sutun'?'26px':undefined}}>
+{ogrBilgi && (<div style={{display:'flex',flexWrap:'wrap',gap:'6px 22px',justifyContent:'space-between',borderBottom:'2px solid #cbd5e1',paddingBottom:'8px',marginBottom:'14px',fontSize:'14px',fontWeight:700,color:'#334155'}}>{ogrBilgi.ad?<span>Ad Soyad: {ogrBilgi.ad}</span>:null}{ogrBilgi.sinif?<span>Sınıf/No: {ogrBilgi.sinif}</span>:null}{ogrBilgi.tarih?<span>Tarih: {ogrBilgi.tarih}</span>:null}</div>)}
 
 {/* Header Alanı */}
 <div className="flex justify-between items-end border-b-2 border-gray-800 pb-4 mb-8 overflow-x-auto">
