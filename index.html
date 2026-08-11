@@ -1331,6 +1331,7 @@ const [matbaaDuzenle, setMatbaaDuzenle] = useState(false);
 const [ogrBilgi, setOgrBilgi] = useState(null);
 const [okuyor, setOkuyor] = useState(false);
 const [ogrenciProfil, setOgrenciProfil] = useState('');
+const [acikArac, setAcikArac] = useState('');
 const [apiKey, setApiKey] = useState(localStorage.getItem('gemini_api_key') || '');
 const [modelName, setModelName] = useState(localStorage.getItem('gemini_model_name') || 'gemini-2.5-pro');
 const [testModuCalisiyor, setTestModuCalisiyor] = useState(false);
@@ -2216,7 +2217,7 @@ const yaklasimOner = async () => {
         const prompt = 'Sen ordinaryüs seviyesinde bir eğitim bilimleri uzmanısın. Aşağıda BAŞLIĞI ve İÇERİĞİ verilen SOMUT çalışmayı dikkatle oku ve SADECE BU çalışmaya özgü, onu daha etkili kılacak 8 geliştirme önerisi ver.\n\nÇOK ÖNEMLİ KURALLAR:\n1) Öneriler bu çalışmanın KONUSUNA/İÇERİĞİNE ÖZGÜ olacak. Her çalışmaya uyan GENEL/KALIP etiketleri (ör. "Bilişsel yükü azalt", "Çoklu duyusal", "Oyunlaştır", "Somutlaştır", "Aralıklı tekrar", "Bağlamsal öğrenme", "Nöroeğitsel yaklaşım") KULLANMA.\n2) Etiket, bu çalışmanın konusundan/öğelerinden bahsetsin. Örnek: konu "anetil ses yöntemiyle okuma-yazma" ise etiketler "Hece geçişini hızlandır", "Sesli harfleri renklendir", "Kelimeden cümleye taşı", "Ayna harf (b-d) çalışması ekle" gibi olsun; konu "kesirler" ise "Pizza modeliyle görselleştir", "Denk kesir eşleştirmesi ekle" gibi.\n3) Talimat, bu çalışmada NE değişeceğini net söyleyen tek bir cümle olsun ve o çalışmaya birebir uygulanabilsin.\n\nBAŞLIK: ' + baslik + '\n\n----- ÇALIŞMA İÇERİĞİ -----\n' + t + '\n\nSADECE şu JSON: {"oneriler":[{"etiket":"...","talimat":"..."}]}';
         const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${aktifModel}:generateContent?key=${apiKey}`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0.6, maxOutputTokens: 2500, thinkingConfig: { thinkingBudget: 0 } } })
+            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0.85, maxOutputTokens: 2500, thinkingConfig: { thinkingBudget: 0 } } })
         });
         if (!resp.ok) { showToast(resp.status === 429 ? 'Kota doldu, biraz sonra dene.' : resp.status === 404 ? 'Model bulunamadı.' : 'Öneri alınamadı (' + resp.status + ').'); setOneriYukleniyor(false); return; }
         const data = await resp.json();
@@ -3615,7 +3616,7 @@ title="Veli ödevi yaptıysa buraya tıklayın."
 )}
 {uploadedFileData && (
     <div className="mb-3 bg-white/10 border border-yellow-400/30 rounded-xl p-2.5 no-print">
-        <button onClick={()=>{ if(isGeneratingMaterial){ showToast('⏳ Şu an üretiliyor…'); return; } showToast('🗺️ Rapor analiz ediliyor, yol haritası çıkarılıyor…'); generateMaterial('Yüklediğim dosya bir ÖĞRENCİ RAPORU / değerlendirme belgesidir. Şunları yap ve hepsini TEK belgede, net başlıklarla sun: (1) RAPOR ÖZETİ: öğrencinin güçlü yönleri, zorlandığı alanlar ve öncelikli ihtiyaçlarını maddele. (2) YOL HARİTASI: bu öğrenci için sıralı, uygulanabilir bir plan çıkar — öncelikli hedefler ve kısa/orta/uzun vadeli adımlar. (3) İLK ÇALIŞMA: yol haritasının en öncelikli ilk adımına uygun, sınıfta/terapide doğrudan kullanılabilir SOMUT ve dolu bir çalışma hazırla. Rapordaki bilgilere SADIK kal, uydurma; öğrencinin düzeyine uygun, tekrarlı ve görsel destekli olsun.'); }} className="w-full mb-2 text-xs bg-gradient-to-r from-emerald-500 to-green-600 hover:opacity-90 text-white px-3 py-2 rounded-lg font-black transition"><i className="fa-solid fa-route mr-1"></i>🗺️ Rapordan yol haritası + çalışma çıkar</button>
+        <button onClick={()=>{ if(isGeneratingMaterial){ showToast('⏳ Şu an üretiliyor…'); return; } showToast('🗺️ Rapor analiz ediliyor, yol haritası çıkarılıyor…'); generateMaterial('Yüklediğim dosya bir ÖĞRENCİ RAPORU / değerlendirme belgesidir. Bir uzman (özel eğitim + dil-konuşma terapisti) gözüyle profesyonel bir çıktı üret ve hepsini TEK belgede, net başlıklarla sun: (1) RAPOR ÖZETİ: öğrencinin güçlü yönleri, zorlandığı alanlar, öncelikli ihtiyaçlar (maddeler). (2) YOL HARİTASI: SMART (ölçülebilir) hedeflerle, öncelik sırasına dizili, kısa (1-2 hafta) / orta (1-2 ay) / uzun (dönemlik) vadeli somut adımlar; her adımda hedef beceri, yöntem/teknik ve başarı ölçütü olsun. (3) İLK ÇALIŞMA: yol haritasının en öncelikli ilk adımına birebir uygun, sınıfta/terapide doğrudan kullanılabilir, dolu ve görsel destekli somut bir çalışma. Rapordaki bilgilere SADIK kal, uydurma; öğrencinin düzeyine uygun ve tekrarlı olsun.'); }} className="w-full mb-2 text-xs bg-gradient-to-r from-emerald-500 to-green-600 hover:opacity-90 text-white px-3 py-2 rounded-lg font-black transition"><i className="fa-solid fa-route mr-1"></i>🗺️ Rapordan yol haritası + çalışma çıkar</button>
         <span className="block text-[10px] font-black text-yellow-200 uppercase mb-1.5"><i className="fa-solid fa-image mr-1"></i> Yüklediğin görselle (birebir uyarlar):</span>
         <div className="flex flex-wrap gap-1.5">
             {[
@@ -3637,8 +3638,43 @@ title="Veli ödevi yaptıysa buraya tıklayın."
 <button onClick={() => { setMaterialTopic('4. sınıf için genel değerlendirme testi hazırla.'); setMaterialType('test'); setMatQuestionCount('10'); setMaterialError(''); }} className="text-xs bg-white/10 hover:bg-white/20 border border-teal-300/40 px-3 py-1.5 rounded-full transition">4. sınıf genel test</button>
 </div>
 
+{/* 🎛️ ARAÇLAR — şık açılır/kapanır butonlar (karmaşayı önler) */}
+<div className="mb-3 grid grid-cols-2 gap-2 no-print">
+  <button onClick={()=>setAcikArac(a=>a==='ogrenci'?'':'ogrenci')} className={`flex items-center justify-center gap-2 py-2.5 rounded-xl font-black text-[12px] transition border ${acikArac==='ogrenci'?'bg-gradient-to-br from-blue-500 to-cyan-500 text-white border-transparent shadow-lg':'bg-white/10 text-blue-100 border-blue-400/30 hover:bg-white/20'}`}><i className="fa-solid fa-user-graduate text-base"></i>Öğrenciye Özel</button>
+  <button onClick={()=>setAcikArac(a=>a==='aninda'?'':'aninda')} className={`flex items-center justify-center gap-2 py-2.5 rounded-xl font-black text-[12px] transition border ${acikArac==='aninda'?'bg-gradient-to-br from-fuchsia-500 to-purple-600 text-white border-transparent shadow-lg':'bg-white/10 text-fuchsia-100 border-fuchsia-400/30 hover:bg-white/20'}`}><i className="fa-solid fa-bolt text-base"></i>Anında Çalışma</button>
+  <button onClick={()=>setAcikArac(a=>a==='bireysel'?'':'bireysel')} className={`flex items-center justify-center gap-2 py-2.5 rounded-xl font-black text-[12px] transition border ${acikArac==='bireysel'?'bg-gradient-to-br from-emerald-500 to-teal-600 text-white border-transparent shadow-lg':'bg-white/10 text-emerald-100 border-emerald-400/30 hover:bg-white/20'}`}><i className="fa-solid fa-chart-line text-base"></i>Bireysel Ders</button>
+  <button onClick={()=>setAcikArac(a=>a==='ogretmen'?'':'ogretmen')} className={`flex items-center justify-center gap-2 py-2.5 rounded-xl font-black text-[12px] transition border ${acikArac==='ogretmen'?'bg-gradient-to-br from-amber-500 to-orange-600 text-white border-transparent shadow-lg':'bg-white/10 text-amber-100 border-amber-400/30 hover:bg-white/20'}`}><i className="fa-solid fa-toolbox text-base"></i>Öğretmen Araçları</button>
+</div>
+
+{/* 🧰 ÖĞRETMEN ARAÇLARI — pro tek-tık üreteçler */}
+<div className={`mb-3 bg-gradient-to-br from-amber-600/25 to-orange-600/20 p-3 rounded-xl border border-amber-400/30 ${acikArac==='ogretmen'?'':'hidden'}`}>
+  <div className="flex items-center justify-between mb-2">
+    <span className="text-xs font-black text-amber-100 uppercase tracking-wide"><i className="fa-solid fa-toolbox mr-1 text-amber-300"></i> Öğretmen Araçları</span>
+    <span className="text-[10px] text-amber-200/70">tek tıkla üretilir</span>
+  </div>
+  <div className="flex flex-wrap gap-1.5">
+    {[
+      {e:'📅 Haftalık plan', m:'Belirttiğim ders/sınıf için haftalık ders planı hazırla: her gün için kazanım, etkinlik ve değerlendirme; tablo halinde, uygulanabilir.'},
+      {e:'✉️ Veli mektubu', m:'Öğrencinin gelişimi hakkında velilere yönelik, sıcak, olumlu ve somut önerili bir bilgilendirme mektubu hazırla.'},
+      {e:'📋 Gözlem/değerlendirme formu', m:'Bir beceri/davranış için gözlem ve değerlendirme formu hazırla: maddeler ve "yapabiliyor / kısmen / yapamıyor" işaretleme sütunlarıyla, özet-öneri bölümlü.'},
+      {e:'🎖️ Pekiştireç çizelgesi', m:'Öğrenci için görsel, motive edici bir ödül/pekiştireç (jeton/yıldız) çizelgesi hazırla; hedef davranış ve ödül alanlarıyla.'},
+      {e:'📊 İlerleme takip çizelgesi', m:'Bir hedef beceri için haftalık ilerleme takip çizelgesi hazırla: tarih, deneme sayısı, doğru yüzdesi ve not sütunlarıyla.'},
+      {e:'🧠 BEP hızlı taslak', m:'Bir öğrenci için hızlı BEP taslağı hazırla: mevcut performans, uzun ve kısa vadeli ölçülebilir amaçlar, yöntem, materyal ve değerlendirme ölçütü tablosuyla.'},
+      {e:'👪 Veli görüşme notu', m:'Veli görüşmesi için hazırlık notu hazırla: görüşülecek konular, öğrencinin güçlü yönleri, gelişim alanları ve evde yapılabilecekler.'},
+      {e:'🗓️ Günün planı', m:'Bugünkü ders için 40 dakikalık akış planı hazırla: giriş (ısınma), gelişme (ana etkinlik), sonuç (değerlendirme) ve süre dağılımıyla.'},
+      {e:'🏆 Başarı sertifikası', m:'Bir öğrenci için renkli, motive edici başarı sertifikası hazırla; isim, tarih ve öğretmen imzası alanıyla.'},
+      {e:'📝 Sınav + kazanım analizi', m:'Belirttiğim konudan kısa bir sınav hazırla; her sorunun hangi kazanımı ölçtüğünü etiketle ve sonuna kazanım-analiz tablosu ekle.'},
+      {e:'🎯 3 seviye çalışma seti', m:'Aynı kazanım için destek/temel/ileri üç seviyede tek bir çalışma seti hazırla; her seviye açık başlıkla ayrılsın.'},
+      {e:'🧩 Ödev + veli açıklaması', m:'Konuya uygun kısa bir ev ödevi ve altına velinin çocuğa nasıl yardımcı olacağını anlatan kısa bir açıklama hazırla.'},
+    ].map((k,i)=>(
+      <button key={i} onClick={()=>{ if(isGeneratingMaterial){ showToast('⏳ Şu an üretiliyor…'); return; } const mev=(materialTopic||'').trim(); if(typeof setActiveTab==='function'){ try{ setActiveTab('tools'); }catch(e){} } showToast('🧰 Üretiliyor…'); generateMaterial(mev ? (mev+'\n\n'+k.m) : k.m); }} className="text-[11px] bg-white/10 hover:bg-amber-400 hover:text-slate-900 text-amber-50 px-2.5 py-1.5 rounded-md font-bold border border-amber-300/30 transition">{k.e}</button>
+    ))}
+  </div>
+  <p className="text-[10px] text-amber-100/70 mt-2"><i className="fa-solid fa-lightbulb text-amber-300 mr-1"></i>İpucu: Yukarıdaki Üret kutusuna konu/sınıf yazarsan bu araçlar onun üstüne kurulur.</p>
+</div>
+
 {/* 🎯 ÖĞRENCİYE ÖZEL ÖNERİ — profil yaz, uygun hazır çalışmalar çıksın, dokun → anında üretilsin */}
-<div className="mb-3 bg-gradient-to-br from-blue-600/25 to-cyan-600/20 p-3 rounded-xl border border-blue-400/30">
+<div className={`mb-3 bg-gradient-to-br from-blue-600/25 to-cyan-600/20 p-3 rounded-xl border border-blue-400/30 ${acikArac==='ogrenci'?'':'hidden'}`}>
   <div className="flex items-center justify-between mb-2">
     <span className="text-xs font-black text-blue-100 uppercase tracking-wide"><i className="fa-solid fa-user-graduate mr-1 text-cyan-300"></i> Öğrenciye Özel Öneri</span>
     <span className="text-[10px] text-blue-200/70">dokun → anında üret</span>
@@ -3670,7 +3706,7 @@ title="Veli ödevi yaptıysa buraya tıklayın."
 </div>
 
 {/* ⚡ ANINDA HAZIR ÇALIŞMALAR — Üret kutusuna düşer */}
-<div className="mb-3 bg-gradient-to-br from-fuchsia-600/25 to-indigo-600/20 p-3 rounded-xl border border-fuchsia-400/30">
+<div className={`mb-3 bg-gradient-to-br from-fuchsia-600/25 to-indigo-600/20 p-3 rounded-xl border border-fuchsia-400/30 ${acikArac==='aninda'?'':'hidden'}`}>
   <div className="flex items-center justify-between mb-2">
     <span className="text-xs font-black text-fuchsia-100 uppercase tracking-wide"><i className="fa-solid fa-bolt text-yellow-300 mr-1"></i> Anında Hazır Çalışmalar</span>
     <span className="text-[10px] text-fuchsia-200/70">Üret kutusuna düşer</span>
@@ -3735,7 +3771,7 @@ title="Veli ödevi yaptıysa buraya tıklayın."
 </div>
 
 {/* 📈 BİREYSEL DERS TAKİBİ */}
-<div className="mb-3 bg-gradient-to-br from-emerald-600/25 to-teal-600/20 p-3 rounded-xl border border-emerald-400/30">
+<div className={`mb-3 bg-gradient-to-br from-emerald-600/25 to-teal-600/20 p-3 rounded-xl border border-emerald-400/30 ${acikArac==='bireysel'?'':'hidden'}`}>
   <div className="flex items-center justify-between mb-2">
     <span className="text-xs font-black text-emerald-100 uppercase tracking-wide"><i className="fa-solid fa-chart-line mr-1 text-emerald-300"></i> Bireysel Ders Takibi</span>
     <span className="text-[10px] text-emerald-200/70">kaldığın yeri hatırlar</span>
