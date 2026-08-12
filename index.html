@@ -1174,6 +1174,7 @@ try{
         m.innerHTML='';
         var say=document.createElement('div'); say.className='zsay'; say.textContent='📊 Üretilen çalışma: '+sayac(); m.appendChild(say);
         function ekle(txt,fn){ var x=document.createElement('button'); x.textContent=txt; x.onclick=fn; m.appendChild(x); }
+        ekle('📖 Uygulama Rehberi', function(){ try{ if(window.ZIRVE_tanitimAc) window.ZIRVE_tanitimAc(); }catch(e){} m.classList.remove('acik'); });
         ekle((geceOn?'✅ ':'🌙 ')+'Gece (göz koruma)', function(){ var y=!geceOn; try{localStorage.setItem('zirve_gece',y?'1':'0');}catch(e){} geceUygula(y); yenile(); });
         ekle((konOn?'✅ ':'◐ ')+'Yüksek kontrast', function(){ var y=!konOn; try{localStorage.setItem('zirve_kontrast',y?'1':'0');}catch(e){} kontrastUygula(y); yenile(); });
         ekle('💾 Yedek al (indir)', function(){ yedekAl(); });
@@ -1332,6 +1333,7 @@ const [ogrBilgi, setOgrBilgi] = useState(null);
 const [okuyor, setOkuyor] = useState(false);
 const [ogrenciProfil, setOgrenciProfil] = useState('');
 const [acikArac, setAcikArac] = useState('');
+const [tanitimAcik, setTanitimAcik] = useState(() => { try { return localStorage.getItem('zirve_tanitim_gosterildi') !== '1'; } catch(e){ return true; } });
 const [apiKey, setApiKey] = useState(localStorage.getItem('gemini_api_key') || '');
 const [modelName, setModelName] = useState(localStorage.getItem('gemini_model_name') || 'gemini-2.5-pro');
 const [testModuCalisiyor, setTestModuCalisiyor] = useState(false);
@@ -2278,6 +2280,10 @@ const ogrBilgiDoldur = () => {
     showToast('👦 Öğrenci bilgisi eklendi.');
 };
 
+// 📖 Uygulama tanıtım/rehber ekranı: ilk açılışta gösterilir, ⚙️ menüsünden tekrar açılır.
+const tanitimKapat = () => { try { localStorage.setItem('zirve_tanitim_gosterildi', '1'); } catch(e){} setTanitimAcik(false); };
+useEffect(() => { window.ZIRVE_tanitimAc = () => setTanitimAcik(true); return () => { try { delete window.ZIRVE_tanitimAc; } catch(e){} }; }, []);
+
 // 🎯 ÖĞRENCİYE ÖZEL ÖNERİ: profildeki özelliklere göre en uygun hazır çalışmaları çıkarır.
 const ogrenciOnerileri = (p) => {
     const t = String(p || '').toLowerCase();
@@ -3031,6 +3037,54 @@ return (
   </div>
 </div>
 )}
+{/* 📖 KARŞILAMA / REHBER EKRANI (ilk açılışta; ⚙️ menüsünden tekrar açılır) */}
+{lisansAktif && tanitimAcik && (
+<div className="fixed inset-0 z-[9998] bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-3 no-print" onClick={tanitimKapat}>
+  <div onClick={(e)=>e.stopPropagation()} className="bg-white rounded-2xl w-full max-w-lg max-h-[88vh] overflow-y-auto shadow-2xl">
+    <div className="bg-gradient-to-br from-indigo-600 via-purple-600 to-fuchsia-600 p-5 text-white sticky top-0 z-10">
+      <div className="flex items-center gap-3">
+        <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center text-2xl font-black">Bİ</div>
+        <div>
+          <h2 className="text-lg font-black leading-tight">Barış Öğretmen · Eğitim Ekosistemi</h2>
+          <p className="text-xs text-white/80">Öğretmenler, özel eğitimciler ve dil-konuşma terapistleri için akıllı üretim stüdyosu</p>
+        </div>
+      </div>
+    </div>
+    <div className="p-5">
+      <p className="text-sm text-slate-600 mb-4 leading-relaxed">Aklındaki her çalışmayı saniyeler içinde <b>profesyonel, yazdırmaya hazır</b> materyale çeviren bir ekosistem. İşte neler yapabileceğin ve neden kullanacağın:</p>
+      <div className="space-y-2.5">
+        {[
+          {i:'🖨️', b:'Matbaa Üret — kalbi burası', t:'Ne yazarsan yaz — test, etkinlik, hikâye, çalışma kâğıdı — anında üretilir. Motor her zaman bir sonuç verir; "boş ekran" derdin olmaz.'},
+          {i:'📚', b:'355+ Hazır Şablon (48 grup)', t:'Okuma-yazma yöntemleri, özel eğitim, eğitim bilimleri (kuram-yöntem-strateji-teknik), nörobilim, akademik araçlar ve dil-konuşma terapisi. Tek dokunuşla hazır başlangıç.'},
+          {i:'👨‍🎓', b:'Öğrenciye Özel AI', t:'Öğrencinin adını ve özelliğini yaz (disleksi, otizm, DEHB, konuşma güçlüğü, okul öncesi...) → yapay zeka ona özel, özgün çalışma tasarlar. Neden: her öğrenci farklıdır.'},
+          {i:'🗺️', b:'Rapordan Yol Haritası', t:'Bir öğrencinin raporunu yükle → rapor özeti + SMART hedefli gelişim yol haritası + ilk çalışma otomatik çıksın. Neden: değerlendirmeyi eyleme çevirir.'},
+          {i:'⚡', b:'Anında Çalışmalar', t:'Boşluk doldurma, quiz, eşleştirme, fasikül, DKT kartları, okul öncesi kavramlar... Tek tıkla üretim, zaman kazandırır.'},
+          {i:'📈', b:'Bireysel Ders Takibi', t:'"Oktay — Matematik — Ders 1, 2, ... 103" gibi kaldığın yeri hatırlar, önceki dersin üstüne kurar. Neden: bireysel programda süreklilik.'},
+          {i:'🧰', b:'Öğretmen Araçları', t:'Haftalık plan, veli mektubu, BEP taslağı, gözlem formu, pekiştireç & ilerleme çizelgesi, sertifika. Neden: kâğıt işini dakikalara indirir.'},
+          {i:'🎓', b:'Çalışmaya Özel Öneri', t:'Ürettiğin çalışmayı yapay zeka okur ve "buna en çok şu yakışır" diye O çalışmaya özgü geliştirmeler önerir; dokun → uygula.'},
+          {i:'🎛️', b:'Sınırsız Uyarlama', t:'1–5. sınıfa uyarla, kolaylaştır/zorlaştır, görsel ekle, birebir "şunu sil / şunu ekle". Ne dersen o olur, gerisi korunur.'},
+          {i:'🖼️', b:'Görsel & Rapor Yükleme', t:'Elindeki çalışmanın fotoğrafını yükle → birebir aynısını, farklı örneklerle ya da uyarlayarak üret.'},
+          {i:'🗣️', b:'Dil-Konuşma & Özel Eğitim Gücü', t:'Dünyanın en iyi DKT uzmanı gibi: artikülasyon, oral-motor, fonolojik farkındalık, minimal çiftler, sosyal senaryolar, terapi seans planı.'},
+          {i:'📤', b:'Profesyonel Çıktı', t:'PDF & PNG indir, yazdır, WhatsApp paylaş, sesli oku (özel eğitim için), mürekkep tasarrufu, yazı tipi/satır aralığı, A4/A5.'},
+          {i:'🗂️', b:'Kalıcı Hafıza', t:'Ürettiğin hiçbir çalışma kaybolmaz; "Son Çalışmalarım"dan istediğine tek dokunuşla dönersin.'},
+          {i:'📺', b:'Her Cihazda Çalışır', t:'Telefon, tablet, bilgisayar ve akıllı tahtada otomatik uyumlu; ekrana göre kendini büyütür.'},
+          {i:'⚙️', b:'Ekstra Araçlar', t:'Gece modu (göz koruma), yüksek kontrast, yedek al/geri yükle — sol alttaki ⚙️ menüsünde. Bu rehbere de oradan dönebilirsin.'},
+        ].map((f,i)=>(
+          <div key={i} className="flex gap-3 items-start bg-slate-50 rounded-xl p-3 border border-slate-100">
+            <div className="text-xl shrink-0">{f.i}</div>
+            <div><div className="text-sm font-black text-slate-800">{f.b}</div><div className="text-xs text-slate-500 leading-snug mt-0.5">{f.t}</div></div>
+          </div>
+        ))}
+      </div>
+      <div className="mt-4 bg-indigo-50 border border-indigo-100 rounded-xl p-3 text-center">
+        <p className="text-xs text-indigo-700 font-bold">💡 Nasıl başlarım? Üstteki 4 renkli araç butonunu aç/kapat, bir şablon seç ya da isteğini yaz, "Üret"e bas. Bu rehbere istediğin an <b>sol alt ⚙️ → "Uygulama Rehberi"</b>nden dönebilirsin.</p>
+      </div>
+      <button onClick={tanitimKapat} className="w-full mt-4 bg-gradient-to-r from-indigo-600 to-fuchsia-600 hover:opacity-90 text-white py-3 rounded-xl font-black text-sm">🚀 Hadi başlayalım!</button>
+    </div>
+  </div>
+</div>
+)}
+
 {/* Rastgele Seçilen Öğrenci Ekrani */}
 {pickedStudent && (
 <div className="fixed inset-0 flex items-center justify-center bg-black/80 z-[100] animate-fade-in no-print">
