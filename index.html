@@ -1331,6 +1331,7 @@ const [matbaaSayfa, setMatbaaSayfa] = useState('a4');
 const [matbaaDuzenle, setMatbaaDuzenle] = useState(false);
 const [ogrBilgi, setOgrBilgi] = useState(null);
 const [okuyor, setOkuyor] = useState(false);
+const [htmlUretiliyor, setHtmlUretiliyor] = useState(false);
 const [ogrenciProfil, setOgrenciProfil] = useState('');
 const [acikArac, setAcikArac] = useState('');
 const [hizliAcik, setHizliAcik] = useState(false);
@@ -2257,6 +2258,42 @@ const matbaaWhatsapp = () => {
     const msg = ((materialResult && materialResult.dokuman_basligi) || 'Çalışma') + '\n\n' + t;
     try { window.open('https://wa.me/?text=' + encodeURIComponent(msg.slice(0, 1500)), '_blank'); } catch(e){}
 };
+// 🎮 Çalışmayı TEK DOSYALIK interaktif HTML oyununa çevir (otomatik puanlama + geri bildirim), indir & aç.
+const interaktifHtmlUret = async () => {
+    if (!apiKey) { showToast('Önce API anahtarı girin (Ayarlar).'); return; }
+    const t0 = matbaaMetneCevir(materialResult);
+    if (!t0) { showToast('Önce bir çalışma üret.'); return; }
+    const baslik = (materialResult && materialResult.dokuman_basligi) ? String(materialResult.dokuman_basligi) : 'Etkinlik';
+    const t = t0.length > 4000 ? t0.slice(0, 4000) : t0;
+    let aktifModel = modelName || 'gemini-2.5-flash';
+    try { if (window.ZIRVE && typeof window.ZIRVE.enIyiModel === 'function' && window.ZIRVE.modeller && window.ZIRVE.modeller.length) { const iyi = window.ZIRVE.enIyiModel(window.ZIRVE.modeller); if (iyi) aktifModel = iyi; } else if (window.ZIRVE && window.ZIRVE.model) aktifModel = window.ZIRVE.model; } catch(e){}
+    if (!aktifModel || aktifModel.includes('latest') || aktifModel.includes('lite')) aktifModel = 'gemini-2.5-flash';
+    setHtmlUretiliyor(true);
+    showToast('🎮 İnteraktif oyun hazırlanıyor, biraz sürebilir…');
+    try {
+        const prompt = 'Aşağıdaki çalışma kâğıdını, öğrencinin EKRANDA çözebileceği TEK DOSYALIK, kendi kendine çalışan İNTERAKTİF bir HTML etkinliğine/oyununa çevir. KURALLAR: (1) İçindeki soruları/etkinlikleri interaktif yap — çoktan seçmeli için tıklanabilir şıklar, boşluk doldurma için input kutuları, doğru-yanlış için butonlar, eşleştirme için tıkla-eşleştir. (2) Anında geri bildirim ver: doğru=yeşil, yanlış=kırmızı; "Kontrol Et" ve "Baştan Başla" butonları ve toplam PUAN/skor göstergesi olsun; hepsi bitince kutlama mesajı. (3) Renkli, çocuk-dostu, büyük dokunmatik hedefli; mobil ve akıllı tahta uyumlu (responsive). (4) TÜM CSS ve JavaScript aynı HTML dosyasının İÇİNDE olsun; HARİCİ bağımlılık/İnternet KULLANMA. (5) Türkçe ol, içerikteki soruları/cevapları koru. SADECE <!DOCTYPE html> ile başlayan TAM ve GEÇERLİ HTML kodunu döndür; kod dışında hiçbir açıklama veya markdown yazma.\n\nBAŞLIK: ' + baslik + '\n\n----- ÇALIŞMA -----\n' + t;
+        const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${aktifModel}:generateContent?key=${apiKey}`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.6, maxOutputTokens: 8192, thinkingConfig: { thinkingBudget: 0 } } })
+        });
+        if (!resp.ok) { showToast(resp.status === 429 ? 'Kota doldu, biraz sonra dene.' : resp.status === 404 ? 'Model bulunamadı.' : 'Oyun üretilemedi (' + resp.status + ').'); setHtmlUretiliyor(false); return; }
+        const data = await resp.json();
+        let html = (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0] && data.candidates[0].content.parts[0].text) || '';
+        html = html.replace(/^```(?:html)?/i, '').replace(/```$/i, '').trim();
+        const ix = html.toLowerCase().indexOf('<!doctype');
+        if (ix > 0) html = html.slice(ix);
+        if (!/<html|<!doctype/i.test(html)) { showToast('Oyun üretilemedi, tekrar dene.'); setHtmlUretiliyor(false); return; }
+        const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = baslik.replace(/[^a-z0-9ğüşöçİĞÜŞÖÇ]/gi, '_').slice(0, 40) + '_oyun.html';
+        a.click();
+        try { window.open(url, '_blank'); } catch(e){}
+        setTimeout(() => { try { URL.revokeObjectURL(url); } catch(e){} }, 60000);
+        showToast('🎮 İnteraktif oyun indirildi! Dosyayı açıp oynayabilir/paylaşabilirsin.');
+    } catch (err) { showToast('Oyun üretilemedi (bağlantı sorunu).'); }
+    setHtmlUretiliyor(false);
+};
 // 🔊 Sesli oku (TTS) — özel eğitim için değerli
 const matbaaSesliOku = () => {
     try {
@@ -3067,6 +3104,7 @@ return (
           {i:'🖼️', b:'Görsel & Rapor Yükleme', t:'Elindeki çalışmanın fotoğrafını yükle → birebir aynısını, farklı örneklerle ya da uyarlayarak üret.'},
           {i:'🗣️', b:'Dil-Konuşma & Özel Eğitim Gücü', t:'Dünyanın en iyi DKT uzmanı gibi: artikülasyon, oral-motor, fonolojik farkındalık, minimal çiftler, sosyal senaryolar, terapi seans planı.'},
           {i:'📤', b:'Profesyonel Çıktı', t:'PDF & PNG indir, yazdır, WhatsApp paylaş, sesli oku (özel eğitim için), mürekkep tasarrufu, yazı tipi/satır aralığı, A4/A5.'},
+          {i:'🎮', b:'İnteraktif Oyuna Çevir', t:'Çıkan çalışmayı tek tıkla; otomatik puanlı, anında geri bildirimli interaktif HTML oyununa çevir → indir, aç, paylaş. Akıllı tahta ve tablet için birebir.'},
           {i:'🗂️', b:'Kalıcı Hafıza', t:'Ürettiğin hiçbir çalışma kaybolmaz; "Son Çalışmalarım"dan istediğine tek dokunuşla dönersin.'},
           {i:'📺', b:'Her Cihazda Çalışır', t:'Telefon, tablet, bilgisayar ve akıllı tahtada otomatik uyumlu; ekrana göre kendini büyütür.'},
           {i:'⚙️', b:'Ekstra Araçlar', t:'Gece modu (göz koruma), yüksek kontrast, yedek al/geri yükle — sol alttaki ⚙️ menüsünde. Bu rehbere de oradan dönebilirsin.'},
@@ -4614,6 +4652,7 @@ title="Veli ödevi yaptıysa buraya tıklayın."
   <button onClick={matbaaSesliOku} className={`text-[11px] px-2.5 py-1.5 rounded-lg font-bold border transition ${okuyor ? 'bg-rose-500 text-white border-rose-500' : 'bg-white text-rose-700 border-rose-200 hover:bg-rose-50'}`}><i className={`fa-solid ${okuyor?'fa-stop':'fa-volume-high'} mr-1`}></i>{okuyor?'Durdur':'Sesli oku'}</button>
   <button onClick={matbaaPngIndir} className="text-[11px] px-2.5 py-1.5 rounded-lg font-bold bg-white text-teal-700 border border-teal-200 hover:bg-teal-50 transition"><i className="fa-solid fa-image mr-1"></i>PNG indir</button>
   <button onClick={matbaaWhatsapp} className="text-[11px] px-2.5 py-1.5 rounded-lg font-bold bg-white text-green-700 border border-green-200 hover:bg-green-50 transition"><i className="fa-brands fa-whatsapp mr-1"></i>Paylaş</button>
+  <button onClick={interaktifHtmlUret} disabled={htmlUretiliyor} className="text-[11px] px-2.5 py-1.5 rounded-lg font-black bg-gradient-to-r from-fuchsia-600 to-indigo-600 text-white hover:opacity-90 transition disabled:opacity-60">{htmlUretiliyor ? <span><i className="fa-solid fa-spinner fa-spin mr-1"></i>Oyun hazırlanıyor…</span> : <span><i className="fa-solid fa-gamepad mr-1"></i>🎮 İnteraktif oyuna çevir</span>}</button>
 </div>
 
 <div className="mx-auto mb-4 bg-purple-50 border-2 border-purple-200 rounded-xl p-3 no-print print:hidden" style={{maxWidth: '210mm'}}>
