@@ -3097,7 +3097,7 @@ return (
           {i:'👨‍🎓', b:'Öğrenciye Özel AI', t:'Öğrencinin adını ve özelliğini yaz (disleksi, otizm, DEHB, konuşma güçlüğü, okul öncesi...) → yapay zeka ona özel, özgün çalışma tasarlar. Neden: her öğrenci farklıdır.'},
           {i:'🗺️', b:'Rapordan Yol Haritası', t:'Bir öğrencinin raporunu yükle → rapor özeti + SMART hedefli gelişim yol haritası + ilk çalışma otomatik çıksın. Neden: değerlendirmeyi eyleme çevirir.'},
           {i:'⚡', b:'Anında Çalışmalar', t:'Boşluk doldurma, quiz, eşleştirme, fasikül, DKT kartları, okul öncesi kavramlar... Tek tıkla üretim, zaman kazandırır.'},
-          {i:'📈', b:'Bireysel Ders Takibi', t:'"Oktay — Matematik — Ders 1, 2, ... 103" gibi kaldığın yeri hatırlar, önceki dersin üstüne kurar. Neden: bireysel programda süreklilik.'},
+          {i:'📈', b:'Bireysel Ders Takibi', t:'"Öğrenci — Ders — Ders 1, 2, 3…" gibi kaldığın yeri hatırlar, önceki dersin üstüne kurar. Neden: bireysel programda süreklilik.'},
           {i:'🧰', b:'Öğretmen Araçları', t:'Haftalık plan, veli mektubu, BEP taslağı, gözlem formu, pekiştireç & ilerleme çizelgesi, sertifika. Neden: kâğıt işini dakikalara indirir.'},
           {i:'🎓', b:'Çalışmaya Özel Öneri', t:'Ürettiğin çalışmayı yapay zeka okur ve "buna en çok şu yakışır" diye O çalışmaya özgü geliştirmeler önerir; dokun → uygula.'},
           {i:'🎛️', b:'Sınırsız Uyarlama', t:'1–5. sınıfa uyarla, kolaylaştır/zorlaştır, görsel ekle, birebir "şunu sil / şunu ekle". Ne dersen o olur, gerisi korunur.'},
@@ -3870,7 +3870,7 @@ title="Veli ödevi yaptıysa buraya tıklayın."
     <span className="text-[10px] text-emerald-200/70">kaldığın yeri hatırlar</span>
   </div>
   <div className="flex flex-wrap gap-2 items-center mb-2">
-    <input value={bipOgrenci} onChange={(e)=>setBipOgrenci(e.target.value)} placeholder="Öğrenci adı (ör. Oktay)" className="flex-1 min-w-[130px] px-3 py-2 bg-slate-900/60 border border-emerald-400/30 rounded-lg outline-none text-white text-sm focus:border-emerald-300" />
+    <input value={bipOgrenci} onChange={(e)=>setBipOgrenci(e.target.value)} placeholder="Öğrenci adı" className="flex-1 min-w-[130px] px-3 py-2 bg-slate-900/60 border border-emerald-400/30 rounded-lg outline-none text-white text-sm focus:border-emerald-300" />
     <input value={bipDers} onChange={(e)=>setBipDers(e.target.value)} placeholder="Ders (ör. Matematik)" className="w-[150px] px-3 py-2 bg-slate-900/60 border border-emerald-400/30 rounded-lg outline-none text-white text-sm focus:border-emerald-300" />
     <span className="px-2.5 py-2 rounded-lg bg-emerald-500/20 border border-emerald-400/30 text-emerald-100 text-xs font-black whitespace-nowrap">Kaldığın yer: Ders {bipDersNo}</span>
   </div>
