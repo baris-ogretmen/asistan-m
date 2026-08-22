@@ -1406,6 +1406,9 @@ const [planAcik, setPlanAcik] = useState(false);
 const [planSinif, setPlanSinif] = useState('');
 const [planDers, setPlanDers] = useState('');
 const [uyarlaNot, setUyarlaNot] = useState('');
+const [sonSilinenUyarla, setSonSilinenUyarla] = useState(''); // × ile silinen uyarla yazısını geri getirmek için
+const [matbaaVersiyonlar, setMatbaaVersiyonlar] = useState(() => { try { const r = localStorage.getItem('zirve_matbaa_versiyonlar'); if (r) { const d = JSON.parse(r); if (Array.isArray(d)) return d; } } catch(e){} return []; });
+const [aktifVersiyon, setAktifVersiyon] = useState(-1);
 const [fasikulAcik, setFasikulAcik] = useState(false);
 const [fasikulBolumler, setFasikulBolumler] = useState([]);
 
@@ -1899,6 +1902,30 @@ const dersPlaniOlustur = (tur) => {
     showToast('📅 ' + tur + ' ders planı istemi hazır — şimdi "Üret"e bas!');
     setTimeout(() => { try { document.querySelector('textarea')?.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {} }, 150);
 };
+// ── ŞIK TEKRARINI ÖNLE (PDF/çıktı düzeltmesi) ───────────────────────────────
+// Yapay zekâ şıkları bazen HEM soru_metni'nin içine gömer HEM de secenekler dizisine
+// koyar. Ekranda tolere edilse de A4 PDF'te ikisi ayrı satıra düşünce şıklar İKİ KEZ
+// görünür. secenekler doluysa soru metnindeki gömülü şıkları güvenle ayıklıyoruz.
+const ZIRVE_soruMetniTemizle = (metin, secenekler) => {
+    if (!metin) return metin;
+    if (!Array.isArray(secenekler) || secenekler.filter(x => x && String(x).trim()).length < 2) return metin;
+    let s = String(metin);
+    const isaret = /[\(\[]?\s*[A-Ea-e]\s*[\)\].:\-]\s/g; // A) A. A- A: (a) biçimleri
+    // 1) Tamamen şık olan satırları at (ör. bir satırda "A) sa")
+    s = s.split(/\r?\n/).filter(l => !/^\s*[\(\[]?\s*[A-Ea-e]\s*[\)\].:\-]\s*\S/.test(l)).join('\n');
+    // 2) Aynı satıra dizilmiş şıkları kes ("...ba A) sa B) se C) so" → "...ba")
+    if ((s.match(isaret) || []).length >= 2) {
+        const ilk = s.search(/[\(\[]?\s*[A-Ea-e]\s*[\)\].:\-]\s/);
+        if (ilk > 0) {
+            const kuyruk = s.slice(ilk);
+            if ((kuyruk.match(isaret) || []).length >= 2) s = s.slice(0, ilk);
+        }
+    }
+    s = s.replace(/[\s\-–—:]+$/, '').trim();
+    return s || String(metin); // her ihtimale karşı soru metnini tamamen boşaltma
+};
+try { if (typeof window !== 'undefined') { window.ZIRVE = window.ZIRVE || {}; window.ZIRVE.soruMetniTemizle = ZIRVE_soruMetniTemizle; } } catch(e){}
+
 // ── (EK) Çıktıyı düz metne çevir → Kopyala / Prompta geri ekle ──
 const matbaaMetneCevir = (res) => {
     if (!res) return '';
@@ -1913,7 +1940,7 @@ const matbaaMetneCevir = (res) => {
         if (b.icerik_metni) L.push(S(b.icerik_metni));
         if (b.html_icerik) L.push(S(b.html_icerik));
         if (b.merkez_kavram) L.push('Merkez: ' + S(b.merkez_kavram));
-        if (b.soru_metni) L.push((i + 1) + ') ' + S(b.soru_metni));
+        if (b.soru_metni) L.push((i + 1) + ') ' + S(ZIRVE_soruMetniTemizle(b.soru_metni, b.secenekler)));
         if (Array.isArray(b.secenekler) && b.secenekler.length) b.secenekler.forEach((s, j) => L.push('   ' + (['A','B','C','D','E','F'][j] || '-') + ') ' + S(s)));
         if (Array.isArray(b.sol_sutun) && b.sol_sutun.length) L.push('Sol: ' + b.sol_sutun.map(S).join(', '));
         if (Array.isArray(b.sag_sutun_karisik) && b.sag_sutun_karisik.length) L.push('Sağ (karışık): ' + b.sag_sutun_karisik.map(S).join(', '));
@@ -1966,6 +1993,63 @@ const matbaaUyarla = (not) => {
 
 // KALICI HAFIZA: aktif çalışmayı tarayıcıya yaz (yenilesen bile durur, geçmişten geri gelir).
 useEffect(() => { try { if (materialResult && Array.isArray(materialResult.icerik_bloklari) && materialResult.icerik_bloklari.length) localStorage.setItem('zirve_matbaa_son', JSON.stringify(materialResult)); else localStorage.removeItem('zirve_matbaa_son'); } catch(e){} }, [materialResult]);
+
+// ── VERSİYON GEÇMİŞİ ─────────────────────────────────────────────────────────
+// Her üretilen / "AL ile uyarla" / "Yeniden üret" çıktısı bir VERSİYON olur.
+// Kullanıcı 1. / 2. / 3. versiyon arasında gezip beğendiğinin PDF/Yazdır çıktısını alır.
+const _versImza = (r) => (r && Array.isArray(r.icerik_bloklari)) ? ((r.dokuman_basligi || '') + '|' + r.icerik_bloklari.length + '|' + JSON.stringify(r).length) : '';
+useEffect(() => {
+    if (!materialResult || !Array.isArray(materialResult.icerik_bloklari) || !materialResult.icerik_bloklari.length) return;
+    const imza = _versImza(materialResult);
+    setMatbaaVersiyonlar(prev => {
+        if (prev.some(v => _versImza(v.sonuc) === imza)) return prev; // aynı içerik → yeni versiyon açma (versiyona tıklamayı da kapsar)
+        const etiket = (materialResult.dokuman_basligi || 'Çalışma').slice(0, 46);
+        const yeni = [...prev, { id: Date.now() + '_' + Math.random().toString(36).slice(2, 6), zaman: Date.now(), etiket, sonuc: materialResult }].slice(-20);
+        try { localStorage.setItem('zirve_matbaa_versiyonlar', JSON.stringify(yeni)); } catch(e){}
+        return yeni;
+    });
+}, [materialResult]);
+useEffect(() => {
+    const imza = _versImza(materialResult);
+    setAktifVersiyon(matbaaVersiyonlar.findIndex(v => _versImza(v.sonuc) === imza));
+}, [matbaaVersiyonlar, materialResult]);
+const versiyonSec = (i) => {
+    const v = matbaaVersiyonlar[i]; if (!v) return;
+    setMaterialResult(v.sonuc);
+    try { setShowAnswerKey(true); } catch(e){}
+    try { localStorage.setItem('zirve_matbaa_son', JSON.stringify(v.sonuc)); } catch(e){}
+    showToast('📄 ' + (i + 1) + '. versiyona geçildi — PDF/Yazdır artık bu versiyonu alır.');
+    setTimeout(() => { try { document.getElementById('printable-material')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch(e){} }, 120);
+};
+const versiyonlariTemizle = () => {
+    if (!window.confirm('Versiyon geçmişi silinsin mi? (Ekranda açık olan çalışma kalır)')) return;
+    const kalan = (aktifVersiyon >= 0 && matbaaVersiyonlar[aktifVersiyon]) ? [matbaaVersiyonlar[aktifVersiyon]] : [];
+    setMatbaaVersiyonlar(kalan);
+    try { localStorage.setItem('zirve_matbaa_versiyonlar', JSON.stringify(kalan)); } catch(e){}
+    showToast('🗑️ Versiyonlar temizlendi.');
+};
+const versiyonSeridi = () => {
+    if (!matbaaVersiyonlar || matbaaVersiyonlar.length < 2) return null;
+    return (
+        <div className="mx-auto mb-4 no-print bg-indigo-50 border-2 border-indigo-200 rounded-xl p-3" style={{maxWidth: '210mm'}}>
+            <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] font-black text-indigo-700 uppercase"><i className="fa-solid fa-layer-group mr-1"></i> Versiyonlar <span className="text-indigo-400 font-bold">({matbaaVersiyonlar.length})</span> — dokun, beğendiğinin PDF'ini al</span>
+                <button onClick={versiyonlariTemizle} title="Versiyon geçmişini temizle" className="text-[10px] text-indigo-400 hover:text-red-500 font-bold"><i className="fa-solid fa-trash-can mr-1"></i>Temizle</button>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+                {matbaaVersiyonlar.map((v, i) => (
+                    <button key={v.id} onClick={() => versiyonSec(i)} title={v.etiket} className={`text-[11px] px-3 py-1.5 rounded-lg font-bold border transition flex items-center gap-1 ${i === aktifVersiyon ? 'bg-indigo-600 text-white border-indigo-600 shadow' : 'bg-white text-indigo-700 border-indigo-200 hover:bg-indigo-100'}`}>
+                        <span className="font-black">{i + 1}.</span> Versiyon
+                        {i === aktifVersiyon && <i className="fa-solid fa-eye ml-1 text-[10px]"></i>}
+                    </button>
+                ))}
+            </div>
+            {aktifVersiyon >= 0 && matbaaVersiyonlar[aktifVersiyon] && (
+                <p className="text-[10px] text-indigo-500 font-semibold mt-2 truncate"><i className="fa-solid fa-file-lines mr-1"></i>Şu an açık: {matbaaVersiyonlar[aktifVersiyon].etiket}</p>
+            )}
+        </div>
+    );
+};
 
 // Üretilen her çalışmayı geçmişe ekler (en yeni başta, en çok 10 kayıt). Böylece HİÇBİRİ kaybolmaz.
 const gecmiseEkle = (res) => {
@@ -4658,12 +4742,19 @@ title="Veli ödevi yaptıysa buraya tıklayın."
 <div className="mx-auto mb-4 bg-purple-50 border-2 border-purple-200 rounded-xl p-3 no-print print:hidden" style={{maxWidth: '210mm'}}>
 <p className="text-[11px] font-black text-purple-700 uppercase mb-2"><i className="fa-solid fa-robot mr-1"></i> Memnun kalmadın mı? AL ile uyarla / yeniden üret</p>
 <div className="flex flex-col sm:flex-row gap-2">
-<input value={uyarlaNot} onChange={e=>setUyarlaNot(e.target.value)} placeholder="Nasıl uyarlayayım? (ör. 2. sınıfa indir, daha kolay yap, uzay temalı)" className="flex-1 px-3 py-2 bg-white border border-purple-200 rounded-lg outline-none text-sm text-gray-800" />
+<div className="relative flex-1">
+<input value={uyarlaNot} onChange={e=>setUyarlaNot(e.target.value)} placeholder="Nasıl uyarlayayım? (ör. 2. sınıfa indir, daha kolay yap, uzay temalı)" className="w-full px-3 py-2 pr-10 bg-white border border-purple-200 rounded-lg outline-none text-sm text-gray-800" />
+{uyarlaNot ? (
+<button onClick={()=>{ setSonSilinenUyarla(uyarlaNot); setUyarlaNot(''); }} title="Yazıyı anında temizle" className="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-gray-200 hover:bg-red-500 hover:text-white text-gray-500 flex items-center justify-center text-xs font-bold transition">✕</button>
+) : (sonSilinenUyarla ? (
+<button onClick={()=>setUyarlaNot(sonSilinenUyarla)} title="Silinen yazıyı geri getir" className="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-purple-100 hover:bg-purple-600 hover:text-white text-purple-600 flex items-center justify-center text-xs transition"><i className="fa-solid fa-rotate-left"></i></button>
+) : null)}
+</div>
 <button onClick={()=>matbaaUyarla(uyarlaNot)} className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg font-bold text-sm whitespace-nowrap transition"><i className="fa-solid fa-wand-magic-sparkles mr-1"></i> AL ile Uyarla</button>
 <button onClick={()=>matbaaUyarla('Beğenmedim; aynı konuda tamamen farklı ve daha kaliteli bir versiyon üret.')} className="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg font-bold text-sm whitespace-nowrap transition"><i className="fa-solid fa-rotate-right mr-1"></i> Yeniden Üret</button>
 </div>
 <div className="flex flex-wrap gap-1.5 mt-2">
-{['1. sınıfa uyarla','2. sınıfa uyarla','3. sınıfa uyarla','4. sınıfa uyarla','5. sınıfa uyarla','Daha kolay','Daha zor','Görsel ekle','Kısalt','Uzat','🧠 Zihin haritası ekle','🗺️ Kavram haritası ekle','Somutlaştır','Örnek ekle','Oyunlaştır','Emoji ekle','Renkli vurgula','Boşluk doldur yap','Eşleştirme yap','Tekrar bölümü ekle','Ölçme/değerlendirme ekle','Puntoyu büyüt','Disleksi dostu yap','Adım adım yap','Yönergeyi sadeleştir','Bilgi İşleme Kuramına göre','Somuttan soyuta diz','Görselleri çoğalt','Cevap anahtarı ekle','Veli notu ekle','Süre & puan ekle','Bloom üst düzey soru','5E modeline göre','Yapılandırmacı yap','İş birlikli görev ekle','Farklılaştır (3 seviye)','Çoklu zekâya göre','Oyunlaştır (puan-rozet)','Adım adım çöz','Görselle destekle','Günlük hayattan bağla','Somut örnek ekle','İpucu ekle','Isınma sorusu ekle','Öz-değerlendirme ekle','Geri getirme sorusu ekle','Hikâyeleştir','Kavram haritasıyla özetle','DKT: örnek sayısını artır','Artikülasyon örnekleri ekle','Sosyal senaryo ekle','Nefes/mola ekle','VAKT çok duyulu yap','Sadeleştir (özel eğitim)','Daha çok tekrar ekle','Kazanım/hedef ekle','Rubrik (puanlama) ekle','Akademik dil kullan','Kaynakça/atıf ekle','Üst-bilişsel sorular ekle','Çıkış kartı (exit ticket) ekle','Ön koşul bilgisi ekle','Genelleme/transfer görevi ekle','Terapi hedefi & veri tablosu ekle','İpucu silme (fading) uygula','Minimal çift ekle','Fonolojik farkındalık ekle','Ağız/dudak yönergesi ekle'].map((x,i)=>(<button key={i} onClick={()=>matbaaUyarla(x)} className="text-[11px] bg-white hover:bg-purple-500 hover:text-white text-purple-700 border border-purple-200 px-2 py-1 rounded-md font-semibold transition">{x}</button>))}
+{['✨ Şıkları netleştir','Soru kökünü sadeleştir','Çeldiricileri (yanlış şıkları) güçlendir','Cevap anahtarını ayrı sayfaya al','Zorluğu kademeli sırala','1. sınıfa uyarla','2. sınıfa uyarla','3. sınıfa uyarla','4. sınıfa uyarla','5. sınıfa uyarla','Daha kolay','Daha zor','Görsel ekle','Kısalt','Uzat','🧠 Zihin haritası ekle','🗺️ Kavram haritası ekle','Somutlaştır','Örnek ekle','Oyunlaştır','Emoji ekle','Renkli vurgula','Boşluk doldur yap','Eşleştirme yap','Tekrar bölümü ekle','Ölçme/değerlendirme ekle','Puntoyu büyüt','Disleksi dostu yap','Adım adım yap','Yönergeyi sadeleştir','Bilgi İşleme Kuramına göre','Somuttan soyuta diz','Görselleri çoğalt','Cevap anahtarı ekle','Veli notu ekle','Süre & puan ekle','Bloom üst düzey soru','5E modeline göre','Yapılandırmacı yap','İş birlikli görev ekle','Farklılaştır (3 seviye)','Çoklu zekâya göre','Oyunlaştır (puan-rozet)','Adım adım çöz','Görselle destekle','Günlük hayattan bağla','Somut örnek ekle','İpucu ekle','Isınma sorusu ekle','Öz-değerlendirme ekle','Geri getirme sorusu ekle','Hikâyeleştir','Kavram haritasıyla özetle','DKT: örnek sayısını artır','Artikülasyon örnekleri ekle','Sosyal senaryo ekle','Nefes/mola ekle','VAKT çok duyulu yap','Sadeleştir (özel eğitim)','Daha çok tekrar ekle','Kazanım/hedef ekle','Rubrik (puanlama) ekle','Akademik dil kullan','Kaynakça/atıf ekle','Üst-bilişsel sorular ekle','Çıkış kartı (exit ticket) ekle','Ön koşul bilgisi ekle','Genelleme/transfer görevi ekle','Terapi hedefi & veri tablosu ekle','İpucu silme (fading) uygula','Minimal çift ekle','Fonolojik farkındalık ekle','Ağız/dudak yönergesi ekle'].map((x,i)=>(<button key={i} onClick={()=>matbaaUyarla(x)} className="text-[11px] bg-white hover:bg-purple-500 hover:text-white text-purple-700 border border-purple-200 px-2 py-1 rounded-md font-semibold transition">{x}</button>))}
 </div>
 <div className="mt-3 pt-3 border-t border-purple-200">
   <button onClick={yaklasimOner} disabled={oneriYukleniyor} className="w-full text-xs bg-gradient-to-r from-indigo-600 to-fuchsia-600 hover:opacity-90 text-white px-3 py-2 rounded-lg font-black transition disabled:opacity-60">
@@ -4682,6 +4773,7 @@ title="Veli ödevi yaptıysa buraya tıklayın."
 </div>
 </div>
 
+{versiyonSeridi()}
 <div className="mx-auto mb-4 no-print" style={{maxWidth: '210mm'}}>{gecmisSeridi()}</div>
 
 <div id="printable-material" contentEditable={matbaaDuzenle} suppressContentEditableWarning={true} className={`bg-white mx-auto shadow-2xl print:shadow-none min-h-[1050px] p-8 md:p-12 relative print-card ${matbaaDuzenle?'ring-2 ring-amber-400':''}`} style={{maxWidth: matbaaSayfa==='a5'?'148mm':'210mm', zoom: matbaaZoom===1?undefined:matbaaZoom, filter: matbaaGri?'grayscale(1)':undefined, fontFamily: matbaaFont==='yuvarlak'?'"Comic Sans MS","Comic Sans",cursive':matbaaFont==='okunakli'?'Verdana,"Segoe UI",Tahoma,sans-serif':matbaaFont==='elyazisi'?'"Segoe Script","Bradley Hand","Comic Sans MS",cursive':undefined, letterSpacing: matbaaFont==='okunakli'?'0.5px':undefined, lineHeight: matbaaSatir==='genis'?2:matbaaSatir==='cokGenis'?2.8:undefined, columnCount: matbaaSayfa==='2sutun'?2:undefined, columnGap: matbaaSayfa==='2sutun'?'26px':undefined}}>
@@ -4825,7 +4917,7 @@ return (
 <div key={idx} className="break-inside-avoid mb-6">
 <div className="mb-3">
 <span className="font-black text-lg text-gray-900 mr-2 inline-block align-top print-high-contrast">{soruNo}.</span>
-<p className="font-semibold text-gray-800 text-lg leading-snug print-high-contrast whitespace-pre-wrap inline-block w-[92%] align-top m-0"><HtmlMetin metin={blok.soru_metni} /></p>
+<p className="font-semibold text-gray-800 text-lg leading-snug print-high-contrast whitespace-pre-wrap inline-block w-[92%] align-top m-0"><HtmlMetin metin={ZIRVE_soruMetniTemizle(blok.soru_metni, blok.secenekler)} /></p>
 </div>
 {blok.secenekler && blok.secenekler.length > 0 ? (
 <div className="pl-6 md:pl-8 space-y-3 mt-3">
@@ -5287,7 +5379,7 @@ return (
 {blok.baslik && <h3 className="font-bold text-xl text-indigo-900 mb-3 border-b border-indigo-100 pb-2 print-high-contrast whitespace-pre-wrap">{blok.baslik}</h3>}
 {blok.html_icerik && <div className="prose max-w-none text-gray-800 leading-relaxed text-lg print-high-contrast" dangerouslySetInnerHTML={{ __html: blok.html_icerik }}></div>}
 {blok.icerik_metni && <p className="text-gray-800 leading-relaxed text-lg print-high-contrast whitespace-pre-wrap mb-3"><HtmlMetin metin={blok.icerik_metni} /></p>}
-{blok.soru_metni && <p className="font-semibold text-gray-900 text-lg print-high-contrast whitespace-pre-wrap mb-2"><HtmlMetin metin={blok.soru_metni} /></p>}
+{blok.soru_metni && <p className="font-semibold text-gray-900 text-lg print-high-contrast whitespace-pre-wrap mb-2"><HtmlMetin metin={ZIRVE_soruMetniTemizle(blok.soru_metni, blok.secenekler)} /></p>}
 {blok.secenekler && blok.secenekler.length > 0 && (
 <div className="pl-4 space-y-2 mb-2">
 {blok.secenekler.map((sec, sIdx) => (
