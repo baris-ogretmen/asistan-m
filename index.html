@@ -930,6 +930,7 @@ function panelKur(){
     <label style="font-weight:800;font-size:12px">Anahtarların — her satıra bir tane</label>
     <textarea id="zirve-keys" rows="4" placeholder="AIza...&#10;AIza...&#10;AIza..." style="width:100%;margin:5px 0 6px;padding:9px;border:2px solid #e2e8f0;border-radius:10px;font:600 12px ui-monospace,monospace;resize:vertical;background:#fff"></textarea>
     <button id="zirve-keys-kopyala" style="width:100%;margin-bottom:8px;background:#059669;color:#fff;border:none;border-radius:10px;padding:9px;font-weight:800;cursor:pointer;font-size:12px">📋 Tüm Anahtarları Kopyala (başka çalışmaya yapıştır)</button>
+    <button id="zirve-keys-yapistir" style="width:100%;margin-bottom:8px;background:#7c3aed;color:#fff;border:none;border-radius:10px;padding:9px;font-weight:800;cursor:pointer;font-size:12px">📥 Panodan Yapıştır (tüm anahtarları ekle · birleştir)</button>
     <div style="background:linear-gradient(135deg,#f0f9ff,#eef2ff);border:2px solid #bae6fd;border-radius:12px;padding:12px;margin-bottom:11px">
       <div style="font-size:12px;font-weight:800;color:#0369a1;margin-bottom:6px">🔑 API Anahtarı Nasıl Alınır? (Ücretsiz)</div>
       <div style="font-size:11px;color:#334155;line-height:1.7;font-weight:600">
@@ -970,6 +971,25 @@ function panelKur(){
       else kopyaFallback(metin);
     }catch(e){ kopyaFallback(metin); }
     function kopyaFallback(t){ var ta=document.createElement('textarea'); ta.value=t; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(e){} document.body.removeChild(ta); toast('📋 Anahtarlar kopyalandı!','green'); }
+  };
+  var yapistirBtn=document.getElementById('zirve-keys-yapistir');
+  if(yapistirBtn) yapistirBtn.onclick=function(){
+    function birlestir(pano){
+      var ta=document.getElementById('zirve-keys');
+      var mevcut=(ta && ta.value ? ta.value : '');
+      var hepsi=(mevcut+'\n'+(pano||'')).split(/[\n,;\s]+/).map(function(x){return String(x||'').trim();}).filter(function(k){return k.length>10;});
+      var gorulen={}, tekil=[];
+      for(var i=0;i<hepsi.length;i++){ if(!gorulen[hepsi[i]]){ gorulen[hepsi[i]]=1; tekil.push(hepsi[i]); } }
+      if(!tekil.length){ toast('Panoda anahtar bulunamadı.','red'); return; }
+      if(ta) ta.value=tekil.join('\n');
+      try{ ringSet(tekil); ringSave(); panelYenile(); }catch(e){}
+      toast('📥 '+tekil.length+' anahtar birleştirildi ve kaydedildi. Şimdi "Test Et"e basabilirsin.','green');
+    }
+    try{
+      if(navigator.clipboard && navigator.clipboard.readText){
+        navigator.clipboard.readText().then(birlestir, function(){ var g=window.prompt('Anahtarları buraya yapıştır (her satıra bir tane):','')||''; birlestir(g); });
+      } else { var g=window.prompt('Anahtarları buraya yapıştır (her satıra bir tane):','')||''; birlestir(g); }
+    }catch(e){ var g2=window.prompt('Anahtarları buraya yapıştır (her satıra bir tane):','')||''; birlestir(g2); }
   };
   document.getElementById('zirve-model').onchange=(e)=>{ MODEL=e.target.value.trim()||'gemini-2.5-flash'; localStorage.setItem(LS.model,MODEL); panelYenile(); };
   panelYenile();
@@ -1198,6 +1218,134 @@ try{
 <script type="text/babel">
 const { useState, useEffect, useRef, useMemo } = React;
 
+// ============================================================
+//  MÜFREDAT · Okul Öncesi → 12. Sınıf (Türkiye Yüzyılı Maarif Modeli uyumlu)
+//  Sınıf → Ders → Konu başlıkları. "🤖 Güncel konuları getir" ile AI'dan tazelenebilir.
+// ============================================================
+const MUFREDAT = {
+"Okul Öncesi": {
+  "Türkçe Dil Etkinlikleri": ["Dinleme ve anlama","Sözcük dağarcığı","Öykü tamamlama","Tekerleme ve parmak oyunları","Sesleri tanıma (ilk ses)","Görsel okuma","Sıralama ve neden-sonuç"],
+  "Erken Matematik": ["1-10 sayılar ve sayma","Nesne-sayı eşleştirme","Geometrik şekiller","Renkler","Örüntü (kırmızı-mavi-kırmızı)","Büyük-küçük / az-çok","Konum (altında-üstünde-içinde)","Eşleştirme ve gruplama"],
+  "Sosyal-Duygusal Gelişim": ["Duyguları tanıma","Kendini ifade etme","Sıra bekleme ve paylaşma","Arkadaşlık","Kurallar ve sorumluluk","Empati"],
+  "Öz Bakım Becerileri": ["El yıkama","Diş fırçalama","Giyinme-soyunma","Sağlıklı beslenme","Tuvalet alışkanlığı","Toplanma-düzen"],
+  "Motor Gelişim": ["İnce motor (kalem tutma, makas, boncuk)","Kaba motor (denge, zıplama, top)","El-göz koordinasyonu","Çizgi çalışmaları"],
+  "Sanat ve Müzik": ["Boyama ve baskı","Kesme-yapıştırma","Ritim ve şarkılar","Yaratıcı drama","Enstrüman tanıma"],
+  "Doğa ve Çevre": ["Mevsimler ve hava","Canlılar-cansızlar","Hayvanlar","Bitkiler","Geri dönüşüm","Beş duyu organı"]
+},
+"1. Sınıf": {
+  "Türkçe": ["Dinleme / izleme","Konuşma","İlk okuma-yazma (ses grupları)","Bitişik eğik yazı","Okuduğunu anlama","Görsel okuma","Söz varlığı"],
+  "Matematik": ["Sayılar ve nicelikler (1-20)","Ritmik sayma","Toplama işlemi","Çıkarma işlemi","Geometrik şekiller","Uzamsal ilişkiler","Uzunluk ölçme","Paralarımız","Zaman (gün-hafta)","Veri (nesne grafiği)"],
+  "Hayat Bilgisi": ["Okulumuzda hayat","Evimizde hayat","Sağlıklı hayat","Güvenli hayat","Ülkemizde hayat","Doğada hayat"],
+  "İngilizce": ["Greetings","Numbers 1-10","Colors","Body parts","Family","Toys","Animals","Fruits"],
+  "Görsel Sanatlar": ["Renkler ve boyama","Çizgi ve şekil","Kolaj","Doku ve baskı"],
+  "Müzik": ["Ritim","Sesli-sessiz","Şarkılar","Nefes ve ses"],
+  "Oyun ve Fiziki Etkinlikler": ["Temel hareketler","Denge","Koşma-sıçrama","Grup oyunları"]
+},
+"2. Sınıf": {
+  "Türkçe": ["Dinleme / konuşma","Okuma akıcılığı","Okuduğunu anlama","Yazma","Söz varlığı","Adlar (isimler)","Yazım ve noktalama"],
+  "Matematik": ["Doğal sayılar (100'e kadar)","Basamak değeri","Toplama işlemi","Çıkarma işlemi","Çarpma işlemine giriş","Bölme işlemine giriş","Geometrik şekiller ve cisimler","Uzunluk ölçme","Zaman ölçme","Paralarımız","Sıvı ölçme","Veri (şekil grafiği)"],
+  "Hayat Bilgisi": ["Okulumuzda hayat","Evimizde hayat","Sağlıklı hayat","Güvenli hayat","Ülkemizde hayat","Doğada hayat"],
+  "İngilizce": ["Words","Friends","In the classroom","Numbers","Playtime","Food","Animals","My body"],
+  "Görsel Sanatlar": ["Görsel iletişim","Renk ve biçim","Üç boyutlu çalışma"],
+  "Müzik": ["Ritim kalıpları","Ezgi","Müzikli oyunlar"]
+},
+"3. Sınıf": {
+  "Türkçe": ["Dinleme / konuşma","Okuma ve anlama","Yazma (metin oluşturma)","Söz varlığı","Varlıkların özellikleri","Yazım-noktalama","Görsel okuma ve sunu"],
+  "Matematik": ["Doğal sayılar (1000'e kadar)","Toplama işlemi","Çıkarma işlemi","Çarpma işlemi","Bölme işlemi","Kesirler","Geometrik cisimler ve şekiller","Geometride temel kavramlar","Uzunluk-çevre ölçme","Zaman ölçme","Paralarımız","Sıvı-kütle ölçme","Veri toplama ve değerlendirme"],
+  "Fen Bilimleri": ["Gezegenimizi tanıyalım","Beş duyumuz","Kuvveti tanıyalım","Maddeyi tanıyalım","Çevremizdeki ışık ve sesler","Canlılar dünyasına yolculuk","Elektrikli araçlar"],
+  "Hayat Bilgisi": ["Okulumuzda hayat","Evimizde hayat","Sağlıklı hayat","Güvenli hayat","Ülkemizde hayat","Doğada hayat"],
+  "İngilizce": ["Words","Body","Family","Toys and games","My house","Feelings","Food","Cartoon characters"]
+},
+"4. Sınıf": {
+  "Türkçe": ["Dinleme / konuşma","Okuma ve anlama","Yazma (paragraf-metin)","Söz varlığı","Cümle bilgisi","Yazım ve noktalama","Görsel okuma ve sunu"],
+  "Matematik": ["Doğal sayılar","Doğal sayılarla toplama-çıkarma","Doğal sayılarla çarpma","Doğal sayılarla bölme","Kesirler","Zaman ölçme","Veri toplama ve değerlendirme","Geometrik cisimler","Açılar ve üçgen-dörtgen","Uzunluk-çevre-alan","Tartma","Sıvı ölçme"],
+  "Fen Bilimleri": ["Yer kabuğu ve Dünya'mızın hareketleri","Besinlerimiz","Kuvvetin etkileri","Maddeyi tanıyalım","Aydınlatma ve ses teknolojileri","İnsan ve çevre","Basit elektrik devreleri"],
+  "Sosyal Bilgiler": ["Birey ve toplum","Kültür ve miras","İnsanlar yerler ve çevreler","Bilim teknoloji ve toplum","Üretim dağıtım ve tüketim","Etkin vatandaşlık","Küresel bağlantılar"],
+  "İngilizce": ["Classroom rules","Nationality","Cartoon characters","Free time","My day","Fun with science","Jobs","My clothes"],
+  "Din Kültürü ve Ahlak Bilgisi": ["Din ve ahlak hakkında","Temizlik","Hz. Muhammed'i tanıyalım","İlk sure Fatiha","Peygamber ve insan sevgisi"],
+  "İnsan Hakları Yurttaşlık ve Demokrasi": ["İnsan olmak","Hak ve özgürlük","Adalet ve eşitlik","Uzlaşı","Kurallar"],
+  "Trafik Güvenliği": ["Trafikte ben","Yaya olarak trafik","Güvenli yolculuk"]
+},
+"5. Sınıf": {
+  "Türkçe": ["Erdemler","Millî kültürümüz","Doğa ve evren","Duygular","Sağlık ve spor","Okuma-yazma-dinleme-konuşma becerileri"],
+  "Matematik": ["Doğal sayılar","Doğal sayılarla işlemler","Kesirler","Ondalık gösterim","Yüzdeler","Temel geometrik kavramlar ve çizimler","Üçgen ve dörtgenler","Uzunluk ve zaman ölçme","Alan ölçme","Geometrik cisimler","Veri işleme"],
+  "Fen Bilimleri": ["Güneş Dünya ve Ay","Canlılar dünyası","Kuvvetin ölçülmesi ve sürtünme","Madde ve değişim","Işığın yayılması","İnsan ve çevre","Elektrik devre elemanları"],
+  "Sosyal Bilgiler": ["Birey ve toplum","Kültür ve miras","İnsanlar yerler ve çevreler","Bilim teknoloji ve toplum","Üretim dağıtım ve tüketim","Etkin vatandaşlık","Küresel bağlantılar"],
+  "İngilizce": ["Hello","My town","Games and hobbies","My daily routine","Health","Movies","Party time","Fitness","The animal shelter","Festivals"],
+  "Din Kültürü ve Ahlak Bilgisi": ["Allah inancı","Ramazan ve oruç","Adap ve nezaket","Hz. Muhammed ve aile hayatı","Çevremizde dinin izleri"],
+  "Bilişim Teknolojileri ve Yazılım": ["Bilişim teknolojileri","Etik ve güvenlik","İletişim araştırma ve iş birliği","Ürün oluşturma","Algoritma ve programlamaya giriş"]
+},
+"6. Sınıf": {
+  "Türkçe": ["Erdemler","Millî mücadele ve Atatürk","Bilim ve teknoloji","Doğa ve evren","Sanat","Okuma-yazma becerileri"],
+  "Matematik": ["Doğal sayılarla işlemler","Çarpanlar ve katlar","Kümeler","Tam sayılar","Kesirlerle işlemler","Ondalık gösterim","Oran","Cebirsel ifadeler","Veri toplama ve değerlendirme","Açılar","Alan (üçgen ve dörtgen)","Çember","Geometrik cisimler","Sıvı ölçme"],
+  "Fen Bilimleri": ["Güneş sistemi ve tutulmalar","Vücudumuzdaki sistemler","Kuvvet ve hareket","Madde ve ısı","Ses ve özellikleri","Vücudumuzda sistemler-2","İletken ve yalıtkan maddeler (elektrik)"],
+  "Sosyal Bilgiler": ["Birey ve toplum","Kültür ve miras","İnsanlar yerler ve çevreler","Bilim teknoloji ve toplum","Üretim dağıtım ve tüketim","Etkin vatandaşlık","Küresel bağlantılar"],
+  "İngilizce": ["Life","Yummy breakfast","Downtown","Weather and emotions","At the fair","Occupations","Holidays","Bookworms","Saving the planet","Democracy"],
+  "Din Kültürü ve Ahlak Bilgisi": ["Peygamber ve ilahî kitap inancı","Namaz","Zararlı alışkanlıklar","Hz. Muhammed'in hayatı","Temel değerler"]
+},
+"7. Sınıf": {
+  "Türkçe": ["Erdemler","Millî kültür","Kişisel gelişim","Bilim ve teknoloji","Doğa ve evren","Okuma-yazma becerileri"],
+  "Matematik": ["Tam sayılarla işlemler","Rasyonel sayılar","Cebirsel ifadeler","Eşitlik ve denklem","Oran ve orantı","Yüzdeler","Doğrular ve açılar","Çokgenler","Çember ve daire","Cisimlerin farklı yönlerden görünümü","Veri analizi"],
+  "Fen Bilimleri": ["Güneş sistemi ve ötesi","Hücre ve bölünmeler","Kuvvet ve enerji","Saf madde ve karışımlar","Işığın madde ile etkileşimi","Canlılarda üreme büyüme ve gelişme","Elektrik devreleri"],
+  "Sosyal Bilgiler": ["Birey ve toplum","Kültür ve miras","İnsanlar yerler ve çevreler","Bilim teknoloji ve toplum","Üretim dağıtım ve tüketim","Etkin vatandaşlık","Küresel bağlantılar"],
+  "İngilizce": ["Appearance and personality","Sports","Biographies","Wild animals","Television","Celebrations","Dreams","Public buildings","Environment","Planets"],
+  "Din Kültürü ve Ahlak Bilgisi": ["Melek ve ahiret inancı","Hac ve kurban","Ahlaki davranışlar","Allah'ın kulu ve elçisi Hz. Muhammed","İslam düşüncesinde yorumlar"]
+},
+"8. Sınıf": {
+  "Türkçe": ["Erdemler","Millî mücadele ve Atatürk","Bilim ve teknoloji","Kişisel gelişim","Doğa ve evren","Okuma-yazma becerileri"],
+  "Matematik": ["Çarpanlar ve katlar","Üslü ifadeler","Kareköklü ifadeler","Veri analizi","Basit olayların olma olasılığı","Cebirsel ifadeler ve özdeşlikler","Doğrusal denklemler","Eşitsizlikler","Üçgenler","Dönüşüm geometrisi","Geometrik cisimler"],
+  "Fen Bilimleri": ["Mevsimler ve iklim","DNA ve genetik kod","Basınç","Madde ve endüstri","Basit makineler","Enerji dönüşümleri ve çevre bilimi","Elektrik yükleri ve elektrik enerjisi"],
+  "T.C. İnkılap Tarihi ve Atatürkçülük": ["Bir kahraman doğuyor","Millî uyanış: Bağımsızlık yolunda atılan adımlar","Millî bir destan: Ya istiklal ya ölüm","Atatürkçülük ve çağdaşlaşan Türkiye","Demokratikleşme çabaları","Atatürk dönemi Türk dış politikası","Atatürk'ün ölümü ve sonrası"],
+  "İngilizce": ["Friendship","Teen life","In the kitchen","On the phone","The internet","Adventures","Tourism","Chores","Science","Natural forces"],
+  "Din Kültürü ve Ahlak Bilgisi": ["Kader inancı","Zekât ve sadaka","Din ve hayat","Hz. Muhammed'in örnekliği","Kur'an-ı Kerim ve özellikleri"]
+},
+"9. Sınıf": {
+  "Türk Dili ve Edebiyatı": ["Edebiyata giriş","Hikâye","Şiir","Masal / fabl","Roman","Tiyatro","Biyografi ve otobiyografi","Mektup / e-posta","Günlük ve blog","Dilekçe ve tutanak"],
+  "Matematik": ["Mantık","Kümeler","Denklemler ve eşitsizlikler","Üçgenler","Veri-sayma ve olasılık","Sayı kümeleri","Fonksiyonlara giriş"],
+  "Fizik": ["Fizik bilimine giriş","Madde ve özellikleri","Hareket ve kuvvet","Enerji","Isı ve sıcaklık","Elektrostatik"],
+  "Kimya": ["Kimya bilimi","Atom ve periyodik sistem","Kimyasal türler arası etkileşimler","Maddenin hâlleri","Doğa ve kimya"],
+  "Biyoloji": ["Yaşam bilimi biyoloji","Hücre","Canlılar dünyası"],
+  "Tarih": ["Tarih ve zaman","İnsanlığın ilk dönemleri","Orta Çağ'da dünya","İlk ve Orta Çağlarda Türk dünyası","İslam medeniyetinin doğuşu","Türklerin İslamiyet'i kabulü"],
+  "Coğrafya": ["Doğa ve insan","Dünya'nın şekli ve hareketleri","Harita bilgisi","İklim bilgisi","Yer şekilleri","Beşerî sistemler (nüfus-yerleşme)"],
+  "İngilizce": ["Studying abroad","My environment","Movies","Human in nature","Inspirational people","Bridging cultures","World heritage","Emergency","Digital era","Broadcasting"],
+  "Din Kültürü ve Ahlak Bilgisi": ["Bilgi ve inanç","Din ve İslam","İslam ve ibadet","Gençlik ve değerler","Hz. Muhammed ve gençlik"]
+},
+"10. Sınıf": {
+  "Türk Dili ve Edebiyatı": ["Giriş","Hikâye","Şiir","Destan / efsane","Roman","Tiyatro","Anı / hatıra","Haber metni","Gezi yazısı","Söylev / nutuk"],
+  "Matematik": ["Sayma ve olasılık","Fonksiyonlar","Polinomlar","İkinci dereceden denklemler","Dörtgenler ve çokgenler","Uzay geometri (katı cisimler)"],
+  "Fizik": ["Elektrik ve manyetizma","Basınç ve kaldırma kuvveti","Dalgalar","Optik"],
+  "Kimya": ["Kimyanın temel kanunları ve kimyasal hesaplamalar","Karışımlar","Asitler bazlar ve tuzlar","Kimya her yerde"],
+  "Biyoloji": ["Hücre bölünmeleri","Kalıtımın genel ilkeleri","Ekosistem ekolojisi ve güncel çevre sorunları"],
+  "Tarih": ["Yerleşme ve devletleşme sürecinde Selçuklu Türkiyesi","Beylikten devlete Osmanlı siyaseti","Devletleşme sürecinde savaşçılar ve askerler","Beylikten devlete Osmanlı medeniyeti","Dünya gücü Osmanlı","Sultan ve Osmanlı merkez teşkilatı","Klasik çağda Osmanlı toplum düzeni"],
+  "Coğrafya": ["Doğal sistemler (iklim-yer şekilleri)","Beşerî sistemler (nüfus-göç)","Ekonomik faaliyetler","Küresel ortam: bölgeler ve ülkeler"],
+  "İngilizce": ["School life","Plans","Legendary figures","Traditions","Travel","Helpful tips","Food and festivals","Digital media","Modern heroes","Shopping"],
+  "Din Kültürü ve Ahlak Bilgisi": ["Allah-insan ilişkisi","Hz. Muhammed ve gençlik","Din ve hayat","Ahlaki tutum ve davranışlar","İslam düşüncesinde yorumlar"]
+},
+"11. Sınıf": {
+  "Türk Dili ve Edebiyatı": ["Giriş","Hikâye","Şiir","Roman","Tiyatro","Makale","Sohbet ve fıkra","Eleştiri","Mülakat / röportaj"],
+  "Matematik": ["Trigonometri","Analitik geometri","Fonksiyonlarda uygulamalar","Denklem ve eşitsizlik sistemleri","Çember ve daire","Uzay geometri","Olasılık"],
+  "Fizik": ["Kuvvet ve hareket","Elektrik ve manyetizma","Basit harmonik hareket","Dalga mekaniği"],
+  "Kimya": ["Modern atom teorisi","Gazlar","Sıvı çözeltiler ve çözünürlük","Kimyasal tepkimelerde enerji","Kimyasal tepkimelerde hız","Kimyasal denge"],
+  "Biyoloji": ["İnsan fizyolojisi: denetleyici ve düzenleyici sistemler","Duyu organları","Destek ve hareket sistemi","Sindirim sistemi","Dolaşım ve bağışıklık","Solunum sistemi","Üriner sistem","Üreme sistemi ve embriyonik gelişim","Komünite ve popülasyon ekolojisi"],
+  "Tarih": ["Değişen dünya dengeleri karşısında Osmanlı","Değişim çağında Avrupa ve Osmanlı","Uluslararası ilişkilerde denge stratejisi","Devrimler çağında Osmanlı","Sermaye ve emek","XIX ve XX. yüzyılda değişen gündelik hayat"],
+  "Coğrafya": ["Doğal sistemler","Beşerî sistemler","Ekonomik faaliyetler ve doğal kaynaklar","Çevre ve toplum","Küresel ortam"],
+  "Felsefe": ["Felsefeyi tanıma","Bilgi felsefesi","Varlık felsefesi","Ahlak felsefesi","Sanat felsefesi","Din felsefesi","Siyaset felsefesi","Bilim felsefesi"],
+  "İngilizce": ["Future jobs","Hobbies and skills","Hard times","What a life","Back to the past","Open your heart","Facts about Türkiye","Sports","My friends","Values"],
+  "Din Kültürü ve Ahlak Bilgisi": ["Dünya ve ahiret","Kur'an'a göre Hz. Muhammed","Kur'an'da bazı kavramlar","İnançla ilgili meseleler","Yahudilik ve Hristiyanlık"]
+},
+"12. Sınıf": {
+  "Türk Dili ve Edebiyatı": ["Giriş","Hikâye","Şiir (Cumhuriyet dönemi)","Roman","Tiyatro","Deneme","Söylev","Günlük ve anı"],
+  "Matematik": ["Üstel ve logaritmik fonksiyonlar","Diziler","Trigonometri","Dönüşümler","Türev","İntegral","Analitik geometri (çember)"],
+  "Fizik": ["Çembersel hareket","Basit harmonik hareket","Dalga mekaniği","Atom fiziğine giriş ve radyoaktivite","Modern fizik","Modern fiziğin teknolojideki uygulamaları"],
+  "Kimya": ["Kimya ve elektrik","Karbon kimyasına giriş","Organik bileşikler","Enerji kaynakları ve bilimsel gelişmeler"],
+  "Biyoloji": ["Genden proteine","Canlılarda enerji dönüşümleri (fotosentez-solunum)","Bitki biyolojisi","Canlılar ve çevre"],
+  "T.C. İnkılap Tarihi ve Atatürkçülük": ["20. yüzyıl başlarında Osmanlı ve dünya","Millî Mücadele","Atatürkçülük ve Türk inkılabı","İki savaş arasında Türkiye ve dünya","II. Dünya Savaşı sürecinde Türkiye ve dünya","Soğuk Savaş dönemi","Yumuşama dönemi ve sonrası","Küreselleşen dünya"],
+  "Coğrafya": ["Doğal sistemler","Beşerî sistemler","Küresel ortam: bölgeler ve ülkeler","Çevre ve toplum"],
+  "İngilizce": ["Music","Friendship","Human rights","Coming soon (cinema)","Psychology","Favors","News stories","Alternative energy","Technology","Manners"],
+  "Din Kültürü ve Ahlak Bilgisi": ["İslam ve bilim","Anadolu'da İslam","İslam düşüncesinde tasavvufi yorumlar","Güncel dinî meseleler","Hint ve Çin dinleri"]
+}
+};
+
 // ==== GÜVENLİK AĞI: Herhangi bir render hatasında UYGULAMA KOMPLE ÇIKMASIN ====
 // Bozuk/eksik blok gelse bile ekran beyaz kalmaz; nazik bir hata kutusu gösterip
 // kullanıcının çalışmaya devam etmesini sağlar.
@@ -1409,6 +1557,23 @@ const [uyarlaNot, setUyarlaNot] = useState('');
 const [sonSilinenUyarla, setSonSilinenUyarla] = useState(''); // × ile silinen uyarla yazısını geri getirmek için
 const [matbaaVersiyonlar, setMatbaaVersiyonlar] = useState(() => { try { const r = localStorage.getItem('zirve_matbaa_versiyonlar'); if (r) { const d = JSON.parse(r); if (Array.isArray(d)) return d; } } catch(e){} return []; });
 const [aktifVersiyon, setAktifVersiyon] = useState(-1);
+const [mufKademe, setMufKademe] = useState(''); // seçili sınıf/kademe
+const [mufDers, setMufDers] = useState(''); // seçili ders
+const [mufKonular, setMufKonular] = useState([]); // o dersin konu başlıkları
+const [mufKonu, setMufKonu] = useState(''); // tıklanan konu
+const [mufAiYukleniyor, setMufAiYukleniyor] = useState(false);
+const [mufFavoriler, setMufFavoriler] = useState(() => { try { const r = localStorage.getItem('zirve_muf_favoriler'); if (r) { const d = JSON.parse(r); if (Array.isArray(d)) return d; } } catch(e){} return []; });
+// Pedagojik Danışman
+const [pedSoru, setPedSoru] = useState('');
+const [pedOgrenci, setPedOgrenci] = useState('');
+const [pedVeli, setPedVeli] = useState('');
+const [pedHazirlayan, setPedHazirlayan] = useState(() => { try { return localStorage.getItem('zirve_ped_hazirlayan') || ''; } catch(e){ return ''; } });
+const [pedYukleniyor, setPedYukleniyor] = useState(false);
+// Bağlam-farkında AI Asistan
+const [asistanAcik, setAsistanAcik] = useState(false);
+const [asistanSoru, setAsistanSoru] = useState('');
+const [asistanGecmis, setAsistanGecmis] = useState([]);
+const [asistanYukleniyor, setAsistanYukleniyor] = useState(false);
 const [fasikulAcik, setFasikulAcik] = useState(false);
 const [fasikulBolumler, setFasikulBolumler] = useState([]);
 
@@ -2291,6 +2456,158 @@ const sahipOnayAraci = () => {
 
 // 🎓 AKILLI PEDAGOJİK ÖNERİ: mevcut çalışmayı analiz edip "şu kuram/yöntem/teknikle daha iyi olur" önerileri sunar.
 useEffect(() => { setOneriler([]); }, [materialResult]);
+// ── MÜFREDAT: sınıf → ders → konu seçimi + AI ile konu anlatımı/infografik ──
+const mufSinifSec = (k) => { setMufKademe(k); setMufDers(''); setMufKonular([]); setMufKonu(''); };
+const mufDersSec = (d) => { setMufDers(d); setMufKonu(''); const list = (MUFREDAT[mufKademe] && MUFREDAT[mufKademe][d]) ? MUFREDAT[mufKademe][d] : []; setMufKonular(list); };
+const mufKonuUret = (tur) => {
+    if (isGeneratingMaterial) { showToast('⏳ Şu an üretiliyor…'); return; }
+    if (!mufKonu) { showToast('Önce bir konu seç.'); return; }
+    const ort = mufKademe + ' ' + mufDers + ' dersi';
+    let istem;
+    if (tur === 'infografik') {
+        istem = ort + ' "' + mufKonu + '" konusunu TEK SAYFALIK, RENKLİ bir İNFOGRAFİK olarak hazırla. Bunu zengin_metin bloğunda İNLİNE SVG ile üret: renkli kutular, ikon/simgeler, oklar, büyük başlıklar; ana kavramları, kısa açıklamaları ve varsa sayısal/örnek verileri görsel-düzenli yerleştir. Çocuğun gözünü şenlendiren, yazdırmaya uygun, Türkiye güncel öğretim programına (Maarif Modeli) uygun bir infografik olsun. Sadece emoji sıralama; gerçek SVG çiz.';
+    } else if (tur === 'kombo') {
+        istem = ort + ' "' + mufKonu + '" konusu için TEK belgede şunları üret: (1) RENKLİ, günlük hayattan örnekli ve metaforlu bir KONU ANLATIMI (bilgi_kutusu blokları, önemli yerler renkli/kalın vurgulu), (2) konuyu özetleyen İNLİNE SVG bir İNFOGRAFİK (zengin_metin bloğu), (3) 5 pekiştirme sorusu ve cevap anahtarı. Türkiye güncel öğretim programına (Maarif Modeli) uygun, yazdırmaya hazır olsun.';
+    } else if (tur === 'fasikul') {
+        istem = ort + ' "' + mufKonu + '" konusu için ZENGİN ve DEVASA bir FASİKÜL hazırla: (1) renkli KONU ANLATIMI (bilgi_kutusu), (2) İNLİNE SVG İNFOGRAFİK (zengin_metin), (3) 5 çoktan seçmeli soru, (4) boşluk doldurma, (5) eşleştirme, (6) kısa bir bulmaca/oyun, (7) en sonda cevap anahtarı. En az 6 farklı blok kullan. Türkiye güncel öğretim programına (Maarif Modeli) uygun, yazdırmaya hazır olsun.';
+    } else {
+        istem = ort + ' "' + mufKonu + '" konusu için RENKLİ, görsel açıdan zengin, günlük hayattan örnekler ve metaforlarla desteklenmiş bir KONU ANLATIMI hazırla. bilgi_kutusu blokları kullan; önemli kelimeleri renkli ve kalın vurgula; uygun yerde inline SVG şema/görsel ekle; sonuna 3-5 pekiştirme sorusu ve cevap anahtarı koy. Türkiye güncel öğretim programına (Maarif Modeli) uygun olsun.';
+    }
+    try { setMaterialError(''); } catch(e){}
+    if (typeof setActiveTab === 'function') { try { setActiveTab('tools'); } catch(e){} }
+    showToast('🎨 "' + mufKonu + '" hazırlanıyor…');
+    generateMaterial(istem);
+};
+// Seçili dersin TÜM konularını tek bir fasikülde üret (ünite tarama)
+const mufTumKonular = () => {
+    if (isGeneratingMaterial) { showToast('⏳ Şu an üretiliyor…'); return; }
+    if (!mufKademe || !mufDers || !mufKonular.length) { showToast('Önce sınıf ve ders seç.'); return; }
+    const liste = mufKonular.slice(0, 12).map((k, i) => (i + 1) + ') ' + k).join('  ');
+    const istem = mufKademe + ' ' + mufDers + ' dersi için, aşağıdaki konu başlıklarını KAPSAYAN tek bir DEVASA fasikül hazırla. Her konu için kısa renkli bir anlatım + 2 örnek soru olsun; başlıklar net ayrılsın; en sonda toplu cevap anahtarı olsun. Konular: ' + liste + '. Türkiye güncel öğretim programına (Maarif Modeli) uygun, yazdırmaya hazır olsun.';
+    try { setMaterialError(''); } catch(e){}
+    if (typeof setActiveTab === 'function') { try { setActiveTab('tools'); } catch(e){} }
+    showToast('📦 Tüm konular tek fasikülde hazırlanıyor…');
+    generateMaterial(istem);
+};
+// Favori konular (yıldızla, üste sabitle)
+const mufFavoriMi = (konu) => mufFavoriler.some(f => f.kademe === mufKademe && f.ders === mufDers && f.konu === konu);
+const mufFavoriToggle = (konu) => {
+    setMufFavoriler(prev => {
+        const varMi = prev.some(f => f.kademe === mufKademe && f.ders === mufDers && f.konu === konu);
+        const yeni = varMi ? prev.filter(f => !(f.kademe === mufKademe && f.ders === mufDers && f.konu === konu)) : [...prev, { kademe: mufKademe, ders: mufDers, konu }].slice(-60);
+        try { localStorage.setItem('zirve_muf_favoriler', JSON.stringify(yeni)); } catch(e){}
+        return yeni;
+    });
+};
+const mufFavoriSec = (f) => { setMufKademe(f.kademe); setMufDers(f.ders); const list = (MUFREDAT[f.kademe] && MUFREDAT[f.kademe][f.ders]) ? MUFREDAT[f.kademe][f.ders] : []; setMufKonular(list.includes(f.konu) ? list : [f.konu, ...list]); setMufKonu(f.konu); if (typeof setAcikArac === 'function') setAcikArac('mufredat'); };
+const mufKonulariAIgetir = async () => {
+    if (!mufKademe || !mufDers) { showToast('Önce sınıf ve ders seç.'); return; }
+    if (!apiKey) { showToast('Önce API anahtarı gir (Ayarlar).'); return; }
+    let aktifModel = modelName || 'gemini-2.5-flash';
+    try { if (window.ZIRVE && typeof window.ZIRVE.enIyiModel === 'function' && window.ZIRVE.modeller && window.ZIRVE.modeller.length) { const iyi = window.ZIRVE.enIyiModel(window.ZIRVE.modeller); if (iyi) aktifModel = iyi; } else if (window.ZIRVE && window.ZIRVE.model) aktifModel = window.ZIRVE.model; } catch(e){}
+    if (!aktifModel || aktifModel.includes('latest') || aktifModel.includes('lite')) aktifModel = 'gemini-2.5-flash';
+    setMufAiYukleniyor(true);
+    try {
+        const prompt = 'Türkiye Millî Eğitim Bakanlığı GÜNCEL öğretim programı olan "Türkiye Yüzyılı Maarif Modeli"ne göre, ' + mufKademe + ' ' + mufDers + ' dersinin ünite ve önemli konu başlıklarını sırayla ver. Sadece resmî ünite/konu başlıkları olsun; açıklama, numara veya cümle yazma. SADECE şu JSON: {"konular":["...","..."]}';
+        const resp = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + aktifModel + ':generateContent?key=' + apiKey, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0.4, maxOutputTokens: 1500, thinkingConfig: { thinkingBudget: 0 } } })
+        });
+        if (!resp.ok) { showToast(resp.status === 429 ? 'Kota doldu, biraz sonra dene.' : resp.status === 404 ? 'Model bulunamadı.' : 'Konular alınamadı (' + resp.status + ').'); setMufAiYukleniyor(false); return; }
+        const data = await resp.json();
+        const metin = (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0] && data.candidates[0].content.parts[0].text) || '';
+        let parsed = null;
+        try { parsed = JSON.parse(metin.replace(/^```(?:json)?/i, '').replace(/```$/i, '').trim()); } catch(e){}
+        const list = (parsed && Array.isArray(parsed.konular)) ? parsed.konular.filter(x => x && String(x).trim()).map(x => String(x).trim()) : [];
+        if (list.length) { setMufKonular(list); setMufKonu(''); showToast('🤖 Güncel konular getirildi (' + list.length + ').'); }
+        else showToast('Konu alınamadı, tekrar dene.');
+    } catch (e) { showToast('Konular alınamadı (bağlantı).'); }
+    setMufAiYukleniyor(false);
+};
+
+// ── PEDAGOJİK DANIŞMAN: her davranış/soru için uzman öğretmen ağzından, belge olarak yanıt ──
+const pedagojikCevap = async () => {
+    if (!pedSoru.trim()) { showToast('Önce soruyu/durumu yaz.'); return; }
+    if (!apiKey) { showToast('Önce API anahtarı gir (Ayarlar).'); return; }
+    let aktifModel = modelName || 'gemini-2.5-flash';
+    try { if (window.ZIRVE && typeof window.ZIRVE.enIyiModel === 'function' && window.ZIRVE.modeller && window.ZIRVE.modeller.length) { const iyi = window.ZIRVE.enIyiModel(window.ZIRVE.modeller); if (iyi) aktifModel = iyi; } else if (window.ZIRVE && window.ZIRVE.model) aktifModel = window.ZIRVE.model; } catch(e){}
+    if (!aktifModel || aktifModel.includes('latest') || aktifModel.includes('lite')) aktifModel = 'gemini-2.5-flash';
+    try { localStorage.setItem('zirve_ped_hazirlayan', pedHazirlayan || ''); } catch(e){}
+    setPedYukleniyor(true);
+    try {
+        const kim = [];
+        if (pedOgrenci.trim()) kim.push('Öğrenci: ' + pedOgrenci.trim());
+        if (pedVeli.trim()) kim.push('Veli: ' + pedVeli.trim());
+        const hazir = pedHazirlayan.trim() || 'öğretmen';
+        const prompt =
+'Sen alanında uzman (özel eğitim, gelişim ve rehberlik) bir öğretmene yardımcı oluyorsun. Aşağıdaki soruyu/durumu, DENEYİMLİ ve ŞEFKATLİ bir uzman öğretmenin ağzından, BİRİNCİ TEKİL ŞAHISLA (\"...öneririm, ...gözlemledim, birlikte şöyle ilerleyebiliriz\") yazılmış, profesyonel ama sıcak bir PEDAGOJİK DANIŞMANLIK METNİ olarak yanıtla. Bu metni ' + hazir + ' hazırlamış gibi yaz.' +
+(kim.length ? (' İlgili kişiler → ' + kim.join(', ') + '. Metinde öğrenciden adıyla, veliden saygılı bir dille söz et.') : '') +
+'\\n\\nYANIT YAPISI (başlıklarla, HTML olarak): ' +
+'(1) <b>Durumun Değerlendirmesi</b> — yargılamadan, normalleştirici bir çerçeve. ' +
+'(2) <b>Olası Nedenler</b> — gelişimsel/çevresel/duygusal maddeler. ' +
+'(3) <b>Adım Adım Yaklaşım</b> — sınıfta ve evde uygulanabilir somut, kademeli stratejiler (sakin yönlendirme, alternatif/uygun davranış kazandırma, mahremiyet ve sınır öğretimi, tutarlı pekiştirme). ' +
+'(4) <b>Veliyle İletişim</b> — veliye söylenecek kibar, örnek cümleler. ' +
+'(5) <b>Ne Zaman Uzmana/Aileye Yönlendirilmeli</b> — önce tıbbi nedenleri (kaşıntı, tahriş) ekarte etmeyi; davranış ısrarlı, ani ya da uygunsuz bağlamda ise okul rehberlik servisine, hekime veya gerektiğinde çocuk koruma birimlerine yönlendirmeyi öner; her zaman çocuğun güvenliğini (olası istismar belirtileri) gözetmeyi hatırlat. ' +
+'İLKELER: bilimsel ve gelişimsel açıdan doğru ol; damgalayıcı olma; ASLA cinsel/uygunsuz içerik üretme; çocuğun iyiliğini ve güvenliğini önceliklendir; kısa-net-uygulanabilir yaz. ' +
+'Çıktıyı yalnızca temiz HTML gövdesi olarak ver (<h3>, <p>, <ul>, <li>, <b>, <em>, renkli <span style=\"color:...\"> kullanabilirsin); markdown veya kod bloğu KULLANMA. Başında kısa bir hitap, sonunda kısa bir kapanış ve imza yeri (' + hazir + ') olsun.' +
+'\\n\\nSORU / DURUM: ' + pedSoru.trim();
+        const resp = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + aktifModel + ':generateContent?key=' + apiKey, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.7, maxOutputTokens: 3000, thinkingConfig: { thinkingBudget: 0 } } })
+        });
+        if (!resp.ok) { showToast(resp.status === 429 ? 'Kota doldu, biraz sonra dene.' : resp.status === 404 ? 'Model bulunamadı.' : 'Yanıt alınamadı (' + resp.status + ').'); setPedYukleniyor(false); return; }
+        const data = await resp.json();
+        let html = (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0] && data.candidates[0].content.parts[0].text) || '';
+        html = html.replace(/^```(?:html)?/i, '').replace(/```$/i, '').trim();
+        if (!html) { showToast('Yanıt boş geldi, tekrar dene.'); setPedYukleniyor(false); return; }
+        const baslik = 'Pedagojik Danışmanlık Notu' + (pedOgrenci.trim() ? (' — ' + pedOgrenci.trim()) : '');
+        const alt = [pedVeli.trim() ? ('Sayın ' + pedVeli.trim()) : '', pedHazirlayan.trim() ? ('Hazırlayan: ' + pedHazirlayan.trim()) : ''].filter(Boolean).join('   ·   ');
+        const res = { dokuman_basligi: baslik, alt_baslik: alt, icerik_bloklari: [{ blok_tipi: 'zengin_metin', baslik: '', html_icerik: html }] };
+        setMaterialResult(res);
+        try { gecmiseEkle(res); } catch(e){}
+        showToast('🧠 Pedagojik danışmanlık notu hazır — PDF / Paylaş edebilirsin.');
+        setTimeout(() => { try { document.getElementById('printable-material')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch(e){} }, 150);
+    } catch (e) { showToast('Yanıt alınamadı (bağlantı).'); }
+    setPedYukleniyor(false);
+};
+
+// ── BAĞLAM-FARKINDA AI ASİSTAN (sağ altta ✨) ──
+const durumOzeti = () => {
+    if (!materialResult || !Array.isArray(materialResult.icerik_bloklari) || !materialResult.icerik_bloklari.length) return 'Şu an ekranda üretilmiş bir çalışma yok.';
+    const bas = materialResult.dokuman_basligi || 'Çalışma';
+    const n = materialResult.icerik_bloklari.length;
+    const turler = {}; materialResult.icerik_bloklari.forEach(b => { if (b && b.blok_tipi) turler[b.blok_tipi] = (turler[b.blok_tipi] || 0) + 1; });
+    const ozet = Object.keys(turler).map(k => turler[k] + ' ' + k).join(', ');
+    return 'Ekrandaki çalışma: "' + bas + '" · ' + n + ' blok (' + ozet + ').';
+};
+const asistanSor = async (q) => {
+    const soru = (q != null ? q : asistanSoru).trim();
+    if (!soru) { showToast('Bir şey yaz.'); return; }
+    if (!apiKey) { showToast('Önce API anahtarı gir (Ayarlar).'); return; }
+    let aktifModel = modelName || 'gemini-2.5-flash';
+    try { if (window.ZIRVE && typeof window.ZIRVE.enIyiModel === 'function' && window.ZIRVE.modeller && window.ZIRVE.modeller.length) { const iyi = window.ZIRVE.enIyiModel(window.ZIRVE.modeller); if (iyi) aktifModel = iyi; } else if (window.ZIRVE && window.ZIRVE.model) aktifModel = window.ZIRVE.model; } catch(e){}
+    if (!aktifModel || aktifModel.includes('latest') || aktifModel.includes('lite')) aktifModel = 'gemini-2.5-flash';
+    setAsistanGecmis(prev => [...prev, { rol: 'sen', metin: soru }]);
+    setAsistanSoru('');
+    setAsistanYukleniyor(true);
+    try {
+        const prompt = 'Sen bir öğretmenin yardımcısısın. Kısa, net ve TÜRKÇE cevap ver; öğretmenin işini hafiflet. Yalnızca sana verilen duruma ve genel pedagojik bilgine dayan, uydurma. GİZLİLİK: öğrenci fotoğrafı/telefonu gibi kişisel veri isteme.\\n\\nUYGULAMA DURUMU: ' + durumOzeti() + '\\n\\nÖĞRETMENİN SORUSU: ' + soru;
+        const resp = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + aktifModel + ':generateContent?key=' + apiKey, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.6, maxOutputTokens: 1200, thinkingConfig: { thinkingBudget: 0 } } })
+        });
+        if (!resp.ok) { setAsistanGecmis(prev => [...prev, { rol: 'asistan', metin: resp.status === 429 ? 'Kota doldu, biraz sonra dene.' : resp.status === 404 ? 'Model bulunamadı.' : 'Cevap alınamadı (' + resp.status + ').' }]); setAsistanYukleniyor(false); return; }
+        const data = await resp.json();
+        let metin = (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0] && data.candidates[0].content.parts[0].text) || 'Cevap boş geldi.';
+        setAsistanGecmis(prev => [...prev, { rol: 'asistan', metin: metin.trim() }]);
+    } catch (e) { setAsistanGecmis(prev => [...prev, { rol: 'asistan', metin: 'Cevap alınamadı (bağlantı).' }]); }
+    setAsistanYukleniyor(false);
+};
+const asistanKopyala = (metin) => {
+    let t = metin; try { if (window.ZIRVE && typeof window.ZIRVE.duzMetin === 'function') t = window.ZIRVE.duzMetin(metin); } catch(e){}
+    try { navigator.clipboard.writeText(t); showToast('📋 Kopyalandı.'); } catch(e){ showToast('Kopyalanamadı.'); }
+};
+
 const yaklasimOner = async () => {
     if (!apiKey) { showToast('Önce API anahtarı girin (Ayarlar).'); return; }
     const t0 = matbaaMetneCevir(materialResult);
@@ -3225,6 +3542,40 @@ return (
 </div>
 )}
 
+{/* ✨ BAĞLAM-FARKINDA AI ASİSTAN */}
+<button onClick={()=>setAsistanAcik(true)} title="AI Asistan" className="fixed bottom-24 right-4 md:bottom-6 md:right-6 z-[9997] w-14 h-14 rounded-full bg-gradient-to-br from-fuchsia-600 to-indigo-600 text-white shadow-2xl flex items-center justify-center text-2xl hover:scale-105 transition no-print">✨</button>
+{asistanAcik && (
+<div className="fixed inset-0 z-[9998] bg-slate-900/70 backdrop-blur-sm flex items-end md:items-center justify-center p-0 md:p-4 no-print" onClick={()=>setAsistanAcik(false)}>
+  <div className="bg-white w-full md:max-w-md md:rounded-2xl rounded-t-2xl shadow-2xl flex flex-col max-h-[85vh]" onClick={e=>e.stopPropagation()}>
+    <div className="flex items-center justify-between p-3 border-b bg-gradient-to-r from-fuchsia-600 to-indigo-600 text-white md:rounded-t-2xl">
+      <span className="font-black text-sm"><i className="fa-solid fa-wand-magic-sparkles mr-1"></i> AI Asistan <span className="opacity-70 font-semibold text-[11px]">— ekrandaki çalışmayı bilir</span></span>
+      <button onClick={()=>setAsistanAcik(false)} className="w-8 h-8 rounded-full hover:bg-white/20 flex items-center justify-center">✕</button>
+    </div>
+    <div className="p-3 overflow-y-auto flex-1 space-y-2 bg-gray-50">
+      <p className="text-[11px] text-gray-500 bg-white border rounded-lg p-2"><i className="fa-solid fa-circle-info mr-1 text-indigo-500"></i>{durumOzeti()}</p>
+      {asistanGecmis.length===0 && <p className="text-[11px] text-gray-400 text-center py-4">Bir soru yaz ya da hızlı komuttan seç.</p>}
+      {asistanGecmis.map((m,i)=>(
+        <div key={i} className={`text-sm rounded-xl px-3 py-2 max-w-[90%] ${m.rol==='sen'?'bg-indigo-600 text-white ml-auto':'bg-white border text-gray-800'}`}>
+          <p className="whitespace-pre-wrap leading-relaxed">{m.metin}</p>
+          {m.rol==='asistan' && <button onClick={()=>asistanKopyala(m.metin)} className="mt-1 text-[10px] text-indigo-500 hover:text-indigo-700 font-bold"><i className="fa-regular fa-copy mr-1"></i>Kopyala</button>}
+        </div>
+      ))}
+      {asistanYukleniyor && <div className="text-sm bg-white border rounded-xl px-3 py-2 text-gray-500"><i className="fa-solid fa-spinner fa-spin mr-1"></i>Düşünüyor…</div>}
+    </div>
+    <div className="p-2 border-t bg-white">
+      <div className="flex flex-wrap gap-1 mb-2">
+        {['Bu çalışmayı özetle','Zorluğunu değerlendir','1 fikir daha ver','Veliye kısa not yaz'].map((q,i)=>(<button key={i} onClick={()=>asistanSor(q)} disabled={asistanYukleniyor} className="text-[10px] bg-indigo-50 hover:bg-indigo-600 hover:text-white text-indigo-700 border border-indigo-200 px-2 py-1 rounded-md font-semibold transition disabled:opacity-50">{q}</button>))}
+      </div>
+      <div className="flex gap-2">
+        <input value={asistanSoru} onChange={e=>setAsistanSoru(e.target.value)} onKeyDown={e=>{ if(e.key==='Enter'){ asistanSor(); } }} placeholder="Sorunu yaz…" className="flex-1 px-3 py-2 border border-gray-300 rounded-lg outline-none text-sm" />
+        <button onClick={()=>asistanSor()} disabled={asistanYukleniyor} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-bold text-sm disabled:opacity-50"><i className="fa-solid fa-paper-plane"></i></button>
+      </div>
+      <p className="text-[9px] text-gray-400 mt-1 text-center">Gizlilik: öğrenci fotoğrafı/telefonu gibi kişisel veriler gönderilmez. Tavsiye niteliğindedir.</p>
+    </div>
+  </div>
+</div>
+)}
+
 {/* Üst Header */}
 <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40 no-print">
 <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
@@ -3821,6 +4172,112 @@ title="Veli ödevi yaptıysa buraya tıklayın."
   <button onClick={()=>setAcikArac(a=>a==='aninda'?'':'aninda')} className={`flex items-center justify-center gap-2 py-2.5 rounded-xl font-black text-[12px] transition border ${acikArac==='aninda'?'bg-gradient-to-br from-fuchsia-500 to-purple-600 text-white border-transparent shadow-lg':'bg-white/10 text-fuchsia-100 border-fuchsia-400/30 hover:bg-white/20'}`}><i className="fa-solid fa-bolt text-base"></i>Anında Çalışma</button>
   <button onClick={()=>setAcikArac(a=>a==='bireysel'?'':'bireysel')} className={`flex items-center justify-center gap-2 py-2.5 rounded-xl font-black text-[12px] transition border ${acikArac==='bireysel'?'bg-gradient-to-br from-emerald-500 to-teal-600 text-white border-transparent shadow-lg':'bg-white/10 text-emerald-100 border-emerald-400/30 hover:bg-white/20'}`}><i className="fa-solid fa-chart-line text-base"></i>Bireysel Ders</button>
   <button onClick={()=>setAcikArac(a=>a==='ogretmen'?'':'ogretmen')} className={`flex items-center justify-center gap-2 py-2.5 rounded-xl font-black text-[12px] transition border ${acikArac==='ogretmen'?'bg-gradient-to-br from-amber-500 to-orange-600 text-white border-transparent shadow-lg':'bg-white/10 text-amber-100 border-amber-400/30 hover:bg-white/20'}`}><i className="fa-solid fa-toolbox text-base"></i>Öğretmen Araçları</button>
+  <button onClick={()=>setAcikArac(a=>a==='mufredat'?'':'mufredat')} className={`col-span-2 flex items-center justify-center gap-2 py-2.5 rounded-xl font-black text-[12px] transition border ${acikArac==='mufredat'?'bg-gradient-to-br from-rose-500 to-pink-600 text-white border-transparent shadow-lg':'bg-white/10 text-rose-100 border-rose-400/30 hover:bg-white/20'}`}><i className="fa-solid fa-graduation-cap text-base"></i>📚 Müfredat & Konular (Sınıf → Ders → Konu)</button>
+  <button onClick={()=>setAcikArac(a=>a==='pedagoji'?'':'pedagoji')} className={`col-span-2 flex items-center justify-center gap-2 py-2.5 rounded-xl font-black text-[12px] transition border ${acikArac==='pedagoji'?'bg-gradient-to-br from-indigo-500 to-violet-600 text-white border-transparent shadow-lg':'bg-white/10 text-indigo-100 border-indigo-400/30 hover:bg-white/20'}`}><i className="fa-solid fa-brain text-base"></i>🧠 Pedagojik Danışman (her davranışa uzman cevap)</button>
+</div>
+
+{/* 📚 MÜFREDAT PANELİ — Sınıf → Ders → Konu → (Renkli Konu Anlatımı / İnfografik) */}
+<div className={`mb-3 bg-gradient-to-br from-rose-600/25 to-pink-600/20 p-3 rounded-xl border border-rose-400/30 ${acikArac==='mufredat'?'':'hidden'}`}>
+  <div className="flex items-center justify-between mb-2">
+    <span className="text-xs font-black text-rose-100 uppercase tracking-wide"><i className="fa-solid fa-graduation-cap mr-1 text-rose-300"></i> Müfredat — Sınıf · Ders · Konu Seç</span>
+    <span className="text-[10px] text-rose-200/70">Maarif Modeli uyumlu</span>
+  </div>
+
+  {mufFavoriler.length > 0 && (
+    <div className="mb-2">
+      <span className="block text-[10px] font-black text-yellow-200/90 uppercase mb-1">⭐ Favori Konular</span>
+      <div className="flex flex-wrap gap-1.5">
+        {mufFavoriler.slice().reverse().map((f,i)=>(
+          <button key={i} onClick={()=>mufFavoriSec(f)} title={f.kademe+' · '+f.ders} className="text-[11px] px-2.5 py-1.5 rounded-lg font-bold border bg-yellow-400/15 text-yellow-100 border-yellow-300/30 hover:bg-yellow-400/25 transition">★ {f.konu}</button>
+        ))}
+      </div>
+    </div>
+  )}
+
+  <div className="mb-2">
+    <span className="block text-[10px] font-black text-rose-200/90 uppercase mb-1">1) Sınıf / Kademe</span>
+    <div className="flex flex-wrap gap-1.5">
+      {Object.keys(MUFREDAT).map((k)=>(
+        <button key={k} onClick={()=>mufSinifSec(k)} className={`text-[11px] px-2.5 py-1.5 rounded-lg font-bold border transition ${mufKademe===k?'bg-rose-500 text-white border-rose-500':'bg-white/10 text-rose-50 border-rose-300/30 hover:bg-white/20'}`}>{k}</button>
+      ))}
+    </div>
+  </div>
+
+  {mufKademe && (
+    <div className="mb-2">
+      <span className="block text-[10px] font-black text-rose-200/90 uppercase mb-1">2) Ders</span>
+      <div className="flex flex-wrap gap-1.5">
+        {Object.keys(MUFREDAT[mufKademe]||{}).map((d)=>(
+          <button key={d} onClick={()=>mufDersSec(d)} className={`text-[11px] px-2.5 py-1.5 rounded-lg font-bold border transition ${mufDers===d?'bg-pink-500 text-white border-pink-500':'bg-white/10 text-pink-50 border-pink-300/30 hover:bg-white/20'}`}>{d}</button>
+        ))}
+      </div>
+    </div>
+  )}
+
+  {mufDers && (
+    <div className="mb-2">
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-[10px] font-black text-rose-200/90 uppercase">3) Konu ({mufKonular.length})</span>
+        <button onClick={mufKonulariAIgetir} disabled={mufAiYukleniyor} className="text-[10px] bg-white/15 hover:bg-white/25 text-rose-50 border border-rose-300/40 px-2 py-1 rounded-md font-bold transition disabled:opacity-60">{mufAiYukleniyor ? <span><i className="fa-solid fa-spinner fa-spin mr-1"></i>Getiriliyor…</span> : <span><i className="fa-solid fa-robot mr-1"></i>🤖 Güncel konuları getir</span>}</button>
+      </div>
+      <div className="flex flex-wrap gap-1.5 max-h-44 overflow-y-auto p-1 bg-black/10 rounded-lg">
+        {mufKonular.map((t,i)=>(
+          <span key={i} className={`inline-flex items-stretch rounded-md border overflow-hidden ${mufKonu===t?'border-white':'border-rose-300/25'}`}>
+            <button onClick={()=>setMufKonu(t)} className={`text-[11px] px-2.5 py-1.5 font-semibold transition text-left ${mufKonu===t?'bg-white text-rose-700':'bg-white/10 text-rose-50 hover:bg-white/20'}`}>{t}</button>
+            <button onClick={()=>mufFavoriToggle(t)} title="Favorilere ekle / çıkar" className={`px-1.5 text-[11px] transition ${mufFavoriMi(t)?'bg-yellow-400 text-rose-900':'bg-black/20 text-yellow-200 hover:bg-black/30'}`}>{mufFavoriMi(t)?'★':'☆'}</button>
+          </span>
+        ))}
+      </div>
+      <button onClick={mufTumKonular} className="w-full mt-1.5 text-[11px] bg-gradient-to-r from-rose-600 to-fuchsia-700 hover:opacity-90 text-white px-2 py-2 rounded-lg font-black transition">📦 Bu dersin TÜM konularını tek fasikülde üret</button>
+    </div>
+  )}
+
+  {mufKonu && (
+    <div className="mt-2 bg-black/15 rounded-xl p-2.5 border border-rose-300/20">
+      <p className="text-[11px] text-rose-50 font-bold mb-2"><i className="fa-solid fa-wand-magic-sparkles mr-1"></i>Seçili konu: <span className="text-white font-black">{mufKonu}</span></p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+        <button onClick={()=>mufKonuUret('anlatim')} className="text-[11px] bg-gradient-to-r from-rose-500 to-pink-600 hover:opacity-90 text-white px-2 py-2 rounded-lg font-black transition">🎨 Renkli Konu Anlatımı</button>
+        <button onClick={()=>mufKonuUret('infografik')} className="text-[11px] bg-gradient-to-r from-fuchsia-500 to-purple-600 hover:opacity-90 text-white px-2 py-2 rounded-lg font-black transition">📊 İnfografik</button>
+        <button onClick={()=>mufKonuUret('kombo')} className="text-[11px] bg-gradient-to-r from-amber-500 to-orange-600 hover:opacity-90 text-white px-2 py-2 rounded-lg font-black transition">✨ Anlatım + İnfografik + Sorular</button>
+        <button onClick={()=>mufKonuUret('fasikul')} className="text-[11px] bg-gradient-to-r from-emerald-500 to-teal-600 hover:opacity-90 text-white px-2 py-2 rounded-lg font-black transition">📚 Tam Fasikül (devasa)</button>
+      </div>
+      <p className="text-[10px] text-rose-200/70 mt-1.5">İpucu: Üretimden sonra çıktının altındaki <b>AL ile Uyarla</b> ile “Uzat” / “Kısalt” diyerek uzunluğu ayarlayabilirsin.</p>
+    </div>
+  )}
+</div>
+
+{/* 🧠 PEDAGOJİK DANIŞMAN PANELİ */}
+<div className={`mb-3 bg-gradient-to-br from-indigo-600/25 to-violet-600/20 p-3 rounded-xl border border-indigo-400/30 ${acikArac==='pedagoji'?'':'hidden'}`}>
+  <div className="flex items-center justify-between mb-2">
+    <span className="text-xs font-black text-indigo-100 uppercase tracking-wide"><i className="fa-solid fa-brain mr-1 text-indigo-300"></i> Pedagojik Danışman</span>
+    <span className="text-[10px] text-indigo-200/70">uzman öğretmen ağzından belge</span>
+  </div>
+  <p className="text-[11px] text-indigo-100/90 mb-2">Sınıfta/evde karşılaştığın bir davranışı veya soruyu yaz; sana özel, uygulanabilir ve <b>senin ağzından hazırlanmış</b> profesyonel bir danışmanlık notu üretir. Çıktı PDF/Paylaş edilebilir.</p>
+
+  <div className="relative mb-2">
+    <textarea value={pedSoru} onChange={e=>setPedSoru(e.target.value)} rows={3} placeholder="Örn: 5 yaşındaki öğrencim sürekli elini cinsel bölgesine götürüyor; sınıfta nasıl yaklaşmalı, veliyle nasıl konuşmalıyım?" className="w-full px-3 py-2 pr-8 bg-white/95 border border-indigo-200 rounded-lg outline-none text-sm text-gray-800 resize-y" />
+    {pedSoru && <button onClick={()=>setPedSoru('')} title="Temizle" className="absolute right-2 top-2 w-6 h-6 rounded-full bg-gray-200 hover:bg-red-500 hover:text-white text-gray-500 flex items-center justify-center text-xs font-bold transition">✕</button>}
+  </div>
+
+  <div className="flex flex-wrap gap-1.5 mb-2">
+    {[
+      'Öğrencim sürekli elini cinsel bölgesine götürüyor; sınıfta nasıl yaklaşmalı ve veliyle nasıl konuşmalıyım?',
+      'Öğrencim arkadaşlarını ısırıyor/vuruyor; öfkesini yönetmesine nasıl yardım ederim?',
+      'Derste yerinde duramıyor, dikkati çabuk dağılıyor; ne yapabilirim?',
+      'Tuvalet eğitiminde geriye dönüş yaşıyor; nasıl destek olurum?',
+      'Konuşması yaşıtlarına göre geç; sınıfta dil gelişimini nasıl desteklerim?',
+      'Veli çocuğuna tanı konmasını reddediyor; nasıl bir dil kullanmalıyım?'
+    ].map((s,i)=>(<button key={i} onClick={()=>setPedSoru(s)} className="text-[11px] bg-white/10 hover:bg-white/20 text-indigo-50 border border-indigo-300/25 px-2 py-1 rounded-md font-semibold transition text-left">{s.length>46?s.slice(0,46)+'…':s}</button>))}
+  </div>
+
+  <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5 mb-2">
+    <input value={pedOgrenci} onChange={e=>setPedOgrenci(e.target.value)} placeholder="Öğrenci adı (ops.)" className="px-2.5 py-2 bg-white/95 border border-indigo-200 rounded-lg outline-none text-sm text-gray-800" />
+    <input value={pedVeli} onChange={e=>setPedVeli(e.target.value)} placeholder="Veli adı (ops.)" className="px-2.5 py-2 bg-white/95 border border-indigo-200 rounded-lg outline-none text-sm text-gray-800" />
+    <input value={pedHazirlayan} onChange={e=>setPedHazirlayan(e.target.value)} placeholder="Hazırlayan (senin adın)" className="px-2.5 py-2 bg-white/95 border border-indigo-200 rounded-lg outline-none text-sm text-gray-800" />
+  </div>
+
+  <button onClick={pedagojikCevap} disabled={pedYukleniyor} className="w-full text-sm bg-gradient-to-r from-indigo-500 to-violet-600 hover:opacity-90 text-white px-3 py-2.5 rounded-lg font-black transition disabled:opacity-60">{pedYukleniyor ? <span><i className="fa-solid fa-spinner fa-spin mr-1"></i>Danışmanlık notu hazırlanıyor…</span> : <span><i className="fa-solid fa-wand-magic-sparkles mr-1"></i>🧠 Pedagojik Cevap Hazırla (belge)</span>}</button>
+  <p className="text-[10px] text-indigo-200/70 mt-1.5">Not: Bu bir eğitsel danışmanlık aracıdır; tıbbi/psikolojik tanı yerine geçmez. Çocuğun güvenliğini ilgilendiren durumlarda rehberlik servisine ve gerekli uzmanlara başvur.</p>
 </div>
 
 {/* 🧰 ÖĞRETMEN ARAÇLARI — pro tek-tık üreteçler */}
@@ -4736,6 +5193,7 @@ title="Veli ödevi yaptıysa buraya tıklayın."
   <button onClick={matbaaSesliOku} className={`text-[11px] px-2.5 py-1.5 rounded-lg font-bold border transition ${okuyor ? 'bg-rose-500 text-white border-rose-500' : 'bg-white text-rose-700 border-rose-200 hover:bg-rose-50'}`}><i className={`fa-solid ${okuyor?'fa-stop':'fa-volume-high'} mr-1`}></i>{okuyor?'Durdur':'Sesli oku'}</button>
   <button onClick={matbaaPngIndir} className="text-[11px] px-2.5 py-1.5 rounded-lg font-bold bg-white text-teal-700 border border-teal-200 hover:bg-teal-50 transition"><i className="fa-solid fa-image mr-1"></i>PNG indir</button>
   <button onClick={matbaaWhatsapp} className="text-[11px] px-2.5 py-1.5 rounded-lg font-bold bg-white text-green-700 border border-green-200 hover:bg-green-50 transition"><i className="fa-brands fa-whatsapp mr-1"></i>Paylaş</button>
+  <button onClick={()=>{ try{ if(window.ZIRVE_paylasAc) window.ZIRVE_paylasAc(); else showToast('QR modülü hazır değil.'); }catch(e){ showToast('QR açılamadı.'); } }} className="text-[11px] px-2.5 py-1.5 rounded-lg font-bold bg-white text-indigo-700 border border-indigo-200 hover:bg-indigo-50 transition"><i className="fa-solid fa-qrcode mr-1"></i>QR</button>
   <button onClick={interaktifHtmlUret} disabled={htmlUretiliyor} className="text-[11px] px-2.5 py-1.5 rounded-lg font-black bg-gradient-to-r from-fuchsia-600 to-indigo-600 text-white hover:opacity-90 transition disabled:opacity-60">{htmlUretiliyor ? <span><i className="fa-solid fa-spinner fa-spin mr-1"></i>Oyun hazırlanıyor…</span> : <span><i className="fa-solid fa-gamepad mr-1"></i>🎮 İnteraktif oyuna çevir</span>}</button>
 </div>
 
@@ -4754,7 +5212,7 @@ title="Veli ödevi yaptıysa buraya tıklayın."
 <button onClick={()=>matbaaUyarla('Beğenmedim; aynı konuda tamamen farklı ve daha kaliteli bir versiyon üret.')} className="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg font-bold text-sm whitespace-nowrap transition"><i className="fa-solid fa-rotate-right mr-1"></i> Yeniden Üret</button>
 </div>
 <div className="flex flex-wrap gap-1.5 mt-2">
-{['✨ Şıkları netleştir','Soru kökünü sadeleştir','Çeldiricileri (yanlış şıkları) güçlendir','Cevap anahtarını ayrı sayfaya al','Zorluğu kademeli sırala','1. sınıfa uyarla','2. sınıfa uyarla','3. sınıfa uyarla','4. sınıfa uyarla','5. sınıfa uyarla','Daha kolay','Daha zor','Görsel ekle','Kısalt','Uzat','🧠 Zihin haritası ekle','🗺️ Kavram haritası ekle','Somutlaştır','Örnek ekle','Oyunlaştır','Emoji ekle','Renkli vurgula','Boşluk doldur yap','Eşleştirme yap','Tekrar bölümü ekle','Ölçme/değerlendirme ekle','Puntoyu büyüt','Disleksi dostu yap','Adım adım yap','Yönergeyi sadeleştir','Bilgi İşleme Kuramına göre','Somuttan soyuta diz','Görselleri çoğalt','Cevap anahtarı ekle','Veli notu ekle','Süre & puan ekle','Bloom üst düzey soru','5E modeline göre','Yapılandırmacı yap','İş birlikli görev ekle','Farklılaştır (3 seviye)','Çoklu zekâya göre','Oyunlaştır (puan-rozet)','Adım adım çöz','Görselle destekle','Günlük hayattan bağla','Somut örnek ekle','İpucu ekle','Isınma sorusu ekle','Öz-değerlendirme ekle','Geri getirme sorusu ekle','Hikâyeleştir','Kavram haritasıyla özetle','DKT: örnek sayısını artır','Artikülasyon örnekleri ekle','Sosyal senaryo ekle','Nefes/mola ekle','VAKT çok duyulu yap','Sadeleştir (özel eğitim)','Daha çok tekrar ekle','Kazanım/hedef ekle','Rubrik (puanlama) ekle','Akademik dil kullan','Kaynakça/atıf ekle','Üst-bilişsel sorular ekle','Çıkış kartı (exit ticket) ekle','Ön koşul bilgisi ekle','Genelleme/transfer görevi ekle','Terapi hedefi & veri tablosu ekle','İpucu silme (fading) uygula','Minimal çift ekle','Fonolojik farkındalık ekle','Ağız/dudak yönergesi ekle'].map((x,i)=>(<button key={i} onClick={()=>matbaaUyarla(x)} className="text-[11px] bg-white hover:bg-purple-500 hover:text-white text-purple-700 border border-purple-200 px-2 py-1 rounded-md font-semibold transition">{x}</button>))}
+{['✨ Şıkları netleştir','Soru kökünü sadeleştir','Çeldiricileri (yanlış şıkları) güçlendir','Cevap anahtarını ayrı sayfaya al','Zorluğu kademeli sırala','MEB kazanım kodu ekle','1. sınıfa uyarla','2. sınıfa uyarla','3. sınıfa uyarla','4. sınıfa uyarla','5. sınıfa uyarla','Daha kolay','Daha zor','Görsel ekle','Kısalt','Uzat','🧠 Zihin haritası ekle','🗺️ Kavram haritası ekle','Somutlaştır','Örnek ekle','Oyunlaştır','Emoji ekle','Renkli vurgula','Boşluk doldur yap','Eşleştirme yap','Tekrar bölümü ekle','Ölçme/değerlendirme ekle','Puntoyu büyüt','Disleksi dostu yap','Adım adım yap','Yönergeyi sadeleştir','Bilgi İşleme Kuramına göre','Somuttan soyuta diz','Görselleri çoğalt','Cevap anahtarı ekle','Veli notu ekle','Süre & puan ekle','Bloom üst düzey soru','5E modeline göre','Yapılandırmacı yap','İş birlikli görev ekle','Farklılaştır (3 seviye)','Çoklu zekâya göre','Oyunlaştır (puan-rozet)','Adım adım çöz','Görselle destekle','Günlük hayattan bağla','Somut örnek ekle','İpucu ekle','Isınma sorusu ekle','Öz-değerlendirme ekle','Geri getirme sorusu ekle','Hikâyeleştir','Kavram haritasıyla özetle','DKT: örnek sayısını artır','Artikülasyon örnekleri ekle','Sosyal senaryo ekle','Nefes/mola ekle','VAKT çok duyulu yap','Sadeleştir (özel eğitim)','Daha çok tekrar ekle','Kazanım/hedef ekle','Rubrik (puanlama) ekle','Akademik dil kullan','Kaynakça/atıf ekle','Üst-bilişsel sorular ekle','Çıkış kartı (exit ticket) ekle','Ön koşul bilgisi ekle','Genelleme/transfer görevi ekle','Terapi hedefi & veri tablosu ekle','İpucu silme (fading) uygula','Minimal çift ekle','Fonolojik farkındalık ekle','Ağız/dudak yönergesi ekle'].map((x,i)=>(<button key={i} onClick={()=>matbaaUyarla(x)} className="text-[11px] bg-white hover:bg-purple-500 hover:text-white text-purple-700 border border-purple-200 px-2 py-1 rounded-md font-semibold transition">{x}</button>))}
 </div>
 <div className="mt-3 pt-3 border-t border-purple-200">
   <button onClick={yaklasimOner} disabled={oneriYukleniyor} className="w-full text-xs bg-gradient-to-r from-indigo-600 to-fuchsia-600 hover:opacity-90 text-white px-3 py-2 rounded-lg font-black transition disabled:opacity-60">
@@ -5651,6 +6109,77 @@ notes.map(n => (
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(<HataSiniri onReset={() => { try{ window.location.reload(); }catch(e){} }}><App /></HataSiniri>);
+</script>
+<!-- ===== ZİRVE · QR ile Paylaş modülü (vanilla, çerçeveden bağımsız) ===== -->
+<script>
+(function(){
+  "use strict";
+  function qrToast(msg){ try{ var t=document.createElement('div'); t.textContent=msg; t.style.cssText='position:fixed;top:16px;left:50%;transform:translateX(-50%);background:#111827;color:#fff;padding:10px 16px;border-radius:999px;font:700 13px system-ui;z-index:100000;box-shadow:0 6px 20px rgba(0,0,0,.3)'; document.body.appendChild(t); setTimeout(function(){ t.remove(); },2200);}catch(e){} }
+  function qrKutuphane(cb){
+    if(window.qrcode){ cb(); return; }
+    var s=document.createElement('script');
+    s.src='https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js';
+    s.onload=function(){ cb(); };
+    s.onerror=function(){ qrToast('QR kütüphanesi yüklenemedi (internet?).'); };
+    document.head.appendChild(s);
+  }
+  window.ZIRVE_paylasAc=function(ozelUrl){
+    var url = ozelUrl || (window.ZIRVE_PAYLAS && window.ZIRVE_PAYLAS.url) || window.location.href;
+    if(/^file:/.test(url)){ qrToast('Bu dosya bilgisayarda açık (file://). QR paylaşımı için önce GitHub Pages gibi bir adrese yükle.'); }
+    qrKutuphane(function(){
+      try{
+        var eski=document.getElementById('zirve-qr-modal'); if(eski) eski.remove();
+        var qr=window.qrcode(0,'M'); qr.addData(url); qr.make();
+        var img=qr.createImgTag(6,12);
+        var ov=document.createElement('div');
+        ov.id='zirve-qr-modal';
+        ov.style.cssText='position:fixed;inset:0;background:rgba(15,23,42,.75);backdrop-filter:blur(3px);z-index:100000;display:flex;align-items:center;justify-content:center;padding:16px';
+        ov.innerHTML='<div style="background:#fff;border-radius:18px;max-width:340px;width:100%;padding:18px;text-align:center;font-family:system-ui;box-shadow:0 20px 60px rgba(0,0,0,.4)">'
+          +'<div style="font-weight:900;font-size:15px;color:#0f172a;margin-bottom:4px">📲 QR ile Paylaş</div>'
+          +'<div style="font-size:11px;color:#64748b;margin-bottom:12px">Telefonla okut, uygulama anında açılsın.</div>'
+          +'<div id="zirve-qr-img" style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px;display:inline-block">'+img+'</div>'
+          +'<div style="font-size:10px;color:#94a3b8;word-break:break-all;margin:10px 0 12px">'+url+'</div>'
+          +'<div style="display:flex;gap:8px">'
+          +'<button id="zirve-qr-kopya" style="flex:1;background:#4f46e5;color:#fff;border:none;border-radius:10px;padding:10px;font-weight:800;cursor:pointer;font-size:12px">🔗 Linki kopyala</button>'
+          +'<button id="zirve-qr-png" style="flex:1;background:#059669;color:#fff;border:none;border-radius:10px;padding:10px;font-weight:800;cursor:pointer;font-size:12px">🖼️ PNG indir</button>'
+          +'</div>'
+          +'<button id="zirve-qr-kapat" style="margin-top:10px;background:#f1f5f9;color:#334155;border:none;border-radius:10px;padding:9px;font-weight:800;cursor:pointer;font-size:12px;width:100%">Kapat</button>'
+          +'</div>';
+        document.body.appendChild(ov);
+        ov.addEventListener('click',function(e){ if(e.target===ov) ov.remove(); });
+        document.getElementById('zirve-qr-kapat').onclick=function(){ ov.remove(); };
+        document.getElementById('zirve-qr-kopya').onclick=function(){ try{ navigator.clipboard.writeText(url).then(function(){qrToast('🔗 Link kopyalandı.');},function(){qrToast('Kopyalanamadı.');}); }catch(e){ qrToast('Kopyalanamadı.'); } };
+        document.getElementById('zirve-qr-png').onclick=function(){
+          try{
+            var imgEl=document.querySelector('#zirve-qr-img img'); if(!imgEl){ qrToast('Görsel bulunamadı.'); return; }
+            var c=document.createElement('canvas'); var boyut=520; c.width=boyut; c.height=boyut;
+            var ctx=c.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,boyut,boyut);
+            var tmp=new Image();
+            tmp.onload=function(){ var m=40; ctx.imageSmoothingEnabled=false; ctx.drawImage(tmp,m,m,boyut-2*m,boyut-2*m); var a=document.createElement('a'); a.href=c.toDataURL('image/png'); a.download='paylasim-qr.png'; a.click(); qrToast('🖼️ QR indirildi.'); };
+            tmp.src=imgEl.src;
+          }catch(e){ qrToast('PNG oluşturulamadı.'); }
+        };
+      }catch(e){ qrToast('QR oluşturulamadı.'); }
+    });
+  };
+  // Silik yüzer pill (× ile kalıcı gizlenir)
+  function pilliKur(){
+    try{
+      if(localStorage.getItem('zirve_qr_pill_gizli')==='1') return;
+      if(document.getElementById('zirve-qr-pill')) return;
+      var w=document.createElement('div');
+      w.id='zirve-qr-pill';
+      w.style.cssText='position:fixed;bottom:96px;left:12px;z-index:9996;display:flex;align-items:center;gap:4px;background:rgba(79,70,229,.92);color:#fff;border-radius:999px;padding:7px 10px;font:800 12px system-ui;box-shadow:0 6px 18px rgba(0,0,0,.25);opacity:.55;cursor:pointer';
+      w.onmouseenter=function(){ w.style.opacity='1'; }; w.onmouseleave=function(){ w.style.opacity='.55'; };
+      var b=document.createElement('span'); b.textContent='📲 QR'; b.onclick=function(){ window.ZIRVE_paylasAc(); };
+      var x=document.createElement('span'); x.textContent='×'; x.title='Gizle'; x.style.cssText='margin-left:2px;font-weight:900;opacity:.8'; x.onclick=function(ev){ ev.stopPropagation(); try{localStorage.setItem('zirve_qr_pill_gizli','1');}catch(e){} w.remove(); };
+      w.appendChild(b); w.appendChild(x);
+      document.body.appendChild(w);
+    }catch(e){}
+  }
+  window.ZIRVE_qrPillGeri=function(){ try{ localStorage.removeItem('zirve_qr_pill_gizli'); }catch(e){} pilliKur(); };
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', pilliKur); else pilliKur();
+})();
 </script>
 </body>
 </html>
