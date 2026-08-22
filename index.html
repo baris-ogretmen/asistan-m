@@ -931,6 +931,7 @@ function panelKur(){
     <textarea id="zirve-keys" rows="4" placeholder="AIza...&#10;AIza...&#10;AIza..." style="width:100%;margin:5px 0 6px;padding:9px;border:2px solid #e2e8f0;border-radius:10px;font:600 12px ui-monospace,monospace;resize:vertical;background:#fff"></textarea>
     <button id="zirve-keys-kopyala" style="width:100%;margin-bottom:8px;background:#059669;color:#fff;border:none;border-radius:10px;padding:9px;font-weight:800;cursor:pointer;font-size:12px">📋 Tüm Anahtarları Kopyala (başka çalışmaya yapıştır)</button>
     <button id="zirve-keys-yapistir" style="width:100%;margin-bottom:8px;background:#7c3aed;color:#fff;border:none;border-radius:10px;padding:9px;font-weight:800;cursor:pointer;font-size:12px">📥 Panodan Yapıştır (tüm anahtarları ekle · birleştir)</button>
+    <button id="zirve-yuzen-geri" style="width:100%;margin-bottom:8px;background:#0ea5e9;color:#fff;border:none;border-radius:10px;padding:9px;font-weight:800;cursor:pointer;font-size:12px">🧲 Yüzen düğmeleri geri getir / konumları sıfırla</button>
     <div style="background:linear-gradient(135deg,#f0f9ff,#eef2ff);border:2px solid #bae6fd;border-radius:12px;padding:12px;margin-bottom:11px">
       <div style="font-size:12px;font-weight:800;color:#0369a1;margin-bottom:6px">🔑 API Anahtarı Nasıl Alınır? (Ücretsiz)</div>
       <div style="font-size:11px;color:#334155;line-height:1.7;font-weight:600">
@@ -992,6 +993,8 @@ function panelKur(){
     }catch(e){ var g2=window.prompt('Anahtarları buraya yapıştır (her satıra bir tane):','')||''; birlestir(g2); }
   };
   document.getElementById('zirve-model').onchange=(e)=>{ MODEL=e.target.value.trim()||'gemini-2.5-flash'; localStorage.setItem(LS.model,MODEL); panelYenile(); };
+  var yuzenGeriBtn=document.getElementById('zirve-yuzen-geri');
+  if(yuzenGeriBtn) yuzenGeriBtn.onclick=function(){ try{ if(window.ZIRVE_kontrolleriGeriGetir) window.ZIRVE_kontrolleriGeriGetir(); else toast('Modül hazır değil.','red'); }catch(e){ toast('Hata.','red'); } };
   panelYenile();
   setInterval(panelYenile, 20000);
   yerlestir();
@@ -1403,8 +1406,51 @@ return <textarea ref={textareaRef} value={value} onChange={onChange} placeholder
 };
 
 const htmlIceriyorMu = (t) => /<(strong|em|b|i|mark|span|u|br)\b|&lt;(strong|em|b|i|mark|span)/i.test(String(t || ''));
+// ── LATEX/SEMBOL TEMİZLEYİCİ: $\rightarrow$ gibi sızıntıları Unicode'a çevirir (ekran + PDF okunaklı) ──
+const ZIRVE_latexTemizle = (str) => {
+  if (!str) return str;
+  let s = String(str);
+  if (s.indexOf('\\') === -1 && s.indexOf('$') === -1 && s.indexOf('^') === -1) return s;
+  s = s.replace(/\\frac\s*\{([^{}]*)\}\s*\{([^{}]*)\}/g, '$1/$2');
+  s = s.replace(/\\(?:text|mathrm|mathbf|mathit|operatorname|mbox)\s*\{([^{}]*)\}/g, '$1');
+  const H = [
+    [/\\Rightarrow/g,'⇒'],[/\\Leftarrow/g,'⇐'],[/\\leftrightarrow/g,'↔'],
+    [/\\longrightarrow/g,'→'],[/\\rightarrow/g,'→'],[/\\to\b/g,'→'],
+    [/\\leftarrow/g,'←'],[/\\uparrow/g,'↑'],[/\\downarrow/g,'↓'],
+    [/\\times/g,'×'],[/\\cdot/g,'·'],[/\\div/g,'÷'],[/\\pm/g,'±'],[/\\mp/g,'∓'],
+    [/\\leq/g,'≤'],[/\\geq/g,'≥'],[/\\neq/g,'≠'],[/\\approx/g,'≈'],[/\\equiv/g,'≡'],
+    [/\\infty/g,'∞'],[/\\theta/g,'θ'],[/\\alpha/g,'α'],[/\\beta/g,'β'],[/\\pi/g,'π'],
+    [/\\Delta/g,'Δ'],[/\\sum/g,'Σ'],[/\\sqrt/g,'√'],[/\\circ/g,'°'],[/\\degree/g,'°'],
+    [/\\%/g,'%'],[/\\&/g,'&'],[/\\_/g,'_'],[/\\#/g,'#'],[/\\,/g,' '],[/\\;/g,' ']
+  ];
+  H.forEach(function(p){ s = s.replace(p[0], p[1]); });
+  s = s.replace(/\^\{?\s*2\s*\}?/g, '²').replace(/\^\{?\s*3\s*\}?/g, '³');
+  s = s.replace(/\\\(([\s\S]*?)\\\)/g, '$1').replace(/\\\[([\s\S]*?)\\\]/g, '$1');
+  s = s.replace(/\$\$([\s\S]*?)\$\$/g, '$1');
+  s = s.replace(/\$([^$\n]{0,80})\$/g, function(m, inner){ return /[→←⇒⇐↔↑↓×·÷±∓≤≥≠≈≡∞πθαβΔΣ√°²³\\^_]/.test(inner) ? inner : m; });
+  return s;
+};
+// ── WHATSAPP BİÇİMLENDİRİCİ: HTML/Markdown'ı WhatsApp biçimine çevirir (*kalın*, _italik_, • madde) ──
+const ZIRVE_whatsappBicim = (girdi) => {
+  let s = ZIRVE_latexTemizle(String(girdi || ''));
+  s = s.replace(/<\s*h[1-6][^>]*>/gi, '\n*').replace(/<\s*\/\s*h[1-6]\s*>/gi, '*\n');
+  s = s.replace(/<\s*(strong|b)\s*[^>]*>/gi, '*').replace(/<\s*\/\s*(strong|b)\s*>/gi, '*');
+  s = s.replace(/<\s*(em|i)\s*[^>]*>/gi, '_').replace(/<\s*\/\s*(em|i)\s*>/gi, '_');
+  s = s.replace(/<\s*li[^>]*>/gi, '\n• ').replace(/<\s*\/\s*li\s*>/gi, '');
+  s = s.replace(/<\s*br\s*\/?\s*>/gi, '\n').replace(/<\s*\/\s*(p|div|tr|h[1-6])\s*>/gi, '\n');
+  s = s.replace(/<[^>]+>/g, '');
+  s = s.replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&hellip;/g, '…');
+  s = s.replace(/\*\*([^*\n]+)\*\*/g, '*$1*');
+  s = s.replace(/(^|\n)\s{0,3}#{1,6}\s*(.+)/g, '$1*$2*');
+  s = s.replace(/(^|\n)\s*[-–]\s+/g, '$1• ');
+  s = s.replace(/`([^`]+)`/g, '$1');
+  s = s.replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+  return s;
+};
+try { if (typeof window !== 'undefined') { window.ZIRVE = window.ZIRVE || {}; window.ZIRVE.latexTemizle = ZIRVE_latexTemizle; window.ZIRVE.whatsappBicim = ZIRVE_whatsappBicim; } } catch(e){}
+
 const HtmlMetin = ({ metin, className }) => {
-  const s = String(metin || '');
+  const s = ZIRVE_latexTemizle(String(metin || ''));
   if (!htmlIceriyorMu(s)) return <span className={className}>{s}</span>;
   let temiz = s.replace(/<\s*script[^>]*>[\s\S]*?<\s*\/\s*script>/gi, '').replace(/on\w+\s*=\s*"[^"]*"/gi, '').replace(/on\w+\s*=\s*'[^']*'/gi, '');
   return <span className={className} dangerouslySetInnerHTML={{ __html: temiz }}></span>;
@@ -1574,6 +1620,23 @@ const [asistanAcik, setAsistanAcik] = useState(false);
 const [asistanSoru, setAsistanSoru] = useState('');
 const [asistanGecmis, setAsistanGecmis] = useState([]);
 const [asistanYukleniyor, setAsistanYukleniyor] = useState(false);
+const [asistanGizli, setAsistanGizli] = useState(() => { try { return localStorage.getItem('zirve_asistan_gizli') === '1'; } catch(e){ return false; } });
+// Öğrenme DNA / Gelişim Check-Up
+const [checkupOgrenci, setCheckupOgrenci] = useState('');
+const [checkupKademe, setCheckupKademe] = useState('1. Sınıf');
+const [checkupKurum, setCheckupKurum] = useState(() => { try { return localStorage.getItem('zirve_ped_hazirlayan') || ''; } catch(e){ return ''; } });
+const [checkupSecili, setCheckupSecili] = useState({});
+const [checkupVeliGozlem, setCheckupVeliGozlem] = useState('');
+const [checkupOgretmenNot, setCheckupOgretmenNot] = useState('');
+const [checkupYukleniyor, setCheckupYukleniyor] = useState(false);
+const [checkupLogo, setCheckupLogo] = useState(() => { try { return localStorage.getItem('zirve_checkup_logo') || ''; } catch(e){ return ''; } });
+const [checkupProfilOzet, setCheckupProfilOzet] = useState('');
+const [checkupKayitlar, setCheckupKayitlar] = useState(() => { try { const r = localStorage.getItem('zirve_checkup_kayitlar'); if (r) { const d = JSON.parse(r); if (Array.isArray(d)) return d; } } catch(e){} return []; });
+const [checkupKayitAcik, setCheckupKayitAcik] = useState(false);
+const [checkupGecmis, setCheckupGecmis] = useState(() => { try { const r = localStorage.getItem('zirve_checkup_gecmis'); if (r) { const d = JSON.parse(r); if (d && typeof d === 'object') return d; } } catch(e){} return {}; });
+const [veliMesaji, setVeliMesaji] = useState('');
+const [veliMesajYukleniyor, setVeliMesajYukleniyor] = useState(false);
+useEffect(() => { const h = () => { setAsistanGizli(false); try{ localStorage.removeItem('zirve_asistan_gizli'); }catch(e){} }; window.addEventListener('zirve-asistan-geri', h); return () => window.removeEventListener('zirve-asistan-geri', h); }, []);
 const [fasikulAcik, setFasikulAcik] = useState(false);
 const [fasikulBolumler, setFasikulBolumler] = useState([]);
 
@@ -1849,6 +1912,52 @@ noPrintElements.forEach(el => el.style.display = '');
 const restoredElements = element.querySelectorAll('[data-pdf-restored="true"]');
 restoredElements.forEach(el => { el.classList.add('print-only'); el.removeAttribute('data-pdf-restored'); });
 try { if (window.ZIRVE_ekranGeri) window.ZIRVE_ekranGeri(); } catch(e){} // ölçeği geri yükle
+try { element.style.zoom=_elZoom; element.style.filter=_elFilter; } catch(e){}
+setIsDownloadingPdf(false);
+}
+};
+// 📄 PDF ile PAYLAŞ — PDF üretip native paylaşım penceresini açar (WhatsApp/Mail vb.). Desteklenmezse indirir.
+const sharePDF = async (elementId, filename) => {
+const element = document.getElementById(elementId);
+if (!element) { showToast('Paylaşılacak içerik yok.'); return; }
+setIsDownloadingPdf(true);
+try { if (window.ZIRVE_ekranReset) window.ZIRVE_ekranReset(); } catch(e){}
+const _elZoom = element.style.zoom, _elFilter = element.style.filter;
+try { element.style.zoom=''; element.style.filter=''; } catch(e){}
+showToast('PDF hazırlanıyor, paylaşım açılacak…');
+const noPrintElements = element.querySelectorAll('.no-print');
+noPrintElements.forEach(el => el.style.display = 'none');
+const printOnlyElements = element.querySelectorAll('.print-only');
+printOnlyElements.forEach(el => { el.classList.remove('print-only'); el.setAttribute('data-pdf-restored', 'true'); });
+const dosyaAdi = `${String(filename||'Rapor').replace(/[^a-z0-9ğüşöçİĞÜŞÖÇ]/gi, '_')}.pdf`;
+const opt = {
+margin:       [10, 10, 10, 10],
+filename:     dosyaAdi,
+image:        { type: 'jpeg', quality: 0.98 },
+html2canvas:  { scale: 2, useCORS: true, letterRendering: true, backgroundColor: '#ffffff', scrollY: 0 },
+jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
+pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] }
+};
+try {
+const blob = await html2pdf().set(opt).from(element).outputPdf('blob');
+const file = new File([blob], dosyaAdi, { type: 'application/pdf' });
+let paylasildi = false;
+try {
+if (navigator.canShare && navigator.canShare({ files: [file] })) {
+await navigator.share({ files: [file], title: filename || 'Rapor', text: (filename || 'Rapor') });
+paylasildi = true;
+}
+} catch(shareErr) { if (shareErr && shareErr.name === 'AbortError') { paylasildi = true; } }
+if (!paylasildi) {
+const u = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = u; a.download = dosyaAdi; document.body.appendChild(a); a.click(); document.body.removeChild(a); setTimeout(() => URL.revokeObjectURL(u), 4000);
+showToast('📄 PDF indirildi — WhatsApp’ta 📎 ile dosya olarak ekleyebilirsin.');
+}
+} catch(e) { showToast('PDF paylaşımı oluşturulamadı.'); console.error(e); }
+finally {
+noPrintElements.forEach(el => el.style.display = '');
+const restoredElements = element.querySelectorAll('[data-pdf-restored="true"]');
+restoredElements.forEach(el => { el.classList.add('print-only'); el.removeAttribute('data-pdf-restored'); });
+try { if (window.ZIRVE_ekranGeri) window.ZIRVE_ekranGeri(); } catch(e){}
 try { element.style.zoom=_elZoom; element.style.filter=_elFilter; } catch(e){}
 setIsDownloadingPdf(false);
 }
@@ -2608,6 +2717,362 @@ const asistanKopyala = (metin) => {
     try { navigator.clipboard.writeText(t); showToast('📋 Kopyalandı.'); } catch(e){ showToast('Kopyalanamadı.'); }
 };
 
+// ── ÖĞRENME DNA / GELİŞİM CHECK-UP ───────────────────────────────────────────
+const CHECKUP_ALANLAR = {
+  '🎯 Dikkat & Odaklanma': ['Oturma süresi kısa (5 dk altı)','Yönergeyi tek seferde anlıyor','Çok yönergeli işi takip edemiyor','Kolay dikkati dağılıyor','Göz teması kuruyor','Etkinliği yarıda bırakıyor','Dikkatini uzun süre koruyor','Dürtüsel davranıyor','Sırasını bekleyebiliyor','Detaylara dikkat ediyor','Sesli ortamda odaklanamıyor','Görevi tamamlama motivasyonu yüksek','Hareket ihtiyacı yüksek (kıpır kıpır)','Tek işe uzun odaklanıyor (hiperfokus)'],
+  '✋ İnce & Kalın Motor': ['Kalemi doğru tutuyor','Kalem tutuşu hatalı','Makası kullanabiliyor','Çizgi/boyama sınırında kalıyor','Denge iyi (tek ayak)','Zıplama-koşma gelişmiş','Top atma-tutma zayıf','Düğme/fermuar yapabiliyor','El tercihi belirginleşti','İnce motor desteğe ihtiyaç var','Boncuk/ip geçirme yapabiliyor','Ritim tutabiliyor (el-ayak)','Merdiven inip çıkabiliyor','Kağıt katlama-yırtma yapabiliyor'],
+  '💛 Sosyal & Duygusal': ['Sıra bekleyebiliyor','Paylaşmakta zorlanıyor','Ayrılık kaygısı var','Akranlarıyla oyun kuruyor','Duygularını ifade edebiliyor','Öfke kontrolü zayıf','Kurallara uyuyor','Yalnız oynamayı tercih ediyor','İş birliği yapabiliyor','Empati gösteriyor','Liderlik eğilimi gösteriyor','Yeni ortama zor uyum sağlıyor','Yardımlaşmayı seviyor','Özür dileyip barışabiliyor','Grup oyunlarına katılıyor'],
+  '🗣️ Dil & İletişim': ['Yaşına uygun konuşuyor','Kelime dağarcığı sınırlı','Ses/artikülasyon hatası var','Cümle kuruyor (3+ kelime)','Sorulara yanıt veriyor','Öykü anlatabiliyor','Yönergeleri anlıyor','Kekemelik gözleniyor','Göz teması kurarak konuşuyor','Duygularını sözelleştirebiliyor','Sıra alarak konuşuyor (diyalog)','Şarkı/tekerleme tekrarlıyor','Yeni kelimeleri hızlı öğreniyor','Konuşurken sözcük buluyor (akıcı)','R/S/Ş seslerinde zorlanıyor','İki dilli ortamda büyüyor'],
+  '🧩 Bilişsel & Akademik Hazırlık': ['Renkleri biliyor','Şekilleri tanıyor','1-10 sayabiliyor','Sayı-nesne eşlemesi yapıyor','Benzer-farklı ayırt ediyor','Örüntü tamamlıyor','Neden-sonuç kuruyor','Kavramları (büyük-küçük vb.) biliyor'],
+  '🧼 Öz Bakım & Bağımsızlık': ['Tuvalet eğitimi tamam','Yardımsız yemek yiyor','Giyinme-soyunmada bağımsız','El yıkama alışkanlığı var','Eşyalarını topluyor','Destek gerekiyor'],
+  '⭐ İlgi Alanları': ['Spora ilgili (koşma, top, dans)','Müziğe ilgili (şarkı, ritim, enstrüman)','Resim-sanata ilgili (boyama, çizim)','Teknoloji-oyuna ilgili','Doğa-hayvanlara ilgili','Kitap-hikâyeye ilgili','Yapı-inşa oyunlarına ilgili (lego, blok)','Drama-taklit oynamayı seviyor','Sayı-bulmacaya ilgili','El işi-tasarıma ilgili'],
+  '💪 Güçlü Yönler & Yetenekler': ['Meraklı ve araştırmacı','Yaratıcı-hayal gücü güçlü','Lider ruhlu','Sabırlı ve titiz','Hızlı öğreniyor','Sosyal ve girişken','Duyarlı-empatik','Azimli-vazgeçmiyor','Pratik zekâlı','İyi gözlemci']
+};
+const checkupToggle = (chip) => setCheckupSecili(p => { const n = {...p}; if (n[chip]) delete n[chip]; else n[chip] = true; return n; });
+const checkupYolHaritasi = (kademe) => {
+  const tumu = [
+    {ad:'Okul Öncesi', yontem:'Deneyimsel Etkinlikler', strateji:'Oyun Temelli Öğrenme'},
+    {ad:'İlkokul', yontem:'Yapılandırmacı Yaklaşım', strateji:'Proje Tabanlı Öğrenme'},
+    {ad:'Ortaokul', yontem:'Aktif Öğrenme Metotları', strateji:'Problem Çözme Odaklı Öğrenme'},
+    {ad:'Lise', yontem:'Üst Düzey Düşünme & Sorgulama', strateji:'Kavramsal & Sınav Odaklı Öğrenme'},
+    {ad:'Üniversite', yontem:'Özerk & Araştırmacı Öğrenme', strateji:'Uzmanlaşma & Kariyer Odaklı'}
+  ];
+  let b = 1;
+  if (kademe === 'Okul Öncesi') b = 0;
+  else { const n = parseInt(kademe, 10); if (n >= 1 && n <= 4) b = 1; else if (n >= 5 && n <= 8) b = 2; else if (n >= 9 && n <= 12) b = 3; }
+  return tumu.slice(b);
+};
+const checkupRaporHTML = (d, meta) => {
+  const R = (o, k) => (o && o[k] != null ? o[k] : 0);
+  const bar = (label, val, mx, renk) => { const y = Math.max(0, Math.min(mx, Number(val) || 0)); const w = Math.round(y / mx * 100); return '<div style="margin:9px 0"><div style="display:flex;justify-content:space-between;font-weight:700;color:#334155;font-size:13px"><span>' + label + '</span><span>' + y + '/' + mx + '</span></div><div style="background:#e2e8f0;border-radius:99px;height:10px;margin-top:4px"><div style="width:' + w + '%;height:10px;border-radius:99px;background:' + renk + '"></div></div></div>'; };
+  const yzd = (label, val, renk) => { const v = Math.max(0, Math.min(100, Number(val) || 0)); return '<div style="margin:9px 0"><div style="display:flex;justify-content:space-between;font-weight:700;color:#334155;font-size:13px"><span>' + label + '</span><span>%' + v + '</span></div><div style="background:#e2e8f0;border-radius:99px;height:10px;margin-top:4px"><div style="width:' + v + '%;height:10px;border-radius:99px;background:' + renk + '"></div></div></div>'; };
+  const kart = (ic, bg, br) => '<div style="background:' + (bg || '#fff') + ';border:1px solid ' + (br || '#e2e8f0') + ';border-radius:16px;padding:16px;margin:14px 0">' + ic + '</div>';
+  const bas = (t, renk) => '<div style="font-weight:900;font-size:15px;color:' + (renk || '#1e3a5f') + ';margin-bottom:10px;letter-spacing:.3px">' + t + '</div>';
+  // Radar
+  const eks = [['Dil', R(d.radar,'dil')], ['Özbakım', R(d.radar,'ozbakim')], ['Sosyal', R(d.radar,'sosyal')], ['Motor', R(d.radar,'motor')], ['Bilişsel', R(d.radar,'bilissel')]];
+  const cx = 160, cy = 150, RR = 100; const pts = [], grid = [], lbl = [];
+  eks.forEach((e, i) => { const a = (-90 + i * 72) * Math.PI / 180; const val = Math.max(0, Math.min(10, Number(e[1]) || 0)); const r = RR * val / 10; pts.push((cx + r * Math.cos(a)).toFixed(1) + ',' + (cy + r * Math.sin(a)).toFixed(1)); grid.push('<line x1="' + cx + '" y1="' + cy + '" x2="' + (cx + RR * Math.cos(a)).toFixed(1) + '" y2="' + (cy + RR * Math.sin(a)).toFixed(1) + '" stroke="#e2e8f0"/>'); lbl.push('<text x="' + (cx + (RR + 20) * Math.cos(a)).toFixed(1) + '" y="' + (cy + (RR + 20) * Math.sin(a)).toFixed(1) + '" font-size="11" font-weight="700" fill="#1e3a5f" text-anchor="middle" dominant-baseline="middle">' + e[0] + '</text>'); });
+  let rings = ''; [0.33, 0.66, 1].forEach(f => { rings += '<polygon points="' + eks.map((e, i) => { const a = (-90 + i * 72) * Math.PI / 180; return (cx + RR * f * Math.cos(a)).toFixed(1) + ',' + (cy + RR * f * Math.sin(a)).toFixed(1); }).join(' ') + '" fill="none" stroke="#e2e8f0"/>'; });
+  const radar = '<svg viewBox="0 0 320 300" style="width:100%;max-width:340px;display:block;margin:0 auto"><g>' + rings + grid.join('') + '<polygon points="' + pts.join(' ') + '" fill="rgba(37,99,235,.25)" stroke="#2563eb" stroke-width="2"/>' + lbl.join('') + '</g></svg>';
+  // Kavram haritası
+  const km = (d.kavram_haritasi || []).slice(0, 6); const renkler = ['#f59e0b','#a855f7','#22c55e','#38bdf8','#8b5cf6','#ef4444'];
+  let dm = ''; const mx = 175, my = 130;
+  km.forEach((k, i) => { const a = (-90 + i * (360 / Math.max(1, km.length))) * Math.PI / 180; const x = mx + 125 * Math.cos(a), y = my + 82 * Math.sin(a); dm += '<line x1="' + mx + '" y1="' + my + '" x2="' + x.toFixed(0) + '" y2="' + y.toFixed(0) + '" stroke="#cbd5e1"/><rect x="' + (x - 48).toFixed(0) + '" y="' + (y - 14).toFixed(0) + '" width="96" height="28" rx="8" fill="' + renkler[i % 6] + '"/><text x="' + x.toFixed(0) + '" y="' + y.toFixed(0) + '" font-size="10" font-weight="700" fill="#fff" text-anchor="middle" dominant-baseline="middle">' + String(k).slice(0, 16) + '</text>'; });
+  const kavramSvg = '<svg viewBox="0 0 350 260" style="width:100%;max-width:360px;display:block;margin:0 auto">' + dm + '<rect x="128" y="116" width="94" height="30" rx="10" fill="#f97316"/><text x="175" y="131" font-size="12" font-weight="800" fill="#fff" text-anchor="middle" dominant-baseline="middle">' + String(meta.ogrenci || 'Öğrenci').slice(0, 14) + '</text></svg>';
+  // Beyin dominansı
+  const an = Math.max(0, Math.min(100, Number(R(d.beyin,'analitik')) || 50)); const ya = 100 - an;
+  const beyin = '<div style="display:flex;justify-content:space-between;text-align:center;margin-bottom:8px"><div><div style="font-size:24px;font-weight:900;color:#7c3aed">%' + an + '</div><div style="font-size:11px;font-weight:700;color:#64748b">ANALİTİK (SOL)</div></div><div><div style="font-size:24px;font-weight:900;color:#ec4899">%' + ya + '</div><div style="font-size:11px;font-weight:700;color:#64748b">YARATICI (SAĞ)</div></div></div><div style="display:flex;height:12px;border-radius:99px;overflow:hidden"><div style="width:' + an + '%;background:#7c3aed"></div><div style="width:' + ya + '%;background:#ec4899"></div></div>';
+  // Öğrenme kuramı 4 kutu
+  const kuramKutu = (et, v, renk) => '<div style="background:#f8fafc;border-radius:12px;padding:12px;text-align:center"><div style="font-size:22px;font-weight:900;color:#0f172a">%' + (Number(v) || 0) + '</div><div style="font-size:12px;font-weight:700;color:#64748b;margin-bottom:6px">' + et + '</div><div style="background:#e2e8f0;border-radius:99px;height:7px"><div style="width:' + (Number(v) || 0) + '%;height:7px;border-radius:99px;background:' + renk + '"></div></div></div>';
+  // Gardner
+  const g = d.gardner || {}; const gLabels = [['Sözel-Dilsel','sozel'],['Mantıksal-Matematiksel','mantik'],['Görsel-Uzamsal','gorsel'],['Bedensel-Kinestetik','bedensel'],['Müziksel','muzik'],['Sosyal','sosyal'],['İçsel','icsel'],['Doğacı','dogaci']];
+  const gardnerHtml = gLabels.map(x => '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f1f5f9;font-weight:700;color:#334155;font-size:13px"><span>' + x[0] + '</span><span style="color:#7c3aed;font-weight:900">' + (Number(g[x[1]]) || 0) + '/10</span></div>').join('');
+  // Yol haritası (kademeye göre)
+  const stages = checkupYolHaritasi(meta.kademe); const aiYol = d.yol_haritasi || [];
+  const yolHtml = stages.map((s, i) => { const ip = (aiYol[i] && aiYol[i].ipucu) ? aiYol[i].ipucu : 'Bu kademede güçlü yönlerini merkeze alan, ilgi temelli görevlerle ilerle.'; return '<div style="background:#0f172a;border-radius:14px;padding:14px;margin:10px 0;color:#e2e8f0"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="background:#fbbf24;color:#0f172a;width:26px;height:26px;border-radius:99px;display:inline-flex;align-items:center;justify-content:center;font-weight:900">' + (i + 1) + '</span><span style="font-weight:900;color:#fbbf24;font-size:15px">' + s.ad + '</span></div><div style="font-size:13px;line-height:1.7"><b style="color:#94a3b8">Yöntem:</b> ' + s.yontem + '<br><b style="color:#94a3b8">Strateji:</b> ' + s.strateji + '<br><b style="color:#94a3b8">İpucu:</b> <span style="color:#6ee7b7;font-style:italic">' + ip + '</span></div></div>'; }).join('');
+  // Gelişim önerileri
+  const go = (d.gelisim_onerileri || []).map(o => '<div style="margin:8px 0"><div style="font-weight:800;color:#0d9488;font-size:13px">' + (o.alan || '') + '</div><div style="font-size:13px;color:#334155">' + (o.metin || '') + '</div></div>').join('');
+  const gelistirme = ((d.yetenek && d.yetenek.gelistirme) || []).map(x => '<li style="margin:4px 0">' + x + '</li>').join('');
+  const motivOner = ((d.motivasyon && d.motivasyon.oneriler) || []).map(x => '<li style="margin:4px 0">' + x + '</li>').join('');
+  // ── GENİŞLETİLMİŞ BÖLÜMLER ──
+  const listeUl = (arr, renk) => (Array.isArray(arr) && arr.length) ? '<ul style="margin:6px 0;padding-left:18px;color:' + (renk || '#334155') + ';font-size:13px;line-height:1.7">' + arr.map(x => '<li style="margin:3px 0">' + x + '</li>').join('') + '</ul>' : '';
+  const hz = d.hazirbulunusluk || {}; const hzSkor = Math.max(0, Math.min(100, Number(hz.skor) || 0));
+  const hazirHtml = '<div style="text-align:center;margin-bottom:10px"><div style="font-size:34px;font-weight:900;color:#0369a1">%' + hzSkor + '</div><div style="font-size:12px;font-weight:700;color:#64748b">OKUL OLGUNLUĞU / HAZIRBULUNUŞLUK</div></div>' + bar('Görsel Algı', R(hz,'gorsel_algi'), 10, '#0ea5e9') + bar('İşitsel Algı', R(hz,'isitsel_algi'), 10, '#0ea5e9') + bar('El-Göz Koordinasyonu', R(hz,'el_goz'), 10, '#0ea5e9') + bar('Kavram Bilgisi', R(hz,'kavram'), 10, '#0ea5e9') + bar('Öz Düzenleme', R(hz,'oz_duzenleme'), 10, '#0ea5e9');
+  const bl = d.bloom || {};
+  const bloomHtml = bar('Hatırlama', R(bl,'hatirlama'), 10, '#6366f1') + bar('Anlama', R(bl,'anlama'), 10, '#6366f1') + bar('Uygulama', R(bl,'uygulama'), 10, '#6366f1') + bar('Analiz', R(bl,'analiz'), 10, '#8b5cf6') + bar('Değerlendirme', R(bl,'degerlendirme'), 10, '#8b5cf6') + bar('Yaratma', R(bl,'yaratma'), 10, '#a855f7');
+  const gucluGelisim = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:10px"><div style="font-weight:800;color:#16a34a;font-size:13px;margin-bottom:4px">💪 Güçlü Yönler</div>' + listeUl(d.guclu_yonler, '#166534') + '</div><div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:10px"><div style="font-weight:800;color:#ea580c;font-size:13px;margin-bottom:4px">🌱 Gelişim Alanları</div>' + listeUl(d.gelisim_alanlari, '#9a3412') + '</div></div>';
+  const ap = d.aksiyon_plani || {};
+  const fazKutu = (baslik, arr, renk, bg) => '<div style="border-left:4px solid ' + renk + ';background:' + bg + ';border-radius:10px;padding:10px;margin:8px 0"><div style="font-weight:800;color:' + renk + ';font-size:13px;margin-bottom:2px">' + baslik + '</div>' + listeUl(arr, '#334155') + '</div>';
+  const aksiyonHtml = fazKutu('İlk 30 Gün — Temel Atma', ap.ay1, '#0d9488', '#f0fdfa') + fazKutu('30-60 Gün — Pekiştirme', ap.ay2, '#2563eb', '#eff6ff') + fazKutu('60-90 Gün — Genişletme', ap.ay3, '#7c3aed', '#faf5ff');
+  const matHtml = (Array.isArray(d.onerilen_materyaller) && d.onerilen_materyaller.length) ? d.onerilen_materyaller.map(m => '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:10px;margin:6px 0"><div style="font-weight:800;color:#1d4ed8;font-size:13px">📄 ' + (m.ad || '') + '</div><div style="font-size:12.5px;color:#475569;margin-top:2px">' + (m.neden || '') + '</div></div>').join('') : '';
+  const projeHtml = (Array.isArray(d.proje_fikirleri) && d.proje_fikirleri.length) ? d.proje_fikirleri.map((p, i) => '<div style="background:#fefce8;border:1px solid #fde68a;border-radius:10px;padding:10px;margin:6px 0"><div style="font-weight:800;color:#b45309;font-size:13px">💡 ' + (i + 1) + '. ' + (p.ad || '') + '</div><div style="font-size:12.5px;color:#713f12;margin-top:2px">' + (p.aciklama || '') + '</div></div>').join('') : '';
+  const sinifHtml = listeUl(d.sinif_ipuclari, '#334155');
+  const izleHtml = (Array.isArray(d.izlenecek_alanlar) && d.izlenecek_alanlar.length) ? (listeUl(d.izlenecek_alanlar, '#334155') + '<div style="font-size:11px;color:#b45309;font-style:italic;margin-top:6px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px">⚠️ Bunlar yalnızca gözleme dayalı, izlenmesi önerilen alanlardır; <b>tanı değildir</b>. Süreklilik gösteriyorsa okul rehberlik servisi ve ilgili uzmana (psikolog/hekim) başvurulması önerilir.</div>') : '';
+  const os = d.ogrenme_stili || {};
+  const osHtml = (os.baslik || (os.ipuclari && os.ipuclari.length)) ? ((os.baslik ? '<div style="font-weight:800;color:#0369a1;margin-bottom:6px">' + os.baslik + '</div>' : '') + listeUl(os.ipuclari, '#334155')) : '';
+  const evOkul = d.ev_okul || {};
+  const evOkulHtml = ((evOkul.ev && evOkul.ev.length) || (evOkul.okul && evOkul.okul.length)) ? '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:10px"><div style="font-weight:800;color:#ea580c;font-size:13px;margin-bottom:4px">🏠 Evde</div>' + listeUl(evOkul.ev, '#9a3412') + '</div><div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:10px"><div style="font-weight:800;color:#1d4ed8;font-size:13px;margin-bottom:4px">🏫 Okulda</div>' + listeUl(evOkul.okul, '#1e3a8a') + '</div></div>' : '';
+  const mektup = d.ogrenci_mektup ? ('<div style="font-style:italic;color:#0f766e;line-height:1.9;font-size:14px">' + d.ogrenci_mektup + '</div>') : '';
+  const smart = d.smart_hedefler;
+  const smartHtml = (Array.isArray(smart) && smart.length) ? smart.map((x, i) => '<div style="background:#fff;border:1px solid #e2e8f0;border-left:4px solid #2563eb;border-radius:10px;padding:10px;margin:6px 0"><div style="font-weight:800;color:#1d4ed8;font-size:13px">🎯 ' + (i + 1) + '. ' + ((x && x.hedef) || '') + '</div>' + ((x && x.olcut) ? '<div style="font-size:12px;color:#64748b;margin-top:2px">Ölçüt: ' + x.olcut + '</div>' : '') + '</div>').join('') : '';
+  const hp = d.haftalik_plan || {};
+  const _gun = (ad, key, renk) => hp[key] ? '<div style="display:flex;gap:8px;align-items:flex-start;padding:7px 0;border-bottom:1px solid #f1f5f9"><span style="min-width:82px;font-weight:800;color:' + renk + ';font-size:12px">' + ad + '</span><span style="font-size:13px;color:#334155">' + hp[key] + '</span></div>' : '';
+  const haftalikHtml = (hp.pazartesi || hp.sali || hp.carsamba || hp.persembe || hp.cuma) ? (_gun('Pazartesi', 'pazartesi', '#ef4444') + _gun('Salı', 'sali', '#f59e0b') + _gun('Çarşamba', 'carsamba', '#10b981') + _gun('Perşembe', 'persembe', '#3b82f6') + _gun('Cuma', 'cuma', '#8b5cf6')) : '';
+  const tr = d.trafik_isigi;
+  const trafikHtml = (Array.isArray(tr) && tr.length) ? tr.map(x => { var dr = ((x && x.durum) || '').toLocaleLowerCase('tr-TR'); var renk = (dr.indexOf('kirmiz') >= 0 || dr.indexOf('kırmız') >= 0) ? '#ef4444' : ((dr.indexOf('sari') >= 0 || dr.indexOf('sarı') >= 0) ? '#f59e0b' : '#22c55e'); return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #f1f5f9"><span style="width:14px;height:14px;border-radius:50%;background:' + renk + ';display:inline-block;flex:none"></span><span style="font-weight:700;color:#1e293b;font-size:13px;min-width:120px">' + ((x && x.alan) || '') + '</span><span style="font-size:12px;color:#64748b">' + ((x && x.not) || '') + '</span></div>'; }).join('') : '';
+  const kr = meta.karsilastirma; let karsHtml = '';
+  if (kr && Array.isArray(kr.deltalar) && kr.deltalar.length) {
+    karsHtml = '<div style="font-size:12px;color:#64748b;margin-bottom:8px">Önceki ölçüm: <b>' + (kr.oncekiTarih || '') + '</b> ile karşılaştırma</div>' + kr.deltalar.map(x => { var fark = Number(x.simdi) - Number(x.onceki); var ok = fark > 0 ? '▲' : (fark < 0 ? '▼' : '▬'); var rnk = fark > 0 ? '#16a34a' : (fark < 0 ? '#dc2626' : '#64748b'); return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f1f5f9;font-size:13px;font-weight:700;color:#334155"><span>' + x.ad + '</span><span>' + x.onceki + ' → ' + x.simdi + ' <span style="color:' + rnk + ';font-weight:900">' + ok + ' ' + (fark > 0 ? '+' : '') + fark + '</span></span></div>'; }).join('');
+  }
+  const bugun = new Date().toLocaleDateString('tr-TR');
+
+  return '' +
+  '<div style="font-family:system-ui,-apple-system,sans-serif;color:#1e293b">' +
+  // Kapak
+  '<div style="text-align:center;border:2px solid #bfdbfe;border-radius:20px;padding:20px;margin-bottom:6px">' +
+    (meta.logo ? '<img src="' + meta.logo + '" style="max-height:60px;max-width:170px;object-fit:contain;margin:0 auto 10px;display:block"/>' : '') +
+    '<div style="display:inline-block;background:#eff6ff;border:1px solid #bfdbfe;border-radius:99px;padding:6px 16px;font-weight:800;color:#1d4ed8;letter-spacing:1px">🎓 ' + (meta.kurum || 'EĞİTİM & GELİŞİM').toUpperCase() + '</div>' +
+    '<h1 style="font-size:30px;font-weight:900;color:#1e3a5f;margin:14px 0 6px">' + (meta.kademe || '').toLocaleUpperCase('tr-TR') + ' CHECK-UP RAPORU</h1>' +
+    '<div style="display:flex;justify-content:center;gap:24px;color:#2563eb;font-weight:800;font-size:14px"><span>ÖĞRENCİ: ' + (meta.ogrenci || '—') + '</span><span>TARİH: ' + bugun + '</span></div>' +
+    (d.rozet ? '<div style="display:inline-block;margin-top:14px;background:linear-gradient(90deg,#2563eb,#7c3aed);color:#fff;border-radius:99px;padding:8px 20px;font-weight:900">🏆 ' + d.rozet + '</div>' : '') +
+  '</div>' +
+  (karsHtml ? kart(bas('📈 Gelişim Karşılaştırması (önceki ölçümle)', '#0d9488') + karsHtml, '#f0fdfa', '#99f6e4') : '') +
+  // Radar
+  kart(bas('📊 Gelişim Profili (Radar)') + radar) +
+  // VAK
+  kart(bas("🧬 Öğrenme DNA'sı (VAK)", '#ea580c') + yzd('Görsel', R(d.vak,'gorsel'), '#f59e0b') + yzd('İşitsel', R(d.vak,'isitsel'), '#38bdf8') + yzd('Kinestetik', R(d.vak,'kinestetik'), '#22c55e'), '#fff7ed', '#fed7aa') +
+  // Beyin
+  kart(bas('🧠 Beyin Dominansı', '#7c3aed') + beyin, '#faf5ff', '#e9d5ff') +
+  (osHtml ? kart(bas('🎨 Öğrenme Stili & Kişisel Çalışma İpuçları', '#0369a1') + osHtml, '#f0f9ff', '#bae6fd') : '') +
+  // Uzman analizi
+  kart(bas('🧑‍🔬 Uzman Analizi') + '<div style="font-style:italic;color:#334155;line-height:1.8;font-size:14px">' + (d.uzman_analizi || '') + '</div>', '#eff6ff', '#bfdbfe') +
+  (d.hazirbulunusluk ? kart(bas('🏫 Okul Olgunluğu / Hazırbulunuşluk', '#0369a1') + hazirHtml, '#f0f9ff', '#bae6fd') : '') +
+  // Alanlar
+  kart(bas('🖥️ Bilişsel Alan', '#2563eb') + bar('Problem Çözme', R(d.bilissel,'problem'), 10, '#2563eb') + bar('Kavram Ayırt Etme', R(d.bilissel,'kavram'), 10, '#2563eb') + bar('Gözlem Yeteneği', R(d.bilissel,'gozlem'), 10, '#2563eb')) +
+  kart(bas('👥 Sosyal-Duygusal', '#16a34a') + bar('Akran İlişkileri', R(d.sosyal_duygusal,'akran'), 10, '#22c55e') + bar('Oyun Kurma', R(d.sosyal_duygusal,'oyun'), 10, '#22c55e') + bar('Empati', R(d.sosyal_duygusal,'empati'), 10, '#22c55e'), '#f0fdf4', '#bbf7d0') +
+  kart(bas('🤸 Motor Beceriler', '#ea580c') + bar('İnce Motor', R(d.motor,'ince'), 10, '#f97316') + bar('Kaba Motor', R(d.motor,'kaba'), 10, '#f97316') + bar('Koordinasyon', R(d.motor,'koordinasyon'), 10, '#f97316'), '#fff7ed', '#fed7aa') +
+  (d.bloom ? kart(bas('🎯 Bloom Taksonomisi (Düşünme Düzeyleri)', '#6d28d9') + bloomHtml, '#f5f3ff', '#ddd6fe') : '') +
+  // Stratejiler
+  kart('<div style="background:#312e81;color:#fff;border-radius:12px;padding:8px 14px;font-weight:800;display:inline-block;margin-bottom:8px">📖 ' + ((d.okuma_yazma && d.okuma_yazma.baslik) || 'Okuma-Yazma Stratejisi') + '</div><div style="line-height:1.8;font-size:14px;color:#312e81">' + ((d.okuma_yazma && d.okuma_yazma.metin) || '') + '</div>', '#eef2ff', '#c7d2fe') +
+  kart('<div style="background:#6b21a8;color:#fff;border-radius:12px;padding:8px 14px;font-weight:800;display:inline-block;margin-bottom:8px">🔢 ' + ((d.matematik && d.matematik.baslik) || 'Matematik Stratejisi') + '</div><div style="line-height:1.8;font-size:14px;color:#6b21a8">' + ((d.matematik && d.matematik.metin) || '') + '</div>', '#faf5ff', '#e9d5ff') +
+  // Veli notu
+  kart(bas('🧑‍🏫 Eğitim Koçu Reçetesi (Veliye Not)', '#4338ca') + '<div style="font-style:italic;color:#3730a3;line-height:1.8;font-size:14px">' + (d.veli_notu || '') + '</div>', '#eef2ff', '#c7d2fe') +
+  (evOkulHtml ? kart(bas('🤝 Ev–Okul Köprüsü (İş Birliği)') + evOkulHtml) : '') +
+  // Öğrenme kuramı
+  kart(bas('🧠 Öğrenme Kuramı Profili', '#0d9488') + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' + kuramKutu('Davranışçı', R(d.kuram,'davranisci'), '#ef4444') + kuramKutu('Bilişsel', R(d.kuram,'bilissel'), '#38bdf8') + kuramKutu('Yapılandırmacı', R(d.kuram,'yapilandirmaci'), '#22c55e') + kuramKutu('Hümanist', R(d.kuram,'humanist'), '#f59e0b') + '</div>' + (d.kuram_yorum ? '<div style="font-style:italic;color:#334155;margin-top:10px;font-size:13px;line-height:1.7">' + d.kuram_yorum + '</div>' : ''), '#f0fdfa', '#99f6e4') +
+  // Gardner
+  kart(bas('🧩 Çoklu Zeka Profili (Gardner)', '#7c3aed') + gardnerHtml, '#faf5ff', '#e9d5ff') +
+  // Motivasyon
+  kart(bas('🔥 Motivasyon Profili', '#ea580c') + '<div style="background:#f97316;color:#fff;border-radius:12px;padding:8px 14px;font-weight:800;display:inline-block;margin-bottom:6px">' + ((d.motivasyon && d.motivasyon.tip) || '') + '</div><div style="background:#fde68a;color:#92400e;border-radius:12px;padding:8px 14px;font-weight:700;display:inline-block;margin-bottom:8px">Kaynak: ' + ((d.motivasyon && d.motivasyon.kaynak) || '') + '</div><ul style="color:#92400e;font-size:13px;padding-left:18px">' + motivOner + '</ul>', '#fffbeb', '#fde68a') +
+  // Yetenek
+  kart(bas('⭐ Yetenek & İlgi Yönelimi', '#be185d') + (d.yetenek && d.yetenek.baslik ? '<div style="background:linear-gradient(90deg,#db2777,#e11d48);color:#fff;border-radius:12px;padding:8px 14px;font-weight:800;display:inline-block;margin-bottom:8px">🎯 ' + d.yetenek.baslik + '</div>' : '') + '<div style="line-height:1.8;font-size:14px;color:#831843">' + ((d.yetenek && d.yetenek.metin) || '') + '</div>' + (gelistirme ? '<div style="font-weight:800;color:#be185d;margin-top:10px">Bu potansiyeli nasıl geliştirebilirsiniz?</div><ul style="color:#831843;font-size:13px;padding-left:18px">' + gelistirme + '</ul>' : ''), '#fdf2f8', '#fbcfe8') +
+  ((d.guclu_yonler || d.gelisim_alanlari) ? kart(bas('🧭 Güçlü Yönler & Gelişim Alanları') + gucluGelisim) : '') +
+  // Gelişim önerileri
+  kart(bas('📈 Gelişim Önerileri (Neler Yapılabilir?)', '#0d9488') + go, '#f0fdfa', '#99f6e4') +
+  (d.aksiyon_plani ? kart(bas('🗓️ 90 Günlük Aksiyon Planı', '#0d9488') + aksiyonHtml, '#f0fdfa', '#99f6e4') : '') +
+  (matHtml ? kart(bas('🧰 Bu Öğrenciye Önerilen Matbaa Materyalleri', '#1d4ed8') + matHtml, '#eff6ff', '#bfdbfe') : '') +
+  (projeHtml ? kart(bas('💡 İlgi-Temelli Proje Fikirleri', '#b45309') + projeHtml, '#fffbeb', '#fde68a') : '') +
+  (sinifHtml ? kart(bas('🍎 Sınıf İçi Öğretmen İpuçları', '#0d9488') + sinifHtml, '#f0fdfa', '#99f6e4') : '') +
+  (izleHtml ? kart(bas('👀 Dikkat Edilmesi / İzlenmesi Önerilen Alanlar', '#b45309') + izleHtml, '#fffbeb', '#fde68a') : '') +
+  (trafikHtml ? kart(bas('🚦 Alan Bazlı Durum Özeti (Trafik Işığı)', '#0f766e') + trafikHtml, '#f0fdfa', '#99f6e4') : '') +
+  (smartHtml ? kart(bas('🎯 SMART Hedefler', '#1d4ed8') + smartHtml, '#eff6ff', '#bfdbfe') : '') +
+  (haftalikHtml ? kart(bas('🗓️ Haftalık Uygulama Planı (5 Gün)', '#7c3aed') + haftalikHtml, '#faf5ff', '#e9d5ff') : '') +
+  // Yol haritası
+  kart(bas('🎓 Kademe Yol Haritası — ' + (meta.kademe || '') + '\'ten Üniversiteye', '#b45309') + yolHtml, '#fffbeb', '#fde68a') +
+  // Kavram haritası
+  kart(bas("🔗 Öğrenme DNA'sı Kavram Haritası", '#4338ca') + kavramSvg) +
+  // Bilimsel dayanak
+  (mektup ? kart(bas('💌 Öğrenciye Küçük Bir Not', '#0f766e') + mektup, '#f0fdfa', '#99f6e4') : '') +
+  kart(bas('📚 Bilimsel Dayanak') + '<div style="font-size:13px;color:#334155;line-height:1.8">Bu değerlendirme; <b>Öğrenme Kuramları</b> (Davranışçı, Bilişsel, Yapılandırmacı, Hümanist), <b>Çoklu Zeka Kuramı</b> (Gardner), <b>VAK Öğrenme Stilleri</b>, <b>Bloom Taksonomisi</b>, <b>Okul Olgunluğu / Hazırbulunuşluk</b> göstergeleri ve <b>Gelişim Alanları</b> (bilişsel, dil, motor, sosyal-duygusal, öz bakım) çerçevesinde hazırlanmıştır.</div><div style="font-size:11px;color:#94a3b8;font-style:italic;margin-top:10px">Not: Bu rapor yapay zeka destekli bir ön değerlendirme aracıdır; kesin tanı ve yönlendirme için alan uzmanının (rehber öğretmen, psikolog) değerlendirmesi esastır.</div><div style="text-align:center;margin-top:14px;padding-top:12px;border-top:1px solid #e2e8f0;font-weight:800;color:#1e3a5f">🎓 ' + (meta.kurum || 'Barış İlkan') + ' — Eğitim & Gelişim Dokümanı</div><div style="display:flex;justify-content:space-between;margin-top:16px;font-size:12px;color:#64748b"><span>Hazırlayan / Onay:</span><span>__________________________</span></div>') +
+  '</div>';
+};
+const checkupUret = async () => {
+  if (!checkupOgrenci.trim()) { showToast('Önce öğrenci adını yaz.'); return; }
+  if (!apiKey) { showToast('Önce API anahtarı gir (Ayarlar).'); return; }
+  let aktifModel = modelName || 'gemini-2.5-flash';
+  try { if (window.ZIRVE && typeof window.ZIRVE.enIyiModel === 'function' && window.ZIRVE.modeller && window.ZIRVE.modeller.length) { const iyi = window.ZIRVE.enIyiModel(window.ZIRVE.modeller); if (iyi) aktifModel = iyi; } else if (window.ZIRVE && window.ZIRVE.model) aktifModel = window.ZIRVE.model; } catch(e){}
+  if (!aktifModel || aktifModel.includes('latest') || aktifModel.includes('lite')) aktifModel = 'gemini-2.5-flash';
+  try { localStorage.setItem('zirve_ped_hazirlayan', checkupKurum || ''); } catch(e){}
+  const gozlemler = Object.keys(CHECKUP_ALANLAR).map(gr => { const sec = CHECKUP_ALANLAR[gr].filter(c => checkupSecili[c]); return sec.length ? (gr + ': ' + sec.join(', ')) : ''; }).filter(Boolean).join('\n');
+  const stages = checkupYolHaritasi(checkupKademe).map(s => s.ad).join(', ');
+  setCheckupYukleniyor(true);
+  showToast('🧬 Öğrenme DNA analizi ve haritası çıkarılıyor…');
+  try {
+    const prompt =
+'Sen uzman bir eğitim psikoloğu ve gelişim değerlendirme uzmanısın. Aşağıdaki gözlemlere dayanarak ' + checkupKademe + ' düzeyindeki "' + checkupOgrenci.trim() + '" adlı öğrenci için KAPSAMLI bir Öğrenme DNA / Gelişim Check-Up analizi üret. ' +
+'Gözlemlerle TUTARLI, gerçekçi ve yapıcı ol; damgalama; güçlü yönleri öne çıkar. Sayılar gözlemleri yansıtsın. ' +
+'Uzman analizi ve veli notunda öğrencinin adını (' + checkupOgrenci.trim() + ') kullan, sıcak ve profesyonel yaz. ' +
+'SADECE şu JSON yapısını döndür (başka metin yok):\n' +
+'{"rozet":"kısa, motive edici bir öğrenci profili etiketi",' +
+'"radar":{"dil":0-10,"ozbakim":0-10,"sosyal":0-10,"motor":0-10,"bilissel":0-10},' +
+'"vak":{"gorsel":0-100,"isitsel":0-100,"kinestetik":0-100},' +
+'"beyin":{"analitik":0-100,"yaratici":0-100},' +
+'"uzman_analizi":"3-4 cümlelik profesyonel analiz",' +
+'"bilissel":{"problem":0-10,"kavram":0-10,"gozlem":0-10},' +
+'"sosyal_duygusal":{"akran":0-10,"oyun":0-10,"empati":0-10},' +
+'"motor":{"ince":0-10,"kaba":0-10,"koordinasyon":0-10},' +
+'"okuma_yazma":{"baslik":"strateji adı","metin":"2-3 cümle"},' +
+'"matematik":{"baslik":"strateji adı","metin":"2-3 cümle"},' +
+'"veli_notu":"veliye hitaben 4-5 cümlelik sıcak, somut öneriler içeren koçluk notu",' +
+'"hazirbulunusluk":{"skor":0-100,"gorsel_algi":0-10,"isitsel_algi":0-10,"el_goz":0-10,"kavram":0-10,"oz_duzenleme":0-10},' +
+'"bloom":{"hatirlama":0-10,"anlama":0-10,"uygulama":0-10,"analiz":0-10,"degerlendirme":0-10,"yaratma":0-10},' +
+'"guclu_yonler":["3-5 kısa madde"],' +
+'"gelisim_alanlari":["2-4 kısa madde"],' +
+'"aksiyon_plani":{"ay1":["2-3 somut adım"],"ay2":["2-3 somut adım"],"ay3":["2-3 somut adım"]},' +
+'"onerilen_materyaller":[{"ad":"çalışma türü (ör. dikkat çalışması, hece fasikülü)","neden":"bu öğrenciye neden uygun, kısa"}],' +
+'"proje_fikirleri":[{"ad":"ilgi alanından proje adı","aciklama":"1 cümle"}],' +
+'"sinif_ipuclari":["öğretmen için 3-4 pratik, uygulanabilir ipucu"],' +
+'"izlenecek_alanlar":["yalnızca gözleme dayalı, izlenmesi önerilen 0-3 alan; TANI KOYMA, hastalık/etiket adı KULLANMA"],' +
+'"ogrenme_stili":{"baslik":"baskın VAK stiline göre kısa başlık","ipuclari":["stile uygun 3-4 çalışma ipucu"]},' +
+'"ev_okul":{"ev":["evde yapılabilecek 2-3 somut madde"],"okul":["okulda/sınıfta yapılabilecek 2-3 somut madde"]},' +
+'"ogrenci_mektup":"öğrenciye hitaben, yaşına uygun, cesaretlendirici ve içten 2-3 cümlelik kısa bir not",' +
+'"trafik_isigi":[{"alan":"Dikkat/Dil/Sosyal/Motor/Akademik gibi","durum":"yesil|sari|kirmizi","not":"çok kısa gerekçe"}],' +
+'"smart_hedefler":[{"hedef":"Spesifik-Ölçülebilir-Ulaşılabilir-Gerçekçi-Zamanlı hedef cümlesi","olcut":"nasıl ölçülür"}],' +
+'"haftalik_plan":{"pazartesi":"kısa etkinlik","sali":"kısa etkinlik","carsamba":"kısa etkinlik","persembe":"kısa etkinlik","cuma":"kısa etkinlik"},' +
+'"kuram":{"davranisci":0-100,"bilissel":0-100,"yapilandirmaci":0-100,"humanist":0-100},' +
+'"kuram_yorum":"1-2 cümle",' +
+'"gardner":{"sozel":0-10,"mantik":0-10,"gorsel":0-10,"bedensel":0-10,"muzik":0-10,"sosyal":0-10,"icsel":0-10,"dogaci":0-10},' +
+'"motivasyon":{"tip":"ör. İçsel ağırlıklı, dışsal takviyelerle","kaynak":"kısa","oneriler":["madde","madde","madde"]},' +
+'"yetenek":{"baslik":"ör. Doğacı-Keşif","metin":"2-3 cümle","gelistirme":["madde","madde","madde"]},' +
+'"gelisim_onerileri":[{"alan":"Dikkat","metin":"somut öneri"},{"alan":"Öz Bakım","metin":"somut öneri"}],' +
+'"kavram_haritasi":["5-6 kısa etiket, öğrencinin öne çıkan özellikleri"],' +
+'"yol_haritasi":[{"ad":"kademe adı","ipucu":"o kademeye özel kısa ipucu"}]}' +
+'\n\nÖNEMLİ: "yol_haritasi" SADECE şu kademeleri ve bu SIRAYLA içersin: ' + stages + '. (Öğrenci ' + checkupKademe + ' olduğu için yol haritası kendi kademesinden başlamalı, anaokulundan DEĞİL.)' +
+'\n\nGÖZLEMLER:\n' + (gozlemler || '(işaretli gözlem yok, kademeye uygun dengeli bir profil üret)') +
+(checkupVeliGozlem.trim() ? ('\n\nVELİ GÖZLEMİ: ' + checkupVeliGozlem.trim()) : '') +
+(checkupOgretmenNot.trim() ? ('\n\nÖĞRETMEN NOTU: ' + checkupOgretmenNot.trim()) : '');
+    const resp = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + aktifModel + ':generateContent?key=' + apiKey, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0.6, maxOutputTokens: 8000, thinkingConfig: { thinkingBudget: 0 } } })
+    });
+    if (!resp.ok) { showToast(resp.status === 429 ? 'Kota doldu, biraz sonra dene.' : resp.status === 404 ? 'Model bulunamadı.' : 'Rapor alınamadı (' + resp.status + ').'); setCheckupYukleniyor(false); return; }
+    const data = await resp.json();
+    let metin = (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0] && data.candidates[0].content.parts[0].text) || '';
+    let parsed = null;
+    try { parsed = JSON.parse(metin.replace(/^```(?:json)?/i, '').replace(/```$/i, '').trim()); } catch(e){}
+    if (!parsed) { showToast('Analiz çözümlenemedi, tekrar dene.'); setCheckupYukleniyor(false); return; }
+    const meta = { ogrenci: checkupOgrenci.trim(), kademe: checkupKademe, kurum: checkupKurum.trim() };
+    meta.logo = checkupLogo || '';
+    const ad0 = checkupOgrenci.trim().toLocaleLowerCase('tr-TR');
+    const onceki = checkupKayitlar.find(k => (k.ogrenci || '').toLocaleLowerCase('tr-TR') === ad0 && k.data);
+    if (onceki && onceki.data) {
+      const RN = (o, k) => (o && o[k] != null ? Number(o[k]) : 0);
+      const dl = []; const r1 = onceki.data.radar || {}, r2 = parsed.radar || {};
+      [['Dil','dil'],['Özbakım','ozbakim'],['Sosyal','sosyal'],['Motor','motor'],['Bilişsel','bilissel']].forEach(x => dl.push({ ad: x[0], onceki: RN(r1, x[1]), simdi: RN(r2, x[1]) }));
+      dl.push({ ad: 'Hazırbulunuşluk %', onceki: RN(onceki.data.hazirbulunusluk || {}, 'skor'), simdi: RN(parsed.hazirbulunusluk || {}, 'skor') });
+      meta.karsilastirma = { oncekiTarih: onceki.tarih || '', deltalar: dl };
+    }
+    const html = checkupRaporHTML(parsed, meta);
+    const res = { dokuman_basligi: checkupKademe + ' Check-Up Raporu — ' + checkupOgrenci.trim(), alt_baslik: (checkupKurum.trim() ? checkupKurum.trim() + '  ·  ' : '') + new Date().toLocaleDateString('tr-TR'), icerik_bloklari: [{ blok_tipi: 'zengin_metin', baslik: '', html_icerik: html }] };
+    setMaterialResult(res);
+    try { gecmiseEkle(res); } catch(e){}
+    try {
+      const kayit = { id: Date.now() + '_' + Math.random().toString(36).slice(2, 6), ogrenci: checkupOgrenci.trim(), kademe: checkupKademe, kurum: checkupKurum.trim(), tarih: new Date().toLocaleDateString('tr-TR'), data: parsed, meta: { ogrenci: checkupOgrenci.trim(), kademe: checkupKademe, kurum: checkupKurum.trim(), logo: checkupLogo || '' } };
+      const yeni = [kayit, ...checkupKayitlar.filter(k => (k.ogrenci || '').toLocaleLowerCase('tr-TR') !== ad0)].slice(0, 30);
+      setCheckupKayitlar(yeni);
+      try { localStorage.setItem('zirve_checkup_kayitlar', JSON.stringify(yeni)); } catch(e2){}
+      // gelişim geçmişi (grafik için kompakt anlık görüntü)
+      try {
+        const ort = (o) => { const v = Object.keys(o || {}).map(k => Number(o[k]) || 0); return v.length ? Math.round(v.reduce((a, b) => a + b, 0) / v.length) : 0; };
+        const snap = { tarih: kayit.tarih, hazir: Math.round(Number((parsed.hazirbulunusluk || {}).skor) || 0), radar: ort(parsed.radar) * 10, bilissel: ort(parsed.bilissel) * 10 };
+        const g = { ...checkupGecmis }; const arr = Array.isArray(g[ad0]) ? g[ad0].slice() : []; arr.push(snap); g[ad0] = arr.slice(-12);
+        setCheckupGecmis(g); try { localStorage.setItem('zirve_checkup_gecmis', JSON.stringify(g)); } catch(e3){}
+      } catch(eg){}
+    } catch(e){}
+    try {
+      const guc = (parsed.guclu_yonler || []).slice(0, 3).join(', ');
+      const ilgi = (parsed.yetenek && parsed.yetenek.baslik) ? parsed.yetenek.baslik : '';
+      const gel = (parsed.gelisim_alanlari || []).slice(0, 2).join(', ');
+      setCheckupProfilOzet(checkupKademe + ' düzeyinde ' + checkupOgrenci.trim() + ' adlı öğrenci. Güçlü yönler: ' + (guc || '-') + '. İlgi/yönelim: ' + (ilgi || '-') + '. Gelişim alanları: ' + (gel || '-') + '.');
+    } catch(e){}
+    showToast('🧬 Check-Up raporu hazır — PDF / Paylaş / QR edebilirsin.');
+    setTimeout(() => { try { document.getElementById('printable-material')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch(e){} }, 150);
+  } catch (e) { showToast('Rapor alınamadı (bağlantı).'); }
+  setCheckupYukleniyor(false);
+};
+const checkupKayitAc = (rec) => {
+  if (!rec || !rec.data) return;
+  const meta = rec.meta || { ogrenci: rec.ogrenci, kademe: rec.kademe, kurum: rec.kurum, logo: '' };
+  const html = checkupRaporHTML(rec.data, meta);
+  const res = { dokuman_basligi: rec.kademe + ' Check-Up Raporu — ' + rec.ogrenci, alt_baslik: (rec.kurum ? rec.kurum + '  ·  ' : '') + (rec.tarih || ''), icerik_bloklari: [{ blok_tipi: 'zengin_metin', baslik: '', html_icerik: html }] };
+  setMaterialResult(res);
+  showToast('📂 Kayıtlı Check-Up açıldı.');
+  setTimeout(() => { try { document.getElementById('printable-material')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch(e){} }, 150);
+};
+const checkupKayitSil = (id) => {
+  const yeni = checkupKayitlar.filter(k => k.id !== id);
+  setCheckupKayitlar(yeni);
+  try { localStorage.setItem('zirve_checkup_kayitlar', JSON.stringify(yeni)); } catch(e){}
+};
+const checkupProfilUret = (tur) => {
+  if (isGeneratingMaterial) { showToast('⏳ Şu an üretiliyor…'); return; }
+  if (!checkupProfilOzet) { showToast('Önce bir Check-Up üret.'); return; }
+  let istem;
+  if (tur === 'test') istem = 'Şu öğrenci profiline UYGUN, seviyesine göre 10 soruluk bir çalışma/test hazırla (cevap anahtarlı). Güçlü yönlerini kullan, gelişim alanlarını nazikçe destekle. PROFİL: ' + checkupProfilOzet;
+  else if (tur === 'destek') istem = 'Şu öğrencinin GELİŞİM ALANLARINA yönelik, basitten zora giden, cesaretlendirici bir destek çalışması hazırla. PROFİL: ' + checkupProfilOzet;
+  else if (tur === 'ilgi') istem = 'Şu öğrencinin İLGİ ALANINDAN yola çıkan, eğlenceli ve öğretici bir etkinlik hazırla. PROFİL: ' + checkupProfilOzet;
+  else if (tur === 'guclu') istem = 'Şu öğrencinin GÜÇLÜ YÖNLERİNİ daha da İLERLETECEK, onu bir adım öteye taşıyacak, başarı hissi veren zenginleştirilmiş bir çalışma hazırla (güçlü yönü merkeze al, meydan okuyan ama ulaşılabilir). PROFİL: ' + checkupProfilOzet;
+  else if (tur === 'zenginlestir') istem = 'Şu öğrenci için ÜST DÜZEY DÜŞÜNME (Bloom: analiz-değerlendirme-yaratma) gerektiren, yaratıcılığı ve derin öğrenmeyi teşvik eden zenginleştirme (enrichment) etkinliği hazırla. PROFİL: ' + checkupProfilOzet;
+  else istem = 'Şu öğrenci profiline uygun, RENKLİ ve görsel bir konu anlatımı hazırla (günlük hayattan örnek + metafor + sonda pekiştirme sorusu). PROFİL: ' + checkupProfilOzet;
+  try { setMaterialError(''); } catch(e){}
+  if (typeof setActiveTab === 'function') { try { setActiveTab('tools'); } catch(e){} }
+  showToast('🎯 Profile özel materyal üretiliyor…');
+  generateMaterial(istem);
+};
+const _ort = (o) => { const v = Object.keys(o || {}).map(k => Number(o[k]) || 0); return v.length ? (v.reduce((a, b) => a + b, 0) / v.length) : 0; };
+const _radarSvg = (vals, renk) => {
+  const labels = ['Dil','Özbakım','Sosyal','Motor','Bilişsel']; const cx = 160, cy = 150, RR = 100; let pts = [], grid = [], lbl = [], rings = '';
+  labels.forEach((L, i) => { const a = (-90 + i * 72) * Math.PI / 180; const val = Math.max(0, Math.min(10, Number(vals[i]) || 0)); const r = RR * val / 10; pts.push((cx + r * Math.cos(a)).toFixed(1) + ',' + (cy + r * Math.sin(a)).toFixed(1)); grid.push('<line x1="' + cx + '" y1="' + cy + '" x2="' + (cx + RR * Math.cos(a)).toFixed(1) + '" y2="' + (cy + RR * Math.sin(a)).toFixed(1) + '" stroke="#e2e8f0"/>'); lbl.push('<text x="' + (cx + (RR + 20) * Math.cos(a)).toFixed(1) + '" y="' + (cy + (RR + 20) * Math.sin(a)).toFixed(1) + '" font-size="11" font-weight="700" fill="#1e3a5f" text-anchor="middle" dominant-baseline="middle">' + L + '</text>'); });
+  [0.33, 0.66, 1].forEach(f => { rings += '<polygon points="' + labels.map((L, i) => { const a = (-90 + i * 72) * Math.PI / 180; return (cx + RR * f * Math.cos(a)).toFixed(1) + ',' + (cy + RR * f * Math.sin(a)).toFixed(1); }).join(' ') + '" fill="none" stroke="#e2e8f0"/>'; });
+  return '<svg viewBox="0 0 320 300" style="width:100%;max-width:340px;display:block;margin:0 auto"><g>' + rings + grid.join('') + '<polygon points="' + pts.join(' ') + '" fill="' + (renk || 'rgba(37,99,235,.25)') + '" stroke="#2563eb" stroke-width="2"/>' + lbl.join('') + '</g></svg>';
+};
+const sinifPaneliAc = () => {
+  if (!checkupKayitlar.length) { showToast('Kayıtlı Check-Up yok.'); return; }
+  const recs = checkupKayitlar; const avg = [0,0,0,0,0]; let hazTop = 0;
+  recs.forEach(r => { const rd = (r.data && r.data.radar) || {}; avg[0]+=Number(rd.dil)||0; avg[1]+=Number(rd.ozbakim)||0; avg[2]+=Number(rd.sosyal)||0; avg[3]+=Number(rd.motor)||0; avg[4]+=Number(rd.bilissel)||0; hazTop+=Number(((r.data&&r.data.hazirbulunusluk)||{}).skor)||0; });
+  const n = recs.length; const avgV = avg.map(x => Math.round(x / n * 10) / 10); const hazAvg = Math.round(hazTop / n);
+  // 🏆 En çok gelişen öğrenci (checkupGecmis: ilk vs son ölçüm)
+  let rozet = '';
+  try {
+    let enIyi = null;
+    recs.forEach(r => { const key = (r.ogrenci || '').toLocaleLowerCase('tr-TR'); const g = checkupGecmis[key]; if (g && g.length >= 2) { const ilk = g[0], son = g[g.length - 1]; const d = (Number(son.hazir) - Number(ilk.hazir)) + (Number(son.radar) - Number(ilk.radar)) + (Number(son.bilissel) - Number(ilk.bilissel)); if (!enIyi || d > enIyi.d) enIyi = { ad: r.ogrenci, d: Math.round(d), n: g.length }; } });
+    if (enIyi && enIyi.d > 0) rozet = '<div style="background:linear-gradient(135deg,#fef9c3,#fde68a);border:2px solid #f59e0b;border-radius:16px;padding:14px;margin:12px 0;text-align:center"><div style="font-size:22px">🏆</div><div style="font-weight:900;color:#92400e;font-size:15px">En Çok Gelişen Öğrenci</div><div style="font-weight:800;color:#78350f;font-size:18px;margin-top:2px">' + enIyi.ad + '</div><div style="font-size:12px;color:#a16207;margin-top:2px">' + enIyi.n + ' ölçümde toplam +' + enIyi.d + ' puanlık ilerleme 🎉</div></div>';
+  } catch(e){}
+  const rows = recs.map(r => { const rd = (r.data && r.data.radar) || {}; const ra = Math.round(_ort(rd) * 10); const hz = Math.round(Number(((r.data&&r.data.hazirbulunusluk)||{}).skor) || 0); return '<tr><td style="padding:8px;border-bottom:1px solid #f1f5f9;font-weight:700;color:#1e293b">' + (r.ogrenci||'') + '</td><td style="padding:8px;border-bottom:1px solid #f1f5f9;color:#475569">' + (r.kademe||'') + '</td><td style="padding:8px;border-bottom:1px solid #f1f5f9;text-align:center;color:#0369a1;font-weight:800">%' + hz + '</td><td style="padding:8px;border-bottom:1px solid #f1f5f9;text-align:center;color:#2563eb;font-weight:800">' + ra + '/100</td><td style="padding:8px;border-bottom:1px solid #f1f5f9;color:#94a3b8;font-size:12px">' + (r.tarih||'') + '</td></tr>'; }).join('');
+  const html = '<div style="font-family:system-ui,-apple-system,sans-serif;color:#1e293b">'
+    + '<div style="text-align:center;border:2px solid #bfdbfe;border-radius:20px;padding:18px;margin-bottom:12px"><div style="display:inline-block;background:#eff6ff;border:1px solid #bfdbfe;border-radius:99px;padding:6px 16px;font-weight:800;color:#1d4ed8;letter-spacing:1px">🏫 SINIF PANELİ</div><h1 style="font-size:26px;font-weight:900;color:#1e3a5f;margin:12px 0 4px">Sınıf Gelişim Özeti</h1><div style="color:#2563eb;font-weight:800">' + n + ' öğrenci · Ort. Hazırbulunuşluk %' + hazAvg + ' · ' + new Date().toLocaleDateString('tr-TR') + '</div></div>'
+    + '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:16px;margin:12px 0"><div style="font-weight:900;color:#1e3a5f;margin-bottom:8px">📊 Sınıf Ortalaması (Radar)</div>' + _radarSvg(avgV, 'rgba(16,185,129,.25)') + '</div>'
+    + rozet
+    + '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:8px;margin:12px 0;overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="background:#f8fafc"><th style="padding:8px;text-align:left;color:#64748b">Öğrenci</th><th style="padding:8px;text-align:left;color:#64748b">Kademe</th><th style="padding:8px;color:#64748b">Hazır.</th><th style="padding:8px;color:#64748b">Radar</th><th style="padding:8px;text-align:left;color:#64748b">Tarih</th></tr></thead><tbody>' + rows + '</tbody></table></div>'
+    + '<div style="text-align:center;font-size:11px;color:#94a3b8;font-style:italic;margin-top:8px">Ön değerlendirme özetidir; bireysel yönlendirme için uzman görüşü esastır.</div></div>';
+  setMaterialResult({ dokuman_basligi: 'Sınıf Paneli — Gelişim Özeti', alt_baslik: n + ' öğrenci · ' + new Date().toLocaleDateString('tr-TR'), icerik_bloklari: [{ blok_tipi:'zengin_metin', baslik:'', html_icerik: html }] });
+  showToast('🏫 Sınıf paneli hazır — PDF/Paylaş edebilirsin.');
+  setTimeout(() => { try { document.getElementById('printable-material')?.scrollIntoView({ behavior:'smooth', block:'start' }); } catch(e){} }, 150);
+};
+const topluPdfAc = () => {
+  if (!checkupKayitlar.length) { showToast('Kayıtlı Check-Up yok.'); return; }
+  const parts = checkupKayitlar.map((r, i) => { const meta = r.meta || { ogrenci:r.ogrenci, kademe:r.kademe, kurum:r.kurum, logo:'' }; return '<div style="' + (i > 0 ? 'page-break-before:always;' : '') + '">' + checkupRaporHTML(r.data, meta) + '</div>'; }).join('');
+  setMaterialResult({ dokuman_basligi: 'Toplu Check-Up (' + checkupKayitlar.length + ' rapor)', alt_baslik: new Date().toLocaleDateString('tr-TR'), icerik_bloklari: [{ blok_tipi:'zengin_metin', baslik:'', html_icerik: parts }] });
+  showToast('🖨️ ' + checkupKayitlar.length + ' rapor tek belgede — PDF İndir ile kaydet.');
+  setTimeout(() => { try { document.getElementById('printable-material')?.scrollIntoView({ behavior:'smooth', block:'start' }); } catch(e){} }, 150);
+};
+const gelisimGrafigiAc = () => {
+  const ad0 = checkupOgrenci.trim().toLocaleLowerCase('tr-TR');
+  const arr = checkupGecmis[ad0] || [];
+  if (arr.length < 2) { showToast('Grafik için en az 2 ölçüm gerekli (aynı isimle tekrar Check-Up üret).'); return; }
+  const W = 560, H = 300, pad = 44; const n = arr.length;
+  const x = (i) => pad + (W - 2 * pad) * (n === 1 ? 0.5 : i / (n - 1));
+  const y = (v) => (H - pad) - (H - 2 * pad) * (Math.max(0, Math.min(100, v)) / 100);
+  const seri = (key, renk) => { let dd = ''; arr.forEach((p, i) => { dd += (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(Number(p[key]) || 0).toFixed(1) + ' '; }); const dots = arr.map((p, i) => '<circle cx="' + x(i).toFixed(1) + '" cy="' + y(Number(p[key]) || 0).toFixed(1) + '" r="3.5" fill="' + renk + '"/>').join(''); return '<path d="' + dd + '" fill="none" stroke="' + renk + '" stroke-width="2.5"/>' + dots; };
+  let gy = ''; [0,25,50,75,100].forEach(v => { gy += '<line x1="' + pad + '" y1="' + y(v) + '" x2="' + (W - pad) + '" y2="' + y(v) + '" stroke="#eef2f7"/><text x="' + (pad - 8) + '" y="' + (y(v) + 3) + '" font-size="9" fill="#94a3b8" text-anchor="end">' + v + '</text>'; });
+  let gx = ''; arr.forEach((p, i) => { gx += '<text x="' + x(i).toFixed(1) + '" y="' + (H - pad + 16) + '" font-size="9" fill="#64748b" text-anchor="middle">' + (p.tarih || ('#' + (i + 1))) + '</text>'; });
+  const svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;max-width:600px;display:block;margin:0 auto">' + gy + gx + seri('hazir', '#0ea5e9') + seri('radar', '#22c55e') + seri('bilissel', '#a855f7') + '</svg>';
+  const leg = '<div style="display:flex;gap:14px;justify-content:center;margin-top:8px;font-size:12px;font-weight:700"><span style="color:#0ea5e9">● Hazırbulunuşluk</span><span style="color:#22c55e">● Radar Ort.</span><span style="color:#a855f7">● Bilişsel</span></div>';
+  const html = '<div style="font-family:system-ui,-apple-system,sans-serif;color:#1e293b"><div style="text-align:center;border:2px solid #bfdbfe;border-radius:20px;padding:18px;margin-bottom:12px"><div style="display:inline-block;background:#eff6ff;border:1px solid #bfdbfe;border-radius:99px;padding:6px 16px;font-weight:800;color:#1d4ed8;letter-spacing:1px">📈 GELİŞİM GRAFİĞİ</div><h1 style="font-size:24px;font-weight:900;color:#1e3a5f;margin:12px 0 4px">' + checkupOgrenci.trim() + ' — Zaman İçinde Gelişim</h1><div style="color:#2563eb;font-weight:800">' + n + ' ölçüm</div></div><div style="background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:16px">' + svg + leg + '</div><div style="text-align:center;font-size:11px;color:#94a3b8;font-style:italic;margin-top:8px">Değerler 0-100 ölçeğine getirilmiştir (radar ve bilişsel ×10).</div></div>';
+  setMaterialResult({ dokuman_basligi: 'Gelişim Grafiği — ' + checkupOgrenci.trim(), alt_baslik: n + ' ölçüm · ' + new Date().toLocaleDateString('tr-TR'), icerik_bloklari: [{ blok_tipi:'zengin_metin', baslik:'', html_icerik: html }] });
+  showToast('📈 Gelişim grafiği hazır.');
+  setTimeout(() => { try { document.getElementById('printable-material')?.scrollIntoView({ behavior:'smooth', block:'start' }); } catch(e){} }, 150);
+};
+const veliMesajiUret = async () => {
+  if (!checkupProfilOzet) { showToast('Önce bir Check-Up üret.'); return; }
+  if (!apiKey) { showToast('Önce API anahtarı gir (Ayarlar).'); return; }
+  let aktifModel = modelName || 'gemini-2.5-flash';
+  try { if (window.ZIRVE && typeof window.ZIRVE.enIyiModel === 'function' && window.ZIRVE.modeller && window.ZIRVE.modeller.length) { const iyi = window.ZIRVE.enIyiModel(window.ZIRVE.modeller); if (iyi) aktifModel = iyi; } else if (window.ZIRVE && window.ZIRVE.model) aktifModel = window.ZIRVE.model; } catch(e){}
+  if (!aktifModel || aktifModel.includes('latest') || aktifModel.includes('lite')) aktifModel = 'gemini-2.5-flash';
+  setVeliMesajYukleniyor(true);
+  try {
+    const prompt = 'Bir öğretmen olarak veliye gönderilecek KISA (en fazla 5-6 cümle), SICAK, olumlu bir WhatsApp mesajı yaz. Çocuğun güçlü yönüyle başla, bir gelişim önerisi ver, umutlu bitir. Sade emoji kullanabilirsin. Markdown/başlık KULLANMA, düz metin olsun. PROFİL: ' + checkupProfilOzet;
+    const resp = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + aktifModel + ':generateContent?key=' + apiKey, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ contents:[{ parts:[{ text: prompt }] }], generationConfig:{ temperature:0.7, maxOutputTokens:600, thinkingConfig:{ thinkingBudget:0 } } }) });
+    if (!resp.ok) { showToast(resp.status === 429 ? 'Kota doldu, biraz sonra dene.' : 'Mesaj alınamadı (' + resp.status + ').'); setVeliMesajYukleniyor(false); return; }
+    const data = await resp.json();
+    let metin = (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0] && data.candidates[0].content.parts[0].text) || '';
+    metin = metin.replace(/```[a-z]*/gi, '').replace(/```/g, '').trim();
+    if (!metin) { showToast('Mesaj boş geldi, tekrar dene.'); setVeliMesajYukleniyor(false); return; }
+    setVeliMesaji(metin); showToast('💬 Veli mesajı hazır.');
+  } catch(e) { showToast('Mesaj alınamadı (bağlantı).'); }
+  setVeliMesajYukleniyor(false);
+};
+
 const yaklasimOner = async () => {
     if (!apiKey) { showToast('Önce API anahtarı girin (Ayarlar).'); return; }
     const t0 = matbaaMetneCevir(materialResult);
@@ -2656,8 +3121,9 @@ const matbaaPngIndir = async () => {
 // 📲 Çalışma metnini WhatsApp'tan paylaş
 const matbaaWhatsapp = () => {
     const t = matbaaMetneCevir(materialResult); if (!t) { showToast('Paylaşılacak içerik yok.'); return; }
-    const msg = ((materialResult && materialResult.dokuman_basligi) || 'Çalışma') + '\n\n' + t;
-    try { window.open('https://wa.me/?text=' + encodeURIComponent(msg.slice(0, 1500)), '_blank'); } catch(e){}
+    const baslik = ((materialResult && materialResult.dokuman_basligi) || 'Çalışma');
+    const msg = ZIRVE_whatsappBicim('*' + baslik + '*\n\n' + t);
+    try { window.open('https://wa.me/?text=' + encodeURIComponent(msg.slice(0, 1800)), '_blank'); } catch(e){}
 };
 // 🎮 Çalışmayı TEK DOSYALIK interaktif HTML oyununa çevir (otomatik puanlama + geri bildirim), indir & aç.
 const interaktifHtmlUret = async () => {
@@ -3543,7 +4009,12 @@ return (
 )}
 
 {/* ✨ BAĞLAM-FARKINDA AI ASİSTAN */}
-<button onClick={()=>setAsistanAcik(true)} title="AI Asistan" className="fixed bottom-24 right-4 md:bottom-6 md:right-6 z-[9997] w-14 h-14 rounded-full bg-gradient-to-br from-fuchsia-600 to-indigo-600 text-white shadow-2xl flex items-center justify-center text-2xl hover:scale-105 transition no-print">✨</button>
+{!asistanGizli && (
+<div id="zirve-asistan-btn" className="fixed bottom-24 right-4 md:bottom-6 md:right-6 z-[9997] no-print">
+  <button onClick={()=>setAsistanAcik(true)} title="AI Asistan (sürükleyebilirsin)" className="w-14 h-14 rounded-full bg-gradient-to-br from-fuchsia-600 to-indigo-600 text-white shadow-2xl flex items-center justify-center text-2xl hover:scale-105 transition">✨</button>
+  <button data-zirve-nodrag onClick={()=>{ setAsistanGizli(true); try{localStorage.setItem('zirve_asistan_gizli','1');}catch(e){} showToast('✨ Asistan gizlendi. Ayarlar → “Yüzen düğmeleri geri getir” ile açabilirsin.'); }} title="Gizle" className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-white text-gray-600 border border-gray-300 shadow flex items-center justify-center text-[10px] font-bold hover:bg-red-500 hover:text-white">✕</button>
+</div>
+)}
 {asistanAcik && (
 <div className="fixed inset-0 z-[9998] bg-slate-900/70 backdrop-blur-sm flex items-end md:items-center justify-center p-0 md:p-4 no-print" onClick={()=>setAsistanAcik(false)}>
   <div className="bg-white w-full md:max-w-md md:rounded-2xl rounded-t-2xl shadow-2xl flex flex-col max-h-[85vh]" onClick={e=>e.stopPropagation()}>
@@ -4174,6 +4645,7 @@ title="Veli ödevi yaptıysa buraya tıklayın."
   <button onClick={()=>setAcikArac(a=>a==='ogretmen'?'':'ogretmen')} className={`flex items-center justify-center gap-2 py-2.5 rounded-xl font-black text-[12px] transition border ${acikArac==='ogretmen'?'bg-gradient-to-br from-amber-500 to-orange-600 text-white border-transparent shadow-lg':'bg-white/10 text-amber-100 border-amber-400/30 hover:bg-white/20'}`}><i className="fa-solid fa-toolbox text-base"></i>Öğretmen Araçları</button>
   <button onClick={()=>setAcikArac(a=>a==='mufredat'?'':'mufredat')} className={`col-span-2 flex items-center justify-center gap-2 py-2.5 rounded-xl font-black text-[12px] transition border ${acikArac==='mufredat'?'bg-gradient-to-br from-rose-500 to-pink-600 text-white border-transparent shadow-lg':'bg-white/10 text-rose-100 border-rose-400/30 hover:bg-white/20'}`}><i className="fa-solid fa-graduation-cap text-base"></i>📚 Müfredat & Konular (Sınıf → Ders → Konu)</button>
   <button onClick={()=>setAcikArac(a=>a==='pedagoji'?'':'pedagoji')} className={`col-span-2 flex items-center justify-center gap-2 py-2.5 rounded-xl font-black text-[12px] transition border ${acikArac==='pedagoji'?'bg-gradient-to-br from-indigo-500 to-violet-600 text-white border-transparent shadow-lg':'bg-white/10 text-indigo-100 border-indigo-400/30 hover:bg-white/20'}`}><i className="fa-solid fa-brain text-base"></i>🧠 Pedagojik Danışman (her davranışa uzman cevap)</button>
+  <button onClick={()=>setAcikArac(a=>a==='checkup'?'':'checkup')} className={`col-span-2 flex items-center justify-center gap-2 py-2.5 rounded-xl font-black text-[12px] transition border ${acikArac==='checkup'?'bg-gradient-to-br from-blue-500 to-cyan-600 text-white border-transparent shadow-lg':'bg-white/10 text-cyan-100 border-cyan-400/30 hover:bg-white/20'}`}><i className="fa-solid fa-dna text-base"></i>🧬 Öğrenme DNA / Gelişim Check-Up (Analiz + Yol Haritası)</button>
 </div>
 
 {/* 📚 MÜFREDAT PANELİ — Sınıf → Ders → Konu → (Renkli Konu Anlatımı / İnfografik) */}
@@ -4278,6 +4750,108 @@ title="Veli ödevi yaptıysa buraya tıklayın."
 
   <button onClick={pedagojikCevap} disabled={pedYukleniyor} className="w-full text-sm bg-gradient-to-r from-indigo-500 to-violet-600 hover:opacity-90 text-white px-3 py-2.5 rounded-lg font-black transition disabled:opacity-60">{pedYukleniyor ? <span><i className="fa-solid fa-spinner fa-spin mr-1"></i>Danışmanlık notu hazırlanıyor…</span> : <span><i className="fa-solid fa-wand-magic-sparkles mr-1"></i>🧠 Pedagojik Cevap Hazırla (belge)</span>}</button>
   <p className="text-[10px] text-indigo-200/70 mt-1.5">Not: Bu bir eğitsel danışmanlık aracıdır; tıbbi/psikolojik tanı yerine geçmez. Çocuğun güvenliğini ilgilendiren durumlarda rehberlik servisine ve gerekli uzmanlara başvur.</p>
+</div>
+
+{/* 🧬 ÖĞRENME DNA / CHECK-UP PANELİ */}
+<div className={`mb-3 bg-gradient-to-br from-blue-600/25 to-cyan-600/20 p-3 rounded-xl border border-cyan-400/30 ${acikArac==='checkup'?'':'hidden'}`}>
+  <div className="flex items-center justify-between mb-2">
+    <span className="text-xs font-black text-cyan-100 uppercase tracking-wide"><i className="fa-solid fa-dna mr-1 text-cyan-300"></i> Öğrenme DNA / Gelişim Check-Up</span>
+    <span className="text-[10px] text-cyan-200/70">radar · VAK · Gardner · yol haritası</span>
+  </div>
+  <p className="text-[11px] text-cyan-100/90 mb-2">Öğrenciyi işaretle, AI kapsamlı bir gelişim analizi + <b>kendi kademesinden başlayan</b> yol haritası çıkarsın. Çıktı PDF/Paylaş/QR edilebilir.</p>
+
+  <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5 mb-2">
+    <input value={checkupOgrenci} onChange={e=>setCheckupOgrenci(e.target.value)} placeholder="Öğrenci adı" className="px-2.5 py-2 bg-white/95 border border-cyan-200 rounded-lg outline-none text-sm text-gray-800" />
+    <select value={checkupKademe} onChange={e=>setCheckupKademe(e.target.value)} className="px-2.5 py-2 bg-white/95 border border-cyan-200 rounded-lg outline-none text-sm text-gray-800 font-semibold">
+      {['Okul Öncesi','1. Sınıf','2. Sınıf','3. Sınıf','4. Sınıf','5. Sınıf','6. Sınıf','7. Sınıf','8. Sınıf','9. Sınıf','10. Sınıf','11. Sınıf','12. Sınıf'].map(k=>(<option key={k} value={k}>{k}</option>))}
+    </select>
+    <input value={checkupKurum} onChange={e=>setCheckupKurum(e.target.value)} placeholder="Rapor kimin adına (kurum/kişi)" className="px-2.5 py-2 bg-white/95 border border-cyan-200 rounded-lg outline-none text-sm text-gray-800" />
+  </div>
+
+  <div className="flex items-center gap-2 mb-2 flex-wrap">
+    <label className="text-[11px] font-bold text-cyan-50 bg-white/10 border border-cyan-300/25 px-2.5 py-1.5 rounded-md cursor-pointer hover:bg-white/20">🏷️ Antet/Logo ekle
+      <input type="file" accept="image/*" className="hidden" onChange={(e)=>{ const f=e.target.files&&e.target.files[0]; if(!f) return; const rd=new FileReader(); rd.onload=()=>{ const b=rd.result; setCheckupLogo(b); try{localStorage.setItem('zirve_checkup_logo',b);}catch(er){} showToast('🏷️ Logo eklendi — rapora işlenecek.'); }; rd.readAsDataURL(f); }} />
+    </label>
+    {checkupLogo && <img src={checkupLogo} alt="logo" className="h-7 max-w-[90px] object-contain bg-white rounded px-1" />}
+    {checkupLogo && <button onClick={()=>{ setCheckupLogo(''); try{localStorage.removeItem('zirve_checkup_logo');}catch(er){} }} className="text-[11px] text-cyan-200 hover:text-red-300 font-bold">✕ kaldır</button>}
+  </div>
+
+  <div className="max-h-64 overflow-y-auto pr-1 mb-2 space-y-2">
+    {Object.keys(CHECKUP_ALANLAR).map((grup)=>(
+      <div key={grup} className="bg-black/10 rounded-lg p-2">
+        <div className="text-[11px] font-black text-cyan-100 mb-1">{grup}</div>
+        <div className="flex flex-wrap gap-1">
+          {CHECKUP_ALANLAR[grup].map((chip)=>(
+            <button key={chip} onClick={()=>checkupToggle(chip)} className={`text-[10.5px] px-2 py-1 rounded-md font-semibold border transition ${checkupSecili[chip]?'bg-cyan-400 text-slate-900 border-cyan-400':'bg-white/10 text-cyan-50 border-cyan-300/25 hover:bg-white/20'}`}>{checkupSecili[chip]?'✓ ':'+ '}{chip}</button>
+          ))}
+        </div>
+      </div>
+    ))}
+  </div>
+
+  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 mb-2">
+    <textarea value={checkupVeliGozlem} onChange={e=>setCheckupVeliGozlem(e.target.value)} rows={2} placeholder="Velinin gözlemi / beklentisi (ops.)" className="px-2.5 py-2 bg-white/95 border border-cyan-200 rounded-lg outline-none text-sm text-gray-800 resize-y" />
+    <textarea value={checkupOgretmenNot} onChange={e=>setCheckupOgretmenNot(e.target.value)} rows={2} placeholder="Öğretmen ek notları (ops.)" className="px-2.5 py-2 bg-white/95 border border-cyan-200 rounded-lg outline-none text-sm text-gray-800 resize-y" />
+  </div>
+
+  <div className="flex gap-1.5 mb-2">
+    <button onClick={()=>{ setCheckupSecili({}); showToast('Seçimler temizlendi.'); }} className="flex-1 text-[11px] bg-white/10 hover:bg-white/20 text-cyan-50 border border-cyan-300/25 px-2 py-1.5 rounded-md font-bold transition">🧹 Seçimleri temizle</button>
+    <button onClick={()=>{ const ornek={}; ['Kolay dikkati dağılıyor','Hareket ihtiyacı yüksek (kıpır kıpır)','Kalemi doğru tutuyor','Akranlarıyla oyun kuruyor','Öykü anlatabiliyor','Doğa-hayvanlara ilgili','Meraklı ve araştırmacı','Pratik zekâlı'].forEach(c=>ornek[c]=true); setCheckupSecili(ornek); if(!checkupOgrenci.trim()) setCheckupOgrenci('Örnek Öğrenci'); showToast('🎁 Örnek profil dolduruldu — şimdi ÇIKAR’a bas.'); }} className="flex-1 text-[11px] bg-white/10 hover:bg-white/20 text-cyan-50 border border-cyan-300/25 px-2 py-1.5 rounded-md font-bold transition">🎁 Örnek profil doldur</button>
+  </div>
+
+  <button onClick={checkupUret} disabled={checkupYukleniyor} className="w-full text-sm bg-gradient-to-r from-blue-500 to-cyan-600 hover:opacity-90 text-white px-3 py-2.5 rounded-lg font-black transition disabled:opacity-60">{checkupYukleniyor ? <span><i className="fa-solid fa-spinner fa-spin mr-1"></i>Analiz ve harita çıkarılıyor…</span> : <span><i className="fa-solid fa-bolt mr-1"></i>⚡ ANALİZİ VE HARİTAYI ÇIKAR</span>}</button>
+  <p className="text-[10px] text-cyan-200/70 mt-1.5">Yol haritası öğrencinin kademesinden başlar (ör. 3. sınıf → İlkokul’dan). Ön değerlendirmedir; kesin tanı için uzman görüşü esastır.</p>
+
+  {checkupProfilOzet && (
+    <div className="mt-2 bg-black/15 rounded-xl p-2.5 border border-cyan-300/20">
+      <p className="text-[11px] text-cyan-50 font-bold mb-1.5"><i className="fa-solid fa-wand-magic-sparkles mr-1"></i>Rapora göre tek tıkla materyal üret:</p>
+      <div className="grid grid-cols-2 gap-1.5">
+        <button onClick={()=>checkupProfilUret('anlatim')} className="text-[11px] bg-gradient-to-r from-rose-500 to-pink-600 text-white px-2 py-2 rounded-lg font-black hover:opacity-90 transition">🎨 Konu anlatımı</button>
+        <button onClick={()=>checkupProfilUret('test')} className="text-[11px] bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-2 py-2 rounded-lg font-black hover:opacity-90 transition">📝 Test / alıştırma</button>
+        <button onClick={()=>checkupProfilUret('guclu')} className="text-[11px] bg-gradient-to-r from-green-500 to-emerald-600 text-white px-2 py-2 rounded-lg font-black hover:opacity-90 transition">💪 Güçlü yönü ilerlet</button>
+        <button onClick={()=>checkupProfilUret('zenginlestir')} className="text-[11px] bg-gradient-to-r from-violet-500 to-purple-600 text-white px-2 py-2 rounded-lg font-black hover:opacity-90 transition">🚀 Üst düzey (zenginleştir)</button>
+        <button onClick={()=>checkupProfilUret('destek')} className="text-[11px] bg-gradient-to-r from-amber-500 to-orange-600 text-white px-2 py-2 rounded-lg font-black hover:opacity-90 transition">🎯 Zayıf alana destek</button>
+        <button onClick={()=>checkupProfilUret('ilgi')} className="text-[11px] bg-gradient-to-r from-teal-500 to-cyan-600 text-white px-2 py-2 rounded-lg font-black hover:opacity-90 transition">🧩 İlgi alanı etkinliği</button>
+      </div>
+      <div className="grid grid-cols-2 gap-1.5 mt-1.5">
+        <button onClick={gelisimGrafigiAc} className="text-[11px] bg-white/10 hover:bg-white/20 text-cyan-50 border border-cyan-300/25 px-2 py-2 rounded-lg font-bold transition">📈 Gelişim grafiği</button>
+        <button onClick={veliMesajiUret} disabled={veliMesajYukleniyor} className="text-[11px] bg-white/10 hover:bg-white/20 text-cyan-50 border border-cyan-300/25 px-2 py-2 rounded-lg font-bold transition disabled:opacity-60">{veliMesajYukleniyor ? '⏳ Hazırlanıyor…' : '💬 Veliye WhatsApp özeti'}</button>
+      </div>
+      {veliMesaji && (
+        <div className="mt-2 bg-white rounded-lg p-2.5 border border-cyan-200">
+          <p className="text-[12.5px] text-gray-800 whitespace-pre-wrap leading-relaxed">{veliMesaji}</p>
+          <div className="flex flex-wrap gap-1.5 mt-2">
+            <button onClick={()=>{ try{ navigator.clipboard.writeText(veliMesaji); showToast('📋 Kopyalandı.'); }catch(e){ showToast('Kopyalanamadı.'); } }} className="text-[11px] bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1.5 rounded-md font-bold transition">📋 Kopyala</button>
+            <button onClick={()=>{ try{ window.open('https://wa.me/?text=' + encodeURIComponent(ZIRVE_whatsappBicim(veliMesaji)), '_blank'); }catch(e){} }} className="text-[11px] bg-green-500 hover:bg-green-600 text-white px-2 py-1.5 rounded-md font-bold transition"><i className="fa-brands fa-whatsapp mr-1"></i>WhatsApp</button>
+            <button onClick={()=>{ try{ const konu=encodeURIComponent((checkupOgrenci.trim()? checkupOgrenci.trim()+' — ':'')+'Gelişim Notu'); window.open('mailto:?subject=' + konu + '&body=' + encodeURIComponent(veliMesaji), '_blank'); }catch(e){} }} className="text-[11px] bg-blue-500 hover:bg-blue-600 text-white px-2 py-1.5 rounded-md font-bold transition"><i className="fa-solid fa-envelope mr-1"></i>E-posta</button>
+            <button onClick={()=>{ try{ window.open('sms:?&body=' + encodeURIComponent(veliMesaji), '_blank'); }catch(e){} }} className="text-[11px] bg-teal-500 hover:bg-teal-600 text-white px-2 py-1.5 rounded-md font-bold transition"><i className="fa-solid fa-comment-sms mr-1"></i>SMS</button>
+            <button onClick={()=>setVeliMesaji('')} title="Kapat" className="text-[11px] text-gray-400 hover:text-red-500 px-1.5 font-bold">✕</button>
+          </div>
+        </div>
+      )}
+    </div>
+  )}
+
+  {checkupKayitlar.length>0 && (
+    <div className="mt-2">
+      <div className="grid grid-cols-2 gap-1.5 mb-1.5">
+        <button onClick={sinifPaneliAc} className="text-[11px] bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-2 py-2 rounded-lg font-black hover:opacity-90 transition">🏫 Sınıf Paneli</button>
+        <button onClick={topluPdfAc} className="text-[11px] bg-gradient-to-r from-slate-600 to-slate-800 text-white px-2 py-2 rounded-lg font-black hover:opacity-90 transition">🖨️ Tümü tek belgede</button>
+      </div>
+      <button onClick={()=>setCheckupKayitAcik(v=>!v)} className="w-full text-[11px] bg-white/10 hover:bg-white/20 text-cyan-50 border border-cyan-300/25 px-2 py-1.5 rounded-md font-bold transition flex items-center justify-between"><span>📚 Kayıtlı Check-Up'lar ({checkupKayitlar.length})</span><i className={`fa-solid fa-chevron-${checkupKayitAcik?'up':'down'}`}></i></button>
+      {checkupKayitAcik && (
+        <div className="mt-1.5 space-y-1 max-h-40 overflow-y-auto">
+          {checkupKayitlar.map(k=>(
+            <div key={k.id} className="flex items-center gap-1.5 bg-black/10 rounded-md px-2 py-1.5">
+              <span className="flex-1 text-[11px] text-cyan-50 font-semibold truncate">{k.ogrenci} · {k.kademe} · <span className="text-cyan-300">{k.tarih}</span></span>
+              <button onClick={()=>checkupKayitAc(k)} className="text-[10px] bg-cyan-500 hover:bg-cyan-400 text-white px-2 py-1 rounded font-bold">Aç</button>
+              <button onClick={()=>checkupKayitSil(k.id)} title="Sil" className="text-[10px] text-cyan-300 hover:text-red-400 font-bold px-1">✕</button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )}
 </div>
 
 {/* 🧰 ÖĞRETMEN ARAÇLARI — pro tek-tık üreteçler */}
@@ -5193,6 +5767,7 @@ title="Veli ödevi yaptıysa buraya tıklayın."
   <button onClick={matbaaSesliOku} className={`text-[11px] px-2.5 py-1.5 rounded-lg font-bold border transition ${okuyor ? 'bg-rose-500 text-white border-rose-500' : 'bg-white text-rose-700 border-rose-200 hover:bg-rose-50'}`}><i className={`fa-solid ${okuyor?'fa-stop':'fa-volume-high'} mr-1`}></i>{okuyor?'Durdur':'Sesli oku'}</button>
   <button onClick={matbaaPngIndir} className="text-[11px] px-2.5 py-1.5 rounded-lg font-bold bg-white text-teal-700 border border-teal-200 hover:bg-teal-50 transition"><i className="fa-solid fa-image mr-1"></i>PNG indir</button>
   <button onClick={matbaaWhatsapp} className="text-[11px] px-2.5 py-1.5 rounded-lg font-bold bg-white text-green-700 border border-green-200 hover:bg-green-50 transition"><i className="fa-brands fa-whatsapp mr-1"></i>Paylaş</button>
+  <button onClick={()=>sharePDF('printable-material', (materialResult && materialResult.dokuman_basligi) || 'Rapor')} disabled={isDownloadingPdf} className="text-[11px] px-2.5 py-1.5 rounded-lg font-bold bg-white text-rose-700 border border-rose-200 hover:bg-rose-50 transition disabled:opacity-60"><i className="fa-solid fa-file-pdf mr-1"></i>PDF ile paylaş</button>
   <button onClick={()=>{ try{ if(window.ZIRVE_paylasAc) window.ZIRVE_paylasAc(); else showToast('QR modülü hazır değil.'); }catch(e){ showToast('QR açılamadı.'); } }} className="text-[11px] px-2.5 py-1.5 rounded-lg font-bold bg-white text-indigo-700 border border-indigo-200 hover:bg-indigo-50 transition"><i className="fa-solid fa-qrcode mr-1"></i>QR</button>
   <button onClick={interaktifHtmlUret} disabled={htmlUretiliyor} className="text-[11px] px-2.5 py-1.5 rounded-lg font-black bg-gradient-to-r from-fuchsia-600 to-indigo-600 text-white hover:opacity-90 transition disabled:opacity-60">{htmlUretiliyor ? <span><i className="fa-solid fa-spinner fa-spin mr-1"></i>Oyun hazırlanıyor…</span> : <span><i className="fa-solid fa-gamepad mr-1"></i>🎮 İnteraktif oyuna çevir</span>}</button>
 </div>
@@ -5822,7 +6397,7 @@ case 'zengin_metin':
 return (
 <div key={idx} className="break-inside-avoid mb-8 bg-white border-2 border-indigo-100 rounded-xl p-6 shadow-sm print:shadow-none print:border-none">
 {blok.baslik && <h3 className="font-bold text-2xl text-indigo-900 mb-4 print-high-contrast border-b border-indigo-100 pb-2">{blok.baslik}</h3>}
-<div className="prose max-w-none text-gray-800 print-high-contrast leading-relaxed text-lg" dangerouslySetInnerHTML={{ __html: blok.html_icerik || blok.icerik_metni }}></div>
+<div className="prose max-w-none text-gray-800 print-high-contrast leading-relaxed text-lg" dangerouslySetInnerHTML={{ __html: ZIRVE_latexTemizle(blok.html_icerik || blok.icerik_metni) }}></div>
 </div>
 );
 
@@ -5835,7 +6410,7 @@ if (!_doluMetin && !_doluDizi) return null;
 return (
 <div key={idx} className="break-inside-avoid mb-6 bg-white border-2 border-indigo-100 rounded-xl p-5 shadow-sm print:shadow-none print:border-gray-300">
 {blok.baslik && <h3 className="font-bold text-xl text-indigo-900 mb-3 border-b border-indigo-100 pb-2 print-high-contrast whitespace-pre-wrap">{blok.baslik}</h3>}
-{blok.html_icerik && <div className="prose max-w-none text-gray-800 leading-relaxed text-lg print-high-contrast" dangerouslySetInnerHTML={{ __html: blok.html_icerik }}></div>}
+{blok.html_icerik && <div className="prose max-w-none text-gray-800 leading-relaxed text-lg print-high-contrast" dangerouslySetInnerHTML={{ __html: ZIRVE_latexTemizle(blok.html_icerik) }}></div>}
 {blok.icerik_metni && <p className="text-gray-800 leading-relaxed text-lg print-high-contrast whitespace-pre-wrap mb-3"><HtmlMetin metin={blok.icerik_metni} /></p>}
 {blok.soru_metni && <p className="font-semibold text-gray-900 text-lg print-high-contrast whitespace-pre-wrap mb-2"><HtmlMetin metin={ZIRVE_soruMetniTemizle(blok.soru_metni, blok.secenekler)} /></p>}
 {blok.secenekler && blok.secenekler.length > 0 && (
@@ -6172,13 +6747,63 @@ root.render(<HataSiniri onReset={() => { try{ window.location.reload(); }catch(e
       w.style.cssText='position:fixed;bottom:96px;left:12px;z-index:9996;display:flex;align-items:center;gap:4px;background:rgba(79,70,229,.92);color:#fff;border-radius:999px;padding:7px 10px;font:800 12px system-ui;box-shadow:0 6px 18px rgba(0,0,0,.25);opacity:.55;cursor:pointer';
       w.onmouseenter=function(){ w.style.opacity='1'; }; w.onmouseleave=function(){ w.style.opacity='.55'; };
       var b=document.createElement('span'); b.textContent='📲 QR'; b.onclick=function(){ window.ZIRVE_paylasAc(); };
-      var x=document.createElement('span'); x.textContent='×'; x.title='Gizle'; x.style.cssText='margin-left:2px;font-weight:900;opacity:.8'; x.onclick=function(ev){ ev.stopPropagation(); try{localStorage.setItem('zirve_qr_pill_gizli','1');}catch(e){} w.remove(); };
+      var x=document.createElement('span'); x.textContent='×'; x.title='Gizle'; x.setAttribute('data-zirve-nodrag','1'); x.style.cssText='margin-left:2px;font-weight:900;opacity:.8'; x.onclick=function(ev){ ev.stopPropagation(); try{localStorage.setItem('zirve_qr_pill_gizli','1');}catch(e){} w.remove(); };
       w.appendChild(b); w.appendChild(x);
       document.body.appendChild(w);
     }catch(e){}
   }
   window.ZIRVE_qrPillGeri=function(){ try{ localStorage.removeItem('zirve_qr_pill_gizli'); }catch(e){} pilliKur(); };
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', pilliKur); else pilliKur();
+})();
+</script>
+<!-- ===== ZİRVE · Yüzen düğmeleri SÜRÜKLE + gizle/geri getir ===== -->
+<script>
+(function(){
+  "use strict";
+  var IDLER=['zirve-asistan-btn','zirve-qr-pill','zirve-ekran-pill'];
+  function key(id){ return 'zirve_pos_'+id; }
+  function uygulaKayitli(el,id){ try{ var r=localStorage.getItem(key(id)); if(r){ var p=JSON.parse(r); if(p&&typeof p.left==='number'){ el.style.left=p.left+'px'; el.style.top=p.top+'px'; el.style.right='auto'; el.style.bottom='auto'; } } }catch(e){} }
+  function suruklenebilir(el,id){
+    if(!el||el.__zirveDrag) return; el.__zirveDrag=true; uygulaKayitli(el,id);
+    var sx,sy,ox,oy,drag=false,moved=false;
+    function down(e){
+      if(e.target && e.target.closest && e.target.closest('[data-zirve-nodrag]')) return;
+      var pt=e.touches?e.touches[0]:e; drag=true; moved=false;
+      var r=el.getBoundingClientRect(); ox=r.left; oy=r.top; sx=pt.clientX; sy=pt.clientY;
+      el.style.left=ox+'px'; el.style.top=oy+'px'; el.style.right='auto'; el.style.bottom='auto'; el.style.transition='none';
+      document.addEventListener('mousemove',move,{passive:false}); document.addEventListener('touchmove',move,{passive:false});
+      document.addEventListener('mouseup',up); document.addEventListener('touchend',up);
+    }
+    function move(e){
+      if(!drag) return; var pt=e.touches?e.touches[0]:e; var dx=pt.clientX-sx, dy=pt.clientY-sy;
+      if(Math.abs(dx)+Math.abs(dy)>4) moved=true;
+      var w=el.offsetWidth||40, h=el.offsetHeight||40;
+      var nl=Math.min(window.innerWidth-w,Math.max(0,ox+dx)); var nt=Math.min(window.innerHeight-h,Math.max(0,oy+dy));
+      el.style.left=nl+'px'; el.style.top=nt+'px'; if(e.cancelable) e.preventDefault();
+    }
+    function up(){
+      drag=false; el.style.transition='';
+      document.removeEventListener('mousemove',move); document.removeEventListener('touchmove',move);
+      document.removeEventListener('mouseup',up); document.removeEventListener('touchend',up);
+      if(moved){ try{ var r=el.getBoundingClientRect(); localStorage.setItem(key(id),JSON.stringify({left:Math.round(r.left),top:Math.round(r.top)})); }catch(e){} el.__zirveMoved=true; setTimeout(function(){ el.__zirveMoved=false; },60); }
+    }
+    el.addEventListener('mousedown',down); el.addEventListener('touchstart',down,{passive:true});
+    el.addEventListener('click',function(e){ if(el.__zirveMoved){ e.stopPropagation(); e.preventDefault(); } },true);
+    el.style.cursor='grab'; el.style.touchAction='none';
+  }
+  window.ZIRVE_yuzenYap=suruklenebilir;
+  window.ZIRVE_dragTara=function(){ IDLER.forEach(function(id){ var el=document.getElementById(id); if(el) suruklenebilir(el,id); }); };
+  window.ZIRVE_kontrolleriGeriGetir=function(){
+    try{ localStorage.removeItem('zirve_asistan_gizli'); localStorage.removeItem('zirve_qr_pill_gizli'); localStorage.removeItem('zirve_ekran_pill_gizli'); }catch(e){}
+    IDLER.forEach(function(id){ try{ localStorage.removeItem(key(id)); }catch(e){} var el=document.getElementById(id); if(el){ el.style.left=''; el.style.top=''; el.style.right=''; el.style.bottom=''; } });
+    try{ window.dispatchEvent(new Event('zirve-asistan-geri')); }catch(e){}
+    try{ if(window.ZIRVE_qrPillGeri) window.ZIRVE_qrPillGeri(); }catch(e){}
+    try{ var t=document.createElement('div'); t.textContent='🧲 Yüzen düğmeler geri getirildi ve konumları sıfırlandı.'; t.style.cssText='position:fixed;top:16px;left:50%;transform:translateX(-50%);background:#111827;color:#fff;padding:10px 16px;border-radius:999px;font:700 13px system-ui;z-index:100000'; document.body.appendChild(t); setTimeout(function(){t.remove();},2200); }catch(e){}
+    setTimeout(window.ZIRVE_dragTara,300);
+  };
+  var n=0; var iv=setInterval(function(){ window.ZIRVE_dragTara(); if(++n>25) clearInterval(iv); },500);
+  if(document.readyState!=='loading') window.ZIRVE_dragTara(); else document.addEventListener('DOMContentLoaded',window.ZIRVE_dragTara);
+  try{ new MutationObserver(function(){ window.ZIRVE_dragTara(); }).observe(document.body,{childList:true,subtree:true}); }catch(e){}
 })();
 </script>
 </body>
