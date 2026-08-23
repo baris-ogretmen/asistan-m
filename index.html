@@ -2719,16 +2719,56 @@ const asistanKopyala = (metin) => {
 
 // ── ÖĞRENME DNA / GELİŞİM CHECK-UP ───────────────────────────────────────────
 const CHECKUP_ALANLAR = {
-  '🎯 Dikkat & Odaklanma': ['Oturma süresi kısa (5 dk altı)','Yönergeyi tek seferde anlıyor','Çok yönergeli işi takip edemiyor','Kolay dikkati dağılıyor','Göz teması kuruyor','Etkinliği yarıda bırakıyor','Dikkatini uzun süre koruyor','Dürtüsel davranıyor','Sırasını bekleyebiliyor','Detaylara dikkat ediyor','Sesli ortamda odaklanamıyor','Görevi tamamlama motivasyonu yüksek','Hareket ihtiyacı yüksek (kıpır kıpır)','Tek işe uzun odaklanıyor (hiperfokus)'],
-  '✋ İnce & Kalın Motor': ['Kalemi doğru tutuyor','Kalem tutuşu hatalı','Makası kullanabiliyor','Çizgi/boyama sınırında kalıyor','Denge iyi (tek ayak)','Zıplama-koşma gelişmiş','Top atma-tutma zayıf','Düğme/fermuar yapabiliyor','El tercihi belirginleşti','İnce motor desteğe ihtiyaç var','Boncuk/ip geçirme yapabiliyor','Ritim tutabiliyor (el-ayak)','Merdiven inip çıkabiliyor','Kağıt katlama-yırtma yapabiliyor'],
-  '💛 Sosyal & Duygusal': ['Sıra bekleyebiliyor','Paylaşmakta zorlanıyor','Ayrılık kaygısı var','Akranlarıyla oyun kuruyor','Duygularını ifade edebiliyor','Öfke kontrolü zayıf','Kurallara uyuyor','Yalnız oynamayı tercih ediyor','İş birliği yapabiliyor','Empati gösteriyor','Liderlik eğilimi gösteriyor','Yeni ortama zor uyum sağlıyor','Yardımlaşmayı seviyor','Özür dileyip barışabiliyor','Grup oyunlarına katılıyor'],
-  '🗣️ Dil & İletişim': ['Yaşına uygun konuşuyor','Kelime dağarcığı sınırlı','Ses/artikülasyon hatası var','Cümle kuruyor (3+ kelime)','Sorulara yanıt veriyor','Öykü anlatabiliyor','Yönergeleri anlıyor','Kekemelik gözleniyor','Göz teması kurarak konuşuyor','Duygularını sözelleştirebiliyor','Sıra alarak konuşuyor (diyalog)','Şarkı/tekerleme tekrarlıyor','Yeni kelimeleri hızlı öğreniyor','Konuşurken sözcük buluyor (akıcı)','R/S/Ş seslerinde zorlanıyor','İki dilli ortamda büyüyor'],
-  '🧩 Bilişsel & Akademik Hazırlık': ['Renkleri biliyor','Şekilleri tanıyor','1-10 sayabiliyor','Sayı-nesne eşlemesi yapıyor','Benzer-farklı ayırt ediyor','Örüntü tamamlıyor','Neden-sonuç kuruyor','Kavramları (büyük-küçük vb.) biliyor'],
-  '🧼 Öz Bakım & Bağımsızlık': ['Tuvalet eğitimi tamam','Yardımsız yemek yiyor','Giyinme-soyunmada bağımsız','El yıkama alışkanlığı var','Eşyalarını topluyor','Destek gerekiyor'],
+  '🎯 Dikkat & Odaklanma': ['Oturma süresi kısa (5 dk altı)','Yönergeyi tek seferde anlıyor','Çok yönergeli işi takip edemiyor','Kolay dikkati dağılıyor','Göz teması kuruyor','Etkinliği yarıda bırakıyor','Dikkatini uzun süre koruyor','Dürtüsel davranıyor','Sırasını bekleyebiliyor','Detaylara dikkat ediyor','Sesli ortamda odaklanamıyor','Görevi tamamlama motivasyonu yüksek','Hareket ihtiyacı yüksek (kıpır kıpır)','Tek işe uzun odaklanıyor (hiperfokus)','Görsel dikkati güçlü','Çalışma belleği zayıf'],
+  '✋ İnce & Kalın Motor': ['Kalemi doğru tutuyor','Kalem tutuşu hatalı','Makası kullanabiliyor','Çizgi/boyama sınırında kalıyor','Denge iyi (tek ayak)','Zıplama-koşma gelişmiş','Top atma-tutma zayıf','Düğme/fermuar yapabiliyor','El tercihi belirginleşti','İnce motor desteğe ihtiyaç var','Boncuk/ip geçirme yapabiliyor','Ritim tutabiliyor (el-ayak)','Merdiven inip çıkabiliyor','Kağıt katlama-yırtma yapabiliyor','Yap-boz/puzzle tamamlıyor'],
+  '💛 Sosyal & Duygusal': ['Sıra bekleyebiliyor','Paylaşmakta zorlanıyor','Ayrılık kaygısı var','Akranlarıyla oyun kuruyor','Duygularını ifade edebiliyor','Öfke kontrolü zayıf','Kurallara uyuyor','Yalnız oynamayı tercih ediyor','İş birliği yapabiliyor','Empati gösteriyor','Liderlik eğilimi gösteriyor','Yeni ortama zor uyum sağlıyor','Yardımlaşmayı seviyor','Özür dileyip barışabiliyor','Grup oyunlarına katılıyor','Özgüveni yüksek'],
+  '🗣️ Dil & İletişim': ['Yaşına uygun konuşuyor','Kelime dağarcığı sınırlı','Ses/artikülasyon hatası var','Cümle kuruyor (3+ kelime)','Sorulara yanıt veriyor','Öykü anlatabiliyor','Yönergeleri anlıyor','Kekemelik gözleniyor','Göz teması kurarak konuşuyor','Duygularını sözelleştirebiliyor','Sıra alarak konuşuyor (diyalog)','Şarkı/tekerleme tekrarlıyor','Yeni kelimeleri hızlı öğreniyor','Konuşurken sözcük buluyor (akıcı)','R/S/Ş seslerinde zorlanıyor','İki dilli ortamda büyüyor','Harfleri/okumaya ilgili'],
+  '🧩 Bilişsel & Akademik Hazırlık': ['Renkleri biliyor','Şekilleri tanıyor','1-10 sayabiliyor','Sayı-nesne eşlemesi yapıyor','Benzer-farklı ayırt ediyor','Örüntü tamamlıyor','Neden-sonuç kuruyor','Kavramları (büyük-küçük vb.) biliyor','Basit toplama-çıkarma yapıyor','Hafızası güçlü (hatırlıyor)'],
+  '🧼 Öz Bakım & Bağımsızlık': ['Tuvalet eğitimi tamam','Yardımsız yemek yiyor','Giyinme-soyunmada bağımsız','El yıkama alışkanlığı var','Eşyalarını topluyor','Destek gerekiyor','Ayakkabı/bağcık bağlayabiliyor'],
   '⭐ İlgi Alanları': ['Spora ilgili (koşma, top, dans)','Müziğe ilgili (şarkı, ritim, enstrüman)','Resim-sanata ilgili (boyama, çizim)','Teknoloji-oyuna ilgili','Doğa-hayvanlara ilgili','Kitap-hikâyeye ilgili','Yapı-inşa oyunlarına ilgili (lego, blok)','Drama-taklit oynamayı seviyor','Sayı-bulmacaya ilgili','El işi-tasarıma ilgili'],
   '💪 Güçlü Yönler & Yetenekler': ['Meraklı ve araştırmacı','Yaratıcı-hayal gücü güçlü','Lider ruhlu','Sabırlı ve titiz','Hızlı öğreniyor','Sosyal ve girişken','Duyarlı-empatik','Azimli-vazgeçmiyor','Pratik zekâlı','İyi gözlemci']
 };
 const checkupToggle = (chip) => setCheckupSecili(p => { const n = {...p}; if (n[chip]) delete n[chip]; else n[chip] = true; return n; });
+// ── TUTARLILIK MOTORU: işaretlenen kriterlerden puanları KOD hesaplar (rapor girdilerle birebir uyumlu olsun) ──
+const CHECKUP_PUAN = {
+  'Oturma süresi kısa (5 dk altı)':[['dik',-1.6]],'Yönergeyi tek seferde anlıyor':[['dik',1.3],['dil',0.6],['bp',0.4]],'Çok yönergeli işi takip edemiyor':[['dik',-1.3],['dil',-0.4]],'Kolay dikkati dağılıyor':[['dik',-1.6]],'Göz teması kuruyor':[['dik',0.8],['sa',0.6]],'Etkinliği yarıda bırakıyor':[['dik',-1.3]],'Dikkatini uzun süre koruyor':[['dik',1.7]],'Dürtüsel davranıyor':[['dik',-1.2],['ozd',-0.8]],'Sırasını bekleyebiliyor':[['dik',0.9],['sa',0.8],['ozd',0.6]],'Detaylara dikkat ediyor':[['dik',1.1],['bg',0.8]],'Sesli ortamda odaklanamıyor':[['dik',-1.0],['ia',-0.6]],'Görevi tamamlama motivasyonu yüksek':[['dik',1.3]],'Hareket ihtiyacı yüksek (kıpır kıpır)':[['dik',-0.9],['mk',0.6]],'Tek işe uzun odaklanıyor (hiperfokus)':[['dik',1.1]],
+  'Kalemi doğru tutuyor':[['mi',1.5],['eg',0.8]],'Kalem tutuşu hatalı':[['mi',-1.5],['eg',-0.6]],'Makası kullanabiliyor':[['mi',1.2],['eg',0.6]],'Çizgi/boyama sınırında kalıyor':[['mi',1.2],['eg',0.8],['ga',0.5]],'Denge iyi (tek ayak)':[['mk',1.4],['mko',0.8]],'Zıplama-koşma gelişmiş':[['mk',1.4]],'Top atma-tutma zayıf':[['mko',-1.3],['eg',-0.5]],'Düğme/fermuar yapabiliyor':[['mi',1.2],['oz',0.6]],'El tercihi belirginleşti':[['mi',0.7]],'İnce motor desteğe ihtiyaç var':[['mi',-1.6],['eg',-0.6]],'Boncuk/ip geçirme yapabiliyor':[['mi',1.1],['eg',0.6]],'Ritim tutabiliyor (el-ayak)':[['mko',1.0],['g_muzik',1.2]],'Merdiven inip çıkabiliyor':[['mk',1.0]],'Kağıt katlama-yırtma yapabiliyor':[['mi',1.0]],
+  'Sıra bekleyebiliyor':[['sa',1.2],['ozd',0.5]],'Paylaşmakta zorlanıyor':[['sa',-1.2]],'Ayrılık kaygısı var':[['se',-1.1],['ozd',-0.5]],'Akranlarıyla oyun kuruyor':[['so',1.4],['sa',0.6]],'Duygularını ifade edebiliyor':[['se',1.3],['dil',0.4]],'Öfke kontrolü zayıf':[['se',-1.2],['ozd',-1.0]],'Kurallara uyuyor':[['sa',1.2],['ozd',0.6]],'Yalnız oynamayı tercih ediyor':[['so',-0.7]],'İş birliği yapabiliyor':[['so',1.2],['sa',0.8]],'Empati gösteriyor':[['se',1.5],['g_icsel',0.8]],'Liderlik eğilimi gösteriyor':[['g_sosyal',1.4],['sa',0.6]],'Yeni ortama zor uyum sağlıyor':[['sa',-1.1]],'Yardımlaşmayı seviyor':[['se',1.2],['g_sosyal',0.6]],'Özür dileyip barışabiliyor':[['se',1.2],['sa',0.6]],'Grup oyunlarına katılıyor':[['so',1.3],['g_sosyal',0.6]],
+  'Yaşına uygun konuşuyor':[['dil',1.5]],'Kelime dağarcığı sınırlı':[['dil',-1.4]],'Ses/artikülasyon hatası var':[['dil',-1.2]],'Cümle kuruyor (3+ kelime)':[['dil',1.3]],'Sorulara yanıt veriyor':[['dil',1.1]],'Öykü anlatabiliyor':[['dil',1.4],['g_sozel',1.4]],'Yönergeleri anlıyor':[['dil',1.2],['dik',0.4]],'Kekemelik gözleniyor':[['dil',-1.0]],'Göz teması kurarak konuşuyor':[['dil',0.8],['sa',0.6]],'Duygularını sözelleştirebiliyor':[['dil',1.0],['se',0.8]],'Sıra alarak konuşuyor (diyalog)':[['dil',1.0],['sa',0.6]],'Şarkı/tekerleme tekrarlıyor':[['dil',0.8],['g_muzik',1.0]],'Yeni kelimeleri hızlı öğreniyor':[['dil',1.3],['g_sozel',0.8]],'Konuşurken sözcük buluyor (akıcı)':[['dil',1.2]],'R/S/Ş seslerinde zorlanıyor':[['dil',-1.0]],'İki dilli ortamda büyüyor':[['g_sozel',0.5]],
+  'Renkleri biliyor':[['bk',1.2],['ga',0.6]],'Şekilleri tanıyor':[['bk',1.2],['ga',0.6]],'1-10 sayabiliyor':[['bk',1.3],['g_mantik',0.8]],'Sayı-nesne eşlemesi yapıyor':[['bp',1.2],['g_mantik',0.8]],'Benzer-farklı ayırt ediyor':[['bg',1.3]],'Örüntü tamamlıyor':[['bp',1.3],['g_mantik',1.0]],'Neden-sonuç kuruyor':[['bp',1.4],['g_mantik',0.8]],'Kavramları (büyük-küçük vb.) biliyor':[['bk',1.3]],
+  'Tuvalet eğitimi tamam':[['oz',1.7]],'Yardımsız yemek yiyor':[['oz',1.3]],'Giyinme-soyunmada bağımsız':[['oz',1.4],['mi',0.4]],'El yıkama alışkanlığı var':[['oz',1.1]],'Eşyalarını topluyor':[['oz',1.1],['ozd',0.8]],'Destek gerekiyor':[['oz',-1.7]],
+  'Spora ilgili (koşma, top, dans)':[['g_bedensel',1.6],['v_k',12],['mk',0.4]],'Müziğe ilgili (şarkı, ritim, enstrüman)':[['g_muzik',1.8],['v_i',10]],'Resim-sanata ilgili (boyama, çizim)':[['g_gorsel',1.6],['v_g',12],['mi',0.4]],'Teknoloji-oyuna ilgili':[['g_mantik',1.4],['v_g',8]],'Doğa-hayvanlara ilgili':[['g_dogaci',1.9]],'Kitap-hikâyeye ilgili':[['g_sozel',1.5],['v_g',10],['dil',0.4]],'Yapı-inşa oyunlarına ilgili (lego, blok)':[['g_gorsel',1.2],['g_mantik',1.0],['v_k',10]],'Drama-taklit oynamayı seviyor':[['g_bedensel',1.2],['g_sosyal',1.0]],'Sayı-bulmacaya ilgili':[['g_mantik',1.6],['bp',0.6]],'El işi-tasarıma ilgili':[['g_gorsel',1.2],['v_k',10],['mi',0.5]],
+  'Meraklı ve araştırmacı':[['bp',0.8],['b_y',10],['g_dogaci',0.5]],'Yaratıcı-hayal gücü güçlü':[['b_y',16],['g_gorsel',1.0]],'Lider ruhlu':[['g_sosyal',1.4],['b_y',6]],'Sabırlı ve titiz':[['dik',1.0],['b_a',12],['mi',0.4]],'Hızlı öğreniyor':[['bp',0.8],['bk',0.6],['b_a',6]],'Sosyal ve girişken':[['so',0.8],['g_sosyal',1.2]],'Duyarlı-empatik':[['se',1.2],['g_icsel',1.2]],'Azimli-vazgeçmiyor':[['dik',1.0]],'Pratik zekâlı':[['bp',1.0],['b_a',10]],'İyi gözlemci':[['bg',1.3],['b_a',6]],'Basit toplama-çıkarma yapıyor':[['bp',1.3],['g_mantik',1.2]],'Hafızası güçlü (hatırlıyor)':[['bg',1.2],['bk',1.0]],'Görsel dikkati güçlü':[['dik',1.2],['ga',1.0]],'Çalışma belleği zayıf':[['bp',-1.1],['dik',-0.6]],'Yap-boz/puzzle tamamlıyor':[['mko',0.8],['g_gorsel',1.0],['bp',0.8]],'Özgüveni yüksek':[['g_icsel',1.2],['so',0.8]],'Harfleri/okumaya ilgili':[['dil',1.2],['bk',0.8],['g_sozel',0.8]],'Ayakkabı/bağcık bağlayabiliyor':[['oz',1.2],['mi',0.8]]
+};
+const checkupPuanla = (secili) => {
+  const S = { dik:6, mi:6, mk:6, mko:6, sa:6, so:6, se:6, dil:6, bp:6, bk:6, bg:6, oz:6, ozd:6, ga:6, ia:6, eg:6 };
+  const G = { g_sozel:5, g_mantik:5, g_gorsel:5, g_bedensel:5, g_muzik:5, g_sosyal:5, g_icsel:5, g_dogaci:5 };
+  const V = { v_g:0, v_i:0, v_k:0 }; const B = { b_a:0, b_y:0 };
+  Object.keys(secili || {}).forEach(chip => { const m = CHECKUP_PUAN[chip]; if (!m) return; m.forEach(pr => { const k = pr[0], d = pr[1]; if (k in S) S[k] += d; else if (k in G) G[k] += d; else if (k in V) V[k] += d; else if (k in B) B[k] += d; }); });
+  const c10 = x => Math.max(1, Math.min(10, Math.round(x)));
+  const avg = function(){ const a = Array.prototype.slice.call(arguments); return a.reduce((p, q) => p + q, 0) / a.length; };
+  Object.keys(S).forEach(k => S[k] = Math.max(1, Math.min(10, S[k])));
+  const radar = { dil: c10(S.dil), ozbakim: c10(S.oz), sosyal: c10(avg(S.sa, S.so, S.se)), motor: c10(avg(S.mi, S.mk, S.mko)), bilissel: c10(avg(S.bp, S.bk, S.bg)) };
+  const bilissel = { problem: c10(S.bp), kavram: c10(S.bk), gozlem: c10(S.bg) };
+  const sosyal_duygusal = { akran: c10(S.sa), oyun: c10(S.so), empati: c10(S.se) };
+  const motor = { ince: c10(S.mi), kaba: c10(S.mk), koordinasyon: c10(S.mko) };
+  const hz = { gorsel_algi: c10(S.ga), isitsel_algi: c10(S.ia), el_goz: c10(avg(S.mi, S.mko, S.eg)), kavram: c10(S.bk), oz_duzenleme: c10(S.ozd) };
+  const hazirbulunusluk = Object.assign({ skor: Math.round(avg(hz.gorsel_algi, hz.isitsel_algi, hz.el_goz, hz.kavram, hz.oz_duzenleme, radar.bilissel) / 10 * 100) }, hz);
+  const bloom = { hatirlama: c10(S.bk + 1), anlama: c10(S.bk), uygulama: c10(S.bp), analiz: c10(S.bp - 1), degerlendirme: c10(avg(S.bp, S.bg) - 1), yaratma: c10(B.b_y > 0 ? 6 + B.b_y / 8 : 5) };
+  const gardner = { sozel: c10(G.g_sozel), mantik: c10(G.g_mantik), gorsel: c10(G.g_gorsel), bedensel: c10(G.g_bedensel), muzik: c10(G.g_muzik), sosyal: c10(G.g_sosyal), icsel: c10(G.g_icsel), dogaci: c10(G.g_dogaci) };
+  let vg = 20 + V.v_g, vi = 20 + V.v_i, vk = 20 + V.v_k; const vt = (vg + vi + vk) || 1; const vak = { gorsel: Math.round(vg / vt * 100), isitsel: Math.round(vi / vt * 100), kinestetik: 0 }; vak.kinestetik = 100 - vak.gorsel - vak.isitsel;
+  let ba = 50 + B.b_a - B.b_y * 0.3; ba = Math.max(15, Math.min(85, ba)); ba = Math.round(ba); const beyin = { analitik: ba, yaratici: 100 - ba };
+  const kuram = {
+    davranisci: Math.max(20, Math.min(90, Math.round(45 + (10 - S.dik) * 3 - (S.bp - 6) * 2))),
+    bilissel: Math.round(radar.bilissel / 10 * 100),
+    yapilandirmaci: Math.max(20, Math.min(95, Math.round((S.bp + S.bg) / 2 / 10 * 100 * 0.7 + B.b_y * 0.6))),
+    humanist: Math.max(20, Math.min(95, Math.round((S.se + S.sa) / 2 / 10 * 100)))
+  };
+  const durum = v => v >= 7 ? 'yesil' : (v >= 5 ? 'sari' : 'kirmizi');
+  const notu = v => v >= 7 ? 'Güçlü' : (v >= 5 ? 'Gelişmekte' : 'Destek önerilir');
+  const trafik = [['Dikkat & Odaklanma', S.dik], ['Dil & İletişim', radar.dil], ['Sosyal-Duygusal', radar.sosyal], ['Motor Beceriler', radar.motor], ['Bilişsel Hazırlık', radar.bilissel], ['Öz Bakım', radar.ozbakim]].map(x => ({ alan: x[0], durum: durum(x[1]), not: notu(x[1]) + ' (' + x[1] + '/10)' }));
+  return { radar, bilissel, sosyal_duygusal, motor, hazirbulunusluk, bloom, gardner, vak, beyin, kuram, trafik_isigi: trafik };
+};
 const checkupYolHaritasi = (kademe) => {
   const tumu = [
     {ad:'Okul Öncesi', yontem:'Deneyimsel Etkinlikler', strateji:'Oyun Temelli Öğrenme'},
@@ -2756,9 +2796,9 @@ const checkupRaporHTML = (d, meta) => {
   const radar = '<svg viewBox="0 0 320 300" style="width:100%;max-width:340px;display:block;margin:0 auto"><g>' + rings + grid.join('') + '<polygon points="' + pts.join(' ') + '" fill="rgba(37,99,235,.25)" stroke="#2563eb" stroke-width="2"/>' + lbl.join('') + '</g></svg>';
   // Kavram haritası
   const km = (d.kavram_haritasi || []).slice(0, 6); const renkler = ['#f59e0b','#a855f7','#22c55e','#38bdf8','#8b5cf6','#ef4444'];
-  let dm = ''; const mx = 175, my = 130;
-  km.forEach((k, i) => { const a = (-90 + i * (360 / Math.max(1, km.length))) * Math.PI / 180; const x = mx + 125 * Math.cos(a), y = my + 82 * Math.sin(a); dm += '<line x1="' + mx + '" y1="' + my + '" x2="' + x.toFixed(0) + '" y2="' + y.toFixed(0) + '" stroke="#cbd5e1"/><rect x="' + (x - 48).toFixed(0) + '" y="' + (y - 14).toFixed(0) + '" width="96" height="28" rx="8" fill="' + renkler[i % 6] + '"/><text x="' + x.toFixed(0) + '" y="' + y.toFixed(0) + '" font-size="10" font-weight="700" fill="#fff" text-anchor="middle" dominant-baseline="middle">' + String(k).slice(0, 16) + '</text>'; });
-  const kavramSvg = '<svg viewBox="0 0 350 260" style="width:100%;max-width:360px;display:block;margin:0 auto">' + dm + '<rect x="128" y="116" width="94" height="30" rx="10" fill="#f97316"/><text x="175" y="131" font-size="12" font-weight="800" fill="#fff" text-anchor="middle" dominant-baseline="middle">' + String(meta.ogrenci || 'Öğrenci').slice(0, 14) + '</text></svg>';
+  let dm = ''; const mx = 190, my = 150;
+  km.forEach((k, i) => { const a = (-90 + i * (360 / Math.max(1, km.length))) * Math.PI / 180; const x = mx + 138 * Math.cos(a), y = my + 98 * Math.sin(a); const col = renkler[i % 6]; dm += '<path d="M' + mx + ' ' + my + ' Q ' + ((mx + x) / 2).toFixed(0) + ' ' + ((my + y) / 2 - 10).toFixed(0) + ' ' + x.toFixed(0) + ' ' + y.toFixed(0) + '" stroke="#cbd5e1" stroke-width="2" fill="none"/>'; dm += '<g filter="url(#kmShadow)"><rect x="' + (x - 54).toFixed(0) + '" y="' + (y - 16).toFixed(0) + '" width="108" height="32" rx="16" fill="' + col + '"/><text x="' + x.toFixed(0) + '" y="' + (y + 1).toFixed(0) + '" font-size="11" font-weight="800" fill="#fff" text-anchor="middle" dominant-baseline="middle">' + String(k).slice(0, 18) + '</text></g>'; });
+  const kavramSvg = '<svg viewBox="0 0 380 300" style="width:100%;max-width:380px;display:block;margin:0 auto"><defs><filter id="kmShadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#0f172a" flood-opacity="0.18"/></filter><linearGradient id="kmCenter" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6366f1"/><stop offset="1" stop-color="#a855f7"/></linearGradient></defs>' + dm + '<g filter="url(#kmShadow)"><rect x="' + (mx - 62) + '" y="' + (my - 21) + '" width="124" height="42" rx="21" fill="url(#kmCenter)"/><text x="' + mx + '" y="' + (my + 1) + '" font-size="13" font-weight="900" fill="#fff" text-anchor="middle" dominant-baseline="middle">' + String(meta.ogrenci || 'Öğrenci').slice(0, 15) + '</text></g></svg>';
   // Beyin dominansı
   const an = Math.max(0, Math.min(100, Number(R(d.beyin,'analitik')) || 50)); const ya = 100 - an;
   const beyin = '<div style="display:flex;justify-content:space-between;text-align:center;margin-bottom:8px"><div><div style="font-size:24px;font-weight:900;color:#7c3aed">%' + an + '</div><div style="font-size:11px;font-weight:700;color:#64748b">ANALİTİK (SOL)</div></div><div><div style="font-size:24px;font-weight:900;color:#ec4899">%' + ya + '</div><div style="font-size:11px;font-weight:700;color:#64748b">YARATICI (SAĞ)</div></div></div><div style="display:flex;height:12px;border-radius:99px;overflow:hidden"><div style="width:' + an + '%;background:#7c3aed"></div><div style="width:' + ya + '%;background:#ec4899"></div></div>';
@@ -2825,7 +2865,7 @@ const checkupRaporHTML = (d, meta) => {
   kart(bas('🧠 Beyin Dominansı', '#7c3aed') + beyin, '#faf5ff', '#e9d5ff') +
   (osHtml ? kart(bas('🎨 Öğrenme Stili & Kişisel Çalışma İpuçları', '#0369a1') + osHtml, '#f0f9ff', '#bae6fd') : '') +
   // Uzman analizi
-  kart(bas('🧑‍🔬 Uzman Analizi') + '<div style="font-style:italic;color:#334155;line-height:1.8;font-size:14px">' + (d.uzman_analizi || '') + '</div>', '#eff6ff', '#bfdbfe') +
+  kart(bas('🧑‍🔬 Uzman Analizi') + '<div style="position:relative;background:linear-gradient(135deg,#eff6ff,#f5f3ff);border-left:5px solid #6366f1;border-radius:12px;padding:16px 16px 16px 46px;color:#1e293b;line-height:1.95;font-size:14.5px;font-style:italic"><span style="position:absolute;left:12px;top:4px;font-size:38px;color:#c7d2fe;font-family:Georgia,serif;line-height:1">“</span>' + ((meta.ogrenci && meta.ogrenci.length > 1) ? String(d.uzman_analizi || '').split(meta.ogrenci).join('<b style="color:#4338ca;font-style:normal">' + meta.ogrenci + '</b>') : String(d.uzman_analizi || '')) + '</div>', '#eff6ff', '#bfdbfe') +
   (d.hazirbulunusluk ? kart(bas('🏫 Okul Olgunluğu / Hazırbulunuşluk', '#0369a1') + hazirHtml, '#f0f9ff', '#bae6fd') : '') +
   // Alanlar
   kart(bas('🖥️ Bilişsel Alan', '#2563eb') + bar('Problem Çözme', R(d.bilissel,'problem'), 10, '#2563eb') + bar('Kavram Ayırt Etme', R(d.bilissel,'kavram'), 10, '#2563eb') + bar('Gözlem Yeteneği', R(d.bilissel,'gozlem'), 10, '#2563eb')) +
@@ -2875,6 +2915,7 @@ const checkupUret = async () => {
   try { localStorage.setItem('zirve_ped_hazirlayan', checkupKurum || ''); } catch(e){}
   const gozlemler = Object.keys(CHECKUP_ALANLAR).map(gr => { const sec = CHECKUP_ALANLAR[gr].filter(c => checkupSecili[c]); return sec.length ? (gr + ': ' + sec.join(', ')) : ''; }).filter(Boolean).join('\n');
   const stages = checkupYolHaritasi(checkupKademe).map(s => s.ad).join(', ');
+  const hesap = checkupPuanla(checkupSecili);
   setCheckupYukleniyor(true);
   showToast('🧬 Öğrenme DNA analizi ve haritası çıkarılıyor…');
   try {
@@ -2919,6 +2960,7 @@ const checkupUret = async () => {
 '"yol_haritasi":[{"ad":"kademe adı","ipucu":"o kademeye özel kısa ipucu"}]}' +
 '\n\nÖNEMLİ: "yol_haritasi" SADECE şu kademeleri ve bu SIRAYLA içersin: ' + stages + '. (Öğrenci ' + checkupKademe + ' olduğu için yol haritası kendi kademesinden başlamalı, anaokulundan DEĞİL.)' +
 '\n\nGÖZLEMLER:\n' + (gozlemler || '(işaretli gözlem yok, kademeye uygun dengeli bir profil üret)') +
+'\n\n★ HESAPLANAN PUANLAR (bu sayıları SİSTEM hesapladı; ASLA değiştirme. rozet, uzman_analizi, güçlü/gelişim yönleri, öneriler, motivasyon, yetenek ve tüm metinleri BU SAYILARLA BİREBİR TUTARLI yaz — yüksek olan alanı güçlü, düşük olanı gelişim alanı olarak ele al):\n' + JSON.stringify({ radar: hesap.radar, hazirbulunusluk_yuzde: hesap.hazirbulunusluk.skor, bilissel: hesap.bilissel, sosyal_duygusal: hesap.sosyal_duygusal, motor: hesap.motor, gardner: hesap.gardner, vak: hesap.vak, beyin: hesap.beyin }) +
 (checkupVeliGozlem.trim() ? ('\n\nVELİ GÖZLEMİ: ' + checkupVeliGozlem.trim()) : '') +
 (checkupOgretmenNot.trim() ? ('\n\nÖĞRETMEN NOTU: ' + checkupOgretmenNot.trim()) : '');
     const resp = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + aktifModel + ':generateContent?key=' + apiKey, {
@@ -2931,6 +2973,18 @@ const checkupUret = async () => {
     let parsed = null;
     try { parsed = JSON.parse(metin.replace(/^```(?:json)?/i, '').replace(/```$/i, '').trim()); } catch(e){}
     if (!parsed) { showToast('Analiz çözümlenemedi, tekrar dene.'); setCheckupYukleniyor(false); return; }
+    // ★ TUTARLILIK: sayısal alanları SİSTEM puanlarıyla ez (girdilerle birebir uyum garantisi)
+    parsed.radar = hesap.radar;
+    parsed.bilissel = hesap.bilissel;
+    parsed.sosyal_duygusal = hesap.sosyal_duygusal;
+    parsed.motor = hesap.motor;
+    parsed.hazirbulunusluk = hesap.hazirbulunusluk;
+    parsed.bloom = hesap.bloom;
+    parsed.gardner = hesap.gardner;
+    parsed.vak = hesap.vak;
+    parsed.beyin = hesap.beyin;
+    parsed.kuram = hesap.kuram;
+    parsed.trafik_isigi = hesap.trafik_isigi;
     const meta = { ogrenci: checkupOgrenci.trim(), kademe: checkupKademe, kurum: checkupKurum.trim() };
     meta.logo = checkupLogo || '';
     const ad0 = checkupOgrenci.trim().toLocaleLowerCase('tr-TR');
