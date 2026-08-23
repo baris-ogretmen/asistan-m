@@ -2767,7 +2767,17 @@ const checkupPuanla = (secili) => {
   const durum = v => v >= 7 ? 'yesil' : (v >= 5 ? 'sari' : 'kirmizi');
   const notu = v => v >= 7 ? 'Güçlü' : (v >= 5 ? 'Gelişmekte' : 'Destek önerilir');
   const trafik = [['Dikkat & Odaklanma', S.dik], ['Dil & İletişim', radar.dil], ['Sosyal-Duygusal', radar.sosyal], ['Motor Beceriler', radar.motor], ['Bilişsel Hazırlık', radar.bilissel], ['Öz Bakım', radar.ozbakim]].map(x => ({ alan: x[0], durum: durum(x[1]), not: notu(x[1]) + ' (' + x[1] + '/10)' }));
-  return { radar, bilissel, sosyal_duygusal, motor, hazirbulunusluk, bloom, gardner, vak, beyin, kuram, trafik_isigi: trafik };
+  // ── ŞEFFAFLIK: her seçili kriteri en güçlü etkilediği alana + / − olarak yaz ──
+  const alanAdi = { dik:'Dikkat & Odaklanma', mi:'Motor Beceriler', mk:'Motor Beceriler', mko:'Motor Beceriler', eg:'Motor Beceriler', sa:'Sosyal-Duygusal', so:'Sosyal-Duygusal', se:'Sosyal-Duygusal', dil:'Dil & İletişim', bp:'Bilişsel Hazırlık', bk:'Bilişsel Hazırlık', bg:'Bilişsel Hazırlık', ga:'Bilişsel Hazırlık', ia:'Bilişsel Hazırlık', oz:'Öz Bakım', ozd:'Öz Bakım' };
+  const gerekce = {};
+  Object.keys(secili || {}).forEach(chip => { const m = CHECKUP_PUAN[chip]; if (!m) return; let best = null; m.forEach(pr => { const k = pr[0], d = pr[1]; if (alanAdi[k]) { if (!best || Math.abs(d) > Math.abs(best.d)) best = { k: k, d: d }; } }); if (best) { const area = alanAdi[best.k]; gerekce[area] = gerekce[area] || { arti: [], eksi: [] }; (best.d >= 0 ? gerekce[area].arti : gerekce[area].eksi).push(chip); } });
+  // ── GELİŞİMSEL PROFİL TİPİ (güçlü yön temelli sentez) ──
+  const alanSira = [['Dil & İletişim', radar.dil], ['Öz Bakım', radar.ozbakim], ['Sosyal-Duygusal', radar.sosyal], ['Motor Beceriler', radar.motor], ['Bilişsel Hazırlık', radar.bilissel]].sort((a, b) => b[1] - a[1]);
+  const arketipAd = { 'Dil & İletişim':'Sözel-İletişimci', 'Öz Bakım':'Bağımsız & Düzenli', 'Sosyal-Duygusal':'Sosyal-Duygusal Lider', 'Motor Beceriler':'Bedensel-Enerjik', 'Bilişsel Hazırlık':'Analitik Kaşif' };
+  const gAd = { sozel:'sözel zekâsı', mantik:'mantıksal-matematiksel zekâsı', gorsel:'görsel-uzamsal zekâsı', bedensel:'bedensel-kinestetik zekâsı', muzik:'müziksel zekâsı', sosyal:'sosyal zekâsı', icsel:'içsel zekâsı', dogaci:'doğacı zekâsı' };
+  const gTop = Object.keys(gardner).sort((a, b) => gardner[b] - gardner[a])[0];
+  const profil = { baslik: arketipAd[alanSira[0][0]] || 'Dengeli Gelişen', aciklama: 'En güçlü alanları ' + alanSira[0][0] + ' (' + alanSira[0][1] + '/10) ve ' + alanSira[1][0] + ' (' + alanSira[1][1] + '/10); çoklu zekâda özellikle ' + (gAd[gTop] || '') + ' öne çıkıyor. Öğretim bu güçlü alanlardan başlatıldığında motivasyon ve kalıcılık artar.' };
+  return { radar, bilissel, sosyal_duygusal, motor, hazirbulunusluk, bloom, gardner, vak, beyin, kuram, trafik_isigi: trafik, gerekce: gerekce, profil: profil };
 };
 const checkupYolHaritasi = (kademe) => {
   const tumu = [
@@ -2791,7 +2801,7 @@ const checkupRaporHTML = (d, meta) => {
   // Radar
   const eks = [['Dil', R(d.radar,'dil')], ['Özbakım', R(d.radar,'ozbakim')], ['Sosyal', R(d.radar,'sosyal')], ['Motor', R(d.radar,'motor')], ['Bilişsel', R(d.radar,'bilissel')]];
   const cx = 160, cy = 150, RR = 100; const pts = [], grid = [], lbl = [];
-  eks.forEach((e, i) => { const a = (-90 + i * 72) * Math.PI / 180; const val = Math.max(0, Math.min(10, Number(e[1]) || 0)); const r = RR * val / 10; pts.push((cx + r * Math.cos(a)).toFixed(1) + ',' + (cy + r * Math.sin(a)).toFixed(1)); grid.push('<line x1="' + cx + '" y1="' + cy + '" x2="' + (cx + RR * Math.cos(a)).toFixed(1) + '" y2="' + (cy + RR * Math.sin(a)).toFixed(1) + '" stroke="#e2e8f0"/>'); lbl.push('<text x="' + (cx + (RR + 20) * Math.cos(a)).toFixed(1) + '" y="' + (cy + (RR + 20) * Math.sin(a)).toFixed(1) + '" font-size="11" font-weight="700" fill="#1e3a5f" text-anchor="middle" dominant-baseline="middle">' + e[0] + '</text>'); });
+  eks.forEach((e, i) => { const a = (-90 + i * 72) * Math.PI / 180; const val = Math.max(0, Math.min(10, Number(e[1]) || 0)); const r = RR * val / 10; pts.push((cx + r * Math.cos(a)).toFixed(1) + ',' + (cy + r * Math.sin(a)).toFixed(1)); grid.push('<line x1="' + cx + '" y1="' + cy + '" x2="' + (cx + RR * Math.cos(a)).toFixed(1) + '" y2="' + (cy + RR * Math.sin(a)).toFixed(1) + '" stroke="#e2e8f0"/>'); lbl.push('<text x="' + (cx + (RR + 20) * Math.cos(a)).toFixed(1) + '" y="' + (cy + (RR + 20) * Math.sin(a)).toFixed(1) + '" font-size="11" font-weight="700" fill="#1e3a5f" text-anchor="middle" dominant-baseline="middle">' + e[0] + '</text>'); lbl.push('<circle cx="' + (cx + r * Math.cos(a)).toFixed(1) + '" cy="' + (cy + r * Math.sin(a)).toFixed(1) + '" r="9" fill="#ffffff" stroke="#2563eb" stroke-width="1.5"/><text x="' + (cx + r * Math.cos(a)).toFixed(1) + '" y="' + (cy + r * Math.sin(a)).toFixed(1) + '" font-size="9" font-weight="800" fill="#2563eb" text-anchor="middle" dominant-baseline="middle">' + val + '</text>'); });
   let rings = ''; [0.33, 0.66, 1].forEach(f => { rings += '<polygon points="' + eks.map((e, i) => { const a = (-90 + i * 72) * Math.PI / 180; return (cx + RR * f * Math.cos(a)).toFixed(1) + ',' + (cy + RR * f * Math.sin(a)).toFixed(1); }).join(' ') + '" fill="none" stroke="#e2e8f0"/>'; });
   const radar = '<svg viewBox="0 0 320 300" style="width:100%;max-width:340px;display:block;margin:0 auto"><g>' + rings + grid.join('') + '<polygon points="' + pts.join(' ') + '" fill="rgba(37,99,235,.25)" stroke="#2563eb" stroke-width="2"/>' + lbl.join('') + '</g></svg>';
   // Kavram haritası
@@ -2845,7 +2855,12 @@ const checkupRaporHTML = (d, meta) => {
     karsHtml = '<div style="font-size:12px;color:#64748b;margin-bottom:8px">Önceki ölçüm: <b>' + (kr.oncekiTarih || '') + '</b> ile karşılaştırma</div>' + kr.deltalar.map(x => { var fark = Number(x.simdi) - Number(x.onceki); var ok = fark > 0 ? '▲' : (fark < 0 ? '▼' : '▬'); var rnk = fark > 0 ? '#16a34a' : (fark < 0 ? '#dc2626' : '#64748b'); return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f1f5f9;font-size:13px;font-weight:700;color:#334155"><span>' + x.ad + '</span><span>' + x.onceki + ' → ' + x.simdi + ' <span style="color:' + rnk + ';font-weight:900">' + ok + ' ' + (fark > 0 ? '+' : '') + fark + '</span></span></div>'; }).join('');
   }
   const bugun = new Date().toLocaleDateString('tr-TR');
-
+  const _pf = d._profil || meta._profil;
+  const profilHtml = _pf ? '<div style="background:linear-gradient(135deg,#eef2ff,#faf5ff);border:2px solid #c7d2fe;border-radius:16px;padding:16px;text-align:center;margin-bottom:12px"><div style="font-size:12px;font-weight:800;color:#6366f1;letter-spacing:1px">🧭 GELİŞİMSEL PROFİL TİPİ</div><div style="font-size:22px;font-weight:900;color:#4338ca;margin:6px 0">' + (_pf.baslik || '') + '</div><div style="font-size:13.5px;color:#4b5563;line-height:1.8">' + (_pf.aciklama || '') + '</div></div>' : '';
+  const _gk = d._gerekce || meta._gerekce || {};
+  let seffafHtml = '';
+  Object.keys(_gk).forEach(area => { const o = _gk[area] || {}; const arti = o.arti || []; const eksi = o.eksi || []; if (!arti.length && !eksi.length) return; seffafHtml += '<div style="margin-bottom:10px;border-bottom:1px solid #f1f5f9;padding-bottom:8px"><div style="font-weight:800;color:#1e3a5f;font-size:13px;margin-bottom:3px">' + area + '</div>' + (arti.length ? '<div style="font-size:12.5px;color:#166534;line-height:1.7">✅ Yükselten: ' + arti.join(', ') + '</div>' : '') + (eksi.length ? '<div style="font-size:12.5px;color:#b91c1c;line-height:1.7">⚠️ Düşüren: ' + eksi.join(', ') + '</div>' : '') + '</div>'; });
+  if (seffafHtml) seffafHtml += '<div style="font-size:11px;color:#64748b;font-style:italic;margin-top:4px">Bu rapordaki puanlar, işaretlediğin gözlemlerden sistem tarafından hesaplanır; yapay zeka sayıları değiştiremez. Böylece sonuç girdilerle birebir tutarlıdır.</div>';
   return '' +
   '<div style="font-family:system-ui,-apple-system,sans-serif;color:#1e293b">' +
   // Kapak
@@ -2859,6 +2874,7 @@ const checkupRaporHTML = (d, meta) => {
   (karsHtml ? kart(bas('📈 Gelişim Karşılaştırması (önceki ölçümle)', '#0d9488') + karsHtml, '#f0fdfa', '#99f6e4') : '') +
   // Radar
   kart(bas('📊 Gelişim Profili (Radar)') + radar) +
+  (profilHtml ? '<div style="margin-bottom:12px">' + profilHtml + '</div>' : '') +
   // VAK
   kart(bas("🧬 Öğrenme DNA'sı (VAK)", '#ea580c') + yzd('Görsel', R(d.vak,'gorsel'), '#f59e0b') + yzd('İşitsel', R(d.vak,'isitsel'), '#38bdf8') + yzd('Kinestetik', R(d.vak,'kinestetik'), '#22c55e'), '#fff7ed', '#fed7aa') +
   // Beyin
@@ -2879,13 +2895,13 @@ const checkupRaporHTML = (d, meta) => {
   kart(bas('🧑‍🏫 Eğitim Koçu Reçetesi (Veliye Not)', '#4338ca') + '<div style="font-style:italic;color:#3730a3;line-height:1.8;font-size:14px">' + (d.veli_notu || '') + '</div>', '#eef2ff', '#c7d2fe') +
   (evOkulHtml ? kart(bas('🤝 Ev–Okul Köprüsü (İş Birliği)') + evOkulHtml) : '') +
   // Öğrenme kuramı
-  kart(bas('🧠 Öğrenme Kuramı Profili', '#0d9488') + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' + kuramKutu('Davranışçı', R(d.kuram,'davranisci'), '#ef4444') + kuramKutu('Bilişsel', R(d.kuram,'bilissel'), '#38bdf8') + kuramKutu('Yapılandırmacı', R(d.kuram,'yapilandirmaci'), '#22c55e') + kuramKutu('Hümanist', R(d.kuram,'humanist'), '#f59e0b') + '</div>' + (d.kuram_yorum ? '<div style="font-style:italic;color:#334155;margin-top:10px;font-size:13px;line-height:1.7">' + d.kuram_yorum + '</div>' : ''), '#f0fdfa', '#99f6e4') +
+  kart(bas('🧠 Öğrenme Kuramı Profili', '#0d9488') + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' + kuramKutu('Davranışçı', R(d.kuram,'davranisci'), '#ef4444') + kuramKutu('Bilişsel', R(d.kuram,'bilissel'), '#38bdf8') + kuramKutu('Yapılandırmacı', R(d.kuram,'yapilandirmaci'), '#22c55e') + kuramKutu('Hümanist', R(d.kuram,'humanist'), '#f59e0b') + '</div>' + (d.kuram_yorum ? '<div style="background:linear-gradient(135deg,#ecfeff,#f0fdfa);border-left:4px solid #14b8a6;border-radius:10px;padding:11px 13px;margin-top:10px;font-style:italic;color:#0f766e;font-size:13.5px;line-height:1.85">' + d.kuram_yorum + '</div>' : ''), '#f0fdfa', '#99f6e4') +
   // Gardner
   kart(bas('🧩 Çoklu Zeka Profili (Gardner)', '#7c3aed') + gardnerHtml, '#faf5ff', '#e9d5ff') +
   // Motivasyon
   kart(bas('🔥 Motivasyon Profili', '#ea580c') + '<div style="background:#f97316;color:#fff;border-radius:12px;padding:8px 14px;font-weight:800;display:inline-block;margin-bottom:6px">' + ((d.motivasyon && d.motivasyon.tip) || '') + '</div><div style="background:#fde68a;color:#92400e;border-radius:12px;padding:8px 14px;font-weight:700;display:inline-block;margin-bottom:8px">Kaynak: ' + ((d.motivasyon && d.motivasyon.kaynak) || '') + '</div><ul style="color:#92400e;font-size:13px;padding-left:18px">' + motivOner + '</ul>', '#fffbeb', '#fde68a') +
   // Yetenek
-  kart(bas('⭐ Yetenek & İlgi Yönelimi', '#be185d') + (d.yetenek && d.yetenek.baslik ? '<div style="background:linear-gradient(90deg,#db2777,#e11d48);color:#fff;border-radius:12px;padding:8px 14px;font-weight:800;display:inline-block;margin-bottom:8px">🎯 ' + d.yetenek.baslik + '</div>' : '') + '<div style="line-height:1.8;font-size:14px;color:#831843">' + ((d.yetenek && d.yetenek.metin) || '') + '</div>' + (gelistirme ? '<div style="font-weight:800;color:#be185d;margin-top:10px">Bu potansiyeli nasıl geliştirebilirsiniz?</div><ul style="color:#831843;font-size:13px;padding-left:18px">' + gelistirme + '</ul>' : ''), '#fdf2f8', '#fbcfe8') +
+  kart(bas('⭐ Yetenek & İlgi Yönelimi', '#be185d') + (d.yetenek && d.yetenek.baslik ? '<div style="background:linear-gradient(90deg,#db2777,#e11d48);color:#fff;border-radius:12px;padding:8px 14px;font-weight:800;display:inline-block;margin-bottom:8px">🎯 ' + d.yetenek.baslik + '</div>' : '') + '<div style="background:linear-gradient(135deg,#fdf2f8,#fff1f2);border-left:4px solid #db2777;border-radius:10px;padding:11px 13px;line-height:1.85;font-size:14px;color:#831843">' + ((d.yetenek && d.yetenek.metin) || '') + '</div>' + (gelistirme ? '<div style="font-weight:800;color:#be185d;margin-top:10px">Bu potansiyeli nasıl geliştirebilirsiniz?</div><ul style="color:#831843;font-size:13px;padding-left:18px">' + gelistirme + '</ul>' : ''), '#fdf2f8', '#fbcfe8') +
   ((d.guclu_yonler || d.gelisim_alanlari) ? kart(bas('🧭 Güçlü Yönler & Gelişim Alanları') + gucluGelisim) : '') +
   // Gelişim önerileri
   kart(bas('📈 Gelişim Önerileri (Neler Yapılabilir?)', '#0d9488') + go, '#f0fdfa', '#99f6e4') +
@@ -2901,6 +2917,7 @@ const checkupRaporHTML = (d, meta) => {
   kart(bas('🎓 Kademe Yol Haritası — ' + (meta.kademe || '') + '\'ten Üniversiteye', '#b45309') + yolHtml, '#fffbeb', '#fde68a') +
   // Kavram haritası
   kart(bas("🔗 Öğrenme DNA'sı Kavram Haritası", '#4338ca') + kavramSvg) +
+  (seffafHtml ? kart(bas('🔎 Bu Rapor Nasıl Oluştu? (Şeffaflık)', '#0369a1') + seffafHtml, '#f0f9ff', '#bae6fd') : '') +
   // Bilimsel dayanak
   (mektup ? kart(bas('💌 Öğrenciye Küçük Bir Not', '#0f766e') + mektup, '#f0fdfa', '#99f6e4') : '') +
   kart(bas('📚 Bilimsel Dayanak') + '<div style="font-size:13px;color:#334155;line-height:1.8">Bu değerlendirme; <b>Öğrenme Kuramları</b> (Davranışçı, Bilişsel, Yapılandırmacı, Hümanist), <b>Çoklu Zeka Kuramı</b> (Gardner), <b>VAK Öğrenme Stilleri</b>, <b>Bloom Taksonomisi</b>, <b>Okul Olgunluğu / Hazırbulunuşluk</b> göstergeleri ve <b>Gelişim Alanları</b> (bilişsel, dil, motor, sosyal-duygusal, öz bakım) çerçevesinde hazırlanmıştır.</div><div style="font-size:11px;color:#94a3b8;font-style:italic;margin-top:10px">Not: Bu rapor yapay zeka destekli bir ön değerlendirme aracıdır; kesin tanı ve yönlendirme için alan uzmanının (rehber öğretmen, psikolog) değerlendirmesi esastır.</div><div style="text-align:center;margin-top:14px;padding-top:12px;border-top:1px solid #e2e8f0;font-weight:800;color:#1e3a5f">🎓 ' + (meta.kurum || 'Barış İlkan') + ' — Eğitim & Gelişim Dokümanı</div><div style="display:flex;justify-content:space-between;margin-top:16px;font-size:12px;color:#64748b"><span>Hazırlayan / Onay:</span><span>__________________________</span></div>') +
@@ -2985,6 +3002,8 @@ const checkupUret = async () => {
     parsed.beyin = hesap.beyin;
     parsed.kuram = hesap.kuram;
     parsed.trafik_isigi = hesap.trafik_isigi;
+    parsed._gerekce = hesap.gerekce;
+    parsed._profil = hesap.profil;
     const meta = { ogrenci: checkupOgrenci.trim(), kademe: checkupKademe, kurum: checkupKurum.trim() };
     meta.logo = checkupLogo || '';
     const ad0 = checkupOgrenci.trim().toLocaleLowerCase('tr-TR');
