@@ -1580,6 +1580,7 @@ const [matbaaGecmisi, setMatbaaGecmisi] = useState(() => { try { const r = local
 const [bipOgrenci, setBipOgrenci] = useState('');
 const [bipDers, setBipDers] = useState('Matematik');
 const [bipDersNo, setBipDersNo] = useState(1);
+const [bipKademe, setBipKademe] = useState('');
 const [isGeneratingMaterial, setIsGeneratingMaterial] = useState(false);
 const [materialProgress, setMaterialProgress] = useState('');
 const [sablonAra, setSablonAra] = useState('');
@@ -1636,6 +1637,15 @@ const [checkupKayitAcik, setCheckupKayitAcik] = useState(false);
 const [checkupGecmis, setCheckupGecmis] = useState(() => { try { const r = localStorage.getItem('zirve_checkup_gecmis'); if (r) { const d = JSON.parse(r); if (d && typeof d === 'object') return d; } } catch(e){} return {}; });
 const [veliMesaji, setVeliMesaji] = useState('');
 const [veliMesajYukleniyor, setVeliMesajYukleniyor] = useState(false);
+// Akademik Check-Up (sınavsız → hazır prompt)
+const [akOgrenci, setAkOgrenci] = useState('');
+const [akKademe, setAkKademe] = useState('');
+const [akDers, setAkDers] = useState('');
+const [akGozlem, setAkGozlem] = useState('');
+const [akTur, setAkTur] = useState('karma (test + konu anlatımı)');
+const [akZorluk, setAkZorluk] = useState('orta');
+const [akSonuc, setAkSonuc] = useState(null);
+const [akYukleniyor, setAkYukleniyor] = useState(false);
 useEffect(() => { const h = () => { setAsistanGizli(false); try{ localStorage.removeItem('zirve_asistan_gizli'); }catch(e){} }; window.addEventListener('zirve-asistan-geri', h); return () => window.removeEventListener('zirve-asistan-geri', h); }, []);
 const [fasikulAcik, setFasikulAcik] = useState(false);
 const [fasikulBolumler, setFasikulBolumler] = useState([]);
@@ -2506,7 +2516,7 @@ const bipDersUret = () => {
     const o = (bipOgrenci || '').trim(); const d = (bipDers || '').trim() || 'Matematik';
     if (!o) { showToast('Önce öğrenci adını yaz.'); return; }
     const no = bipDersNo;
-    const istem = o + ' adlı öğrenci için ' + d + ' dersinde SIFIRDAN ilerleyen bireysel bir programın ' + no + '. DERSİNİ hazırla. ' +
+    const istem = o + ' adlı öğrenci için ' + (bipKademe ? (bipKademe + ' (Türkiye Yüzyılı Maarif Modeli) düzeyinde ') : '') + d + ' dersinde SIFIRDAN ilerleyen bireysel bir programın ' + no + '. DERSİNİ hazırla. ' +
         (no > 1 ? ('Önceki ' + (no - 1) + ' dersin üzerine kur; kısa bir "önceki dersi hatırla" tekrarıyla başla, sonra bu derse geç.') : 'İlk ders olduğu için en temel, en basit seviyeden başla.') +
         ' Bu derse uygun TEK yeni konu/beceri öğret; renkli anlatım + adım adım örnek + bol alıştırma + kısa değerlendirme olsun. Sade, tekrarlı ve özel eğitime uygun ol. Başlığa "' + d + ' — Ders ' + no + ' (' + o + ')" yaz.';
     anindaUret(istem, 'Fark Etmez (Yapay Zeka Seçsin)');
@@ -2514,6 +2524,7 @@ const bipDersUret = () => {
     showToast('📈 Ders ' + no + ' kutuya düştü. Kaldığın yer: Ders ' + sonraki);
 };
 const bipGeri = () => { const o = (bipOgrenci || '').trim(); const d = (bipDers || '').trim() || 'Matematik'; if (!o) return; const yeni = Math.max(1, bipDersNo - 1); bipKaydet(o, d, yeni); setBipDersNo(yeni); showToast('◀ Ders ' + yeni + "'e alındı."); };
+const bipIleri = () => { const o = (bipOgrenci || '').trim(); const d = (bipDers || '').trim() || 'Matematik'; if (!o) { showToast('Önce öğrenci adını yaz.'); return; } const yeni = bipDersNo + 1; bipKaydet(o, d, yeni); setBipDersNo(yeni); showToast('▶ Ders ' + yeni + "'e atlandı (hızlandırıldı)."); };
 const bipSifirla = () => { const o = (bipOgrenci || '').trim(); const d = (bipDers || '').trim() || 'Matematik'; if (!o) return; if (!window.confirm(o + ' — ' + d + ' ilerlemesi Ders 1\'e sıfırlansın mı?')) return; bipKaydet(o, d, 1); setBipDersNo(1); showToast('🔄 Sıfırlandı: Ders 1'); };
 
 // ↩️ GERİ DÖN: kullanıcıya sorar — sakla mı, tamamen kaldır mı? ("PDF komple silinsin mi?")
@@ -2700,7 +2711,7 @@ const asistanSor = async (q) => {
     setAsistanSoru('');
     setAsistanYukleniyor(true);
     try {
-        const prompt = 'Sen bir öğretmenin yardımcısısın. Kısa, net ve TÜRKÇE cevap ver; öğretmenin işini hafiflet. Yalnızca sana verilen duruma ve genel pedagojik bilgine dayan, uydurma. GİZLİLİK: öğrenci fotoğrafı/telefonu gibi kişisel veri isteme.\\n\\nUYGULAMA DURUMU: ' + durumOzeti() + '\\n\\nÖĞRETMENİN SORUSU: ' + soru;
+        const prompt = 'Sen bir öğretmenin yardımcısısın. Kısa, net ve TÜRKÇE cevap ver; öğretmenin işini hafiflet. GİZLİLİK: öğrenci fotoğrafı/telefonu gibi kişisel veri isteme.\\n\\n★ DENEME ANALİZİ MODU: Öğretmen sana LGS / TYT / AYT deneme sonucu (ders bazında doğru-yanlış ya da net) verirse GERÇEKÇİ bir analiz yap: (1) net hesapla — LGS/TYT/AYT’de 4 yanlış 1 doğruyu götürür, net = doğru − yanlış/4 (yuvarlama yapma, gerçek değeri ver); (2) güçlü ve zayıf dersleri sırala; (3) düşük netli derslerde tahmini eksik konu başlıklarını söyle; (4) GERÇEKÇİ ve TEMKİNLİ bir tahmini puan/sıralama aralığı ver, ‘‘denemeler ve katsayılar değişir, kesin değildir’’ uyarısı ekle, abartma; (5) önceliklendirilmiş kısa bir çalışma planı öner. Uydurma net/puan verme; veri eksikse iste. Veri yoksa normal asistan gibi davran.\\n\\nUYGULAMA DURUMU: ' + durumOzeti() + '\\n\\nÖĞRETMENİN SORUSU: ' + soru;
         const resp = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + aktifModel + ':generateContent?key=' + apiKey, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.6, maxOutputTokens: 1200, thinkingConfig: { thinkingBudget: 0 } } })
@@ -3144,6 +3155,40 @@ const veliMesajiUret = async () => {
     setVeliMesaji(metin); showToast('💬 Veli mesajı hazır.');
   } catch(e) { showToast('Mesaj alınamadı (bağlantı).'); }
   setVeliMesajYukleniyor(false);
+};
+// ── AKADEMİK CHECK-UP (sınavsız): gözlemlerden güçlü/zayıf çıkarır + doküman üret'e yapıştırılacak hazır PROMPT üretir ──
+const akYerelPrompt = () => {
+  const kademe = akKademe || 'ilgili sınıf';
+  const ders = akDers ? (akDers + ' dersi ') : '';
+  return kademe + ' (Türkiye Yüzyılı Maarif Modeli) düzeyinde ' + (akOgrenci.trim() ? akOgrenci.trim() + ' adlı öğrenci için ' : '') + ders + 'aşağıdaki gözlemlerde ZAYIF/eksik belirtilen konulara AĞIRLIK ver, güçlü konuları da pekiştir; ' + akZorluk + ' zorlukta, ' + akTur + ' türünde, kademeye ve Maarif kazanımlarına uygun, cevap anahtarlı, renkli ve yazdırmaya uygun kapsamlı bir materyal hazırla. GÖZLEMLER: ' + akGozlem.trim();
+};
+const akademikCheckup = async () => {
+  if (!akGozlem.trim()) { showToast('Önce öğrencinin ders durumunu / zorlandığı konuları yaz.'); return; }
+  if (!apiKey) { setAkSonuc({ ozet: 'API anahtarı yok — gözlemlerinden doğrudan hazır prompt üretildi.', guclu: [], zayif: [], prompt: akYerelPrompt() }); showToast('📝 Hazır prompt oluşturuldu (yerel).'); return; }
+  let aktifModel = modelName || 'gemini-2.5-flash';
+  try { if (window.ZIRVE && typeof window.ZIRVE.enIyiModel === 'function' && window.ZIRVE.modeller && window.ZIRVE.modeller.length) { const iyi = window.ZIRVE.enIyiModel(window.ZIRVE.modeller); if (iyi) aktifModel = iyi; } else if (window.ZIRVE && window.ZIRVE.model) aktifModel = window.ZIRVE.model; } catch(e){}
+  if (!aktifModel || aktifModel.includes('latest') || aktifModel.includes('lite')) aktifModel = 'gemini-2.5-flash';
+  setAkYukleniyor(true);
+  try {
+    const kademe = akKademe || 'ilgili sınıf';
+    const prompt = 'Bir öğretmenin verdiği aşağıdaki AKADEMİK gözlemlerden (ders notları, yaptığı çalışmalar, zorlandığı/başarılı olduğu konular) yola çıkarak SINAVSIZ bir akademik check-up yap. Deneme/quiz YOK; sadece bu gözlemleri kullan. Öğrenci: ' + (akOgrenci.trim() || 'öğrenci') + ', Kademe: ' + kademe + ' (Türkiye Yüzyılı Maarif Modeli)' + (akDers ? (', Ders: ' + akDers) : '') + '. GÖZLEMLER: ' + akGozlem.trim() + '. İstenen materyal türü: ' + akTur + ', zorluk: ' + akZorluk + '. '
+      + 'SADECE şu JSON döndür: {"ozet":"2-3 cümle akademik durum özeti","guclu":["güçlü konu/alan maddeleri"],"zayif":["zayıf/eksik konu/alan maddeleri"],"prompt":"Öğretmenin doküman üret kutusuna YAPIŞTIRIP çalıştırabileceği HAZIR ve DETAYLI tek bir Türkçe komut. Bu komut; yukarıdaki zayıf konulara ağırlık verip güçlü konuları da pekiştiren, ' + kademe + ' düzeyine ve Maarif kazanımlarına uygun, ' + akZorluk + ' zorlukta, ' + akTur + ' türünde, cevap anahtarlı, renkli ve yazdırmaya uygun bir materyal üretmeyi açıkça istesin; hedeflenen konu adlarını tek tek yazsın."}';
+    const resp = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + aktifModel + ':generateContent?key=' + apiKey, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ contents:[{ parts:[{ text: prompt }] }], generationConfig:{ responseMimeType:'application/json', temperature:0.5, maxOutputTokens:2000, thinkingConfig:{ thinkingBudget:0 } } }) });
+    if (!resp.ok) { showToast(resp.status === 429 ? 'Kota doldu, biraz sonra dene.' : 'Analiz alınamadı (' + resp.status + ').'); setAkYukleniyor(false); return; }
+    const data = await resp.json();
+    let metin = (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0] && data.candidates[0].content.parts[0].text) || '';
+    let parsed = null; try { parsed = JSON.parse(metin.replace(/^```(?:json)?/i,'').replace(/```$/i,'').trim()); } catch(e){}
+    if (!parsed || !parsed.prompt) { parsed = { ozet: 'Otomatik özet çıkarılamadı; gözlemlerden hazır prompt üretildi.', guclu: [], zayif: [], prompt: akYerelPrompt() }; }
+    setAkSonuc({ ozet: parsed.ozet || '', guclu: Array.isArray(parsed.guclu) ? parsed.guclu : [], zayif: Array.isArray(parsed.zayif) ? parsed.zayif : [], prompt: parsed.prompt || akYerelPrompt() });
+    showToast('🎓 Akademik check-up + hazır prompt oluşturuldu.');
+  } catch(e) { setAkSonuc({ ozet: 'Bağlantı hatası — gözlemlerden hazır prompt üretildi.', guclu: [], zayif: [], prompt: akYerelPrompt() }); showToast('Analiz alınamadı; yerel prompt hazır.'); }
+  setAkYukleniyor(false);
+};
+const akUretKutusunaGonder = (uret) => {
+  if (!akSonuc || !akSonuc.prompt) return;
+  try { if (typeof setMaterialTopic === 'function') setMaterialTopic(akSonuc.prompt); } catch(e){}
+  if (uret) { try { setMaterialError(''); } catch(e){} if (typeof setActiveTab === 'function') { try { setActiveTab('tools'); } catch(e){} } showToast('⚡ Hedef materyal üretiliyor…'); generateMaterial(akSonuc.prompt); }
+  else showToast('📥 Prompt üret kutusuna yazıldı (istersen düzenle).');
 };
 
 const yaklasimOner = async () => {
@@ -4108,7 +4153,7 @@ return (
     </div>
     <div className="p-2 border-t bg-white">
       <div className="flex flex-wrap gap-1 mb-2">
-        {['Bu çalışmayı özetle','Zorluğunu değerlendir','1 fikir daha ver','Veliye kısa not yaz'].map((q,i)=>(<button key={i} onClick={()=>asistanSor(q)} disabled={asistanYukleniyor} className="text-[10px] bg-indigo-50 hover:bg-indigo-600 hover:text-white text-indigo-700 border border-indigo-200 px-2 py-1 rounded-md font-semibold transition disabled:opacity-50">{q}</button>))}
+        {['Bu çalışmayı özetle','📊 LGS deneme analizi','📊 TYT/AYT deneme analizi','Zorluğunu değerlendir','1 fikir daha ver','Veliye kısa not yaz'].map((q,i)=>(<button key={i} onClick={()=>asistanSor(q)} disabled={asistanYukleniyor} className="text-[10px] bg-indigo-50 hover:bg-indigo-600 hover:text-white text-indigo-700 border border-indigo-200 px-2 py-1 rounded-md font-semibold transition disabled:opacity-50">{q}</button>))}
       </div>
       <div className="flex gap-2">
         <input value={asistanSoru} onChange={e=>setAsistanSoru(e.target.value)} onKeyDown={e=>{ if(e.key==='Enter'){ asistanSor(); } }} placeholder="Sorunu yaz…" className="flex-1 px-3 py-2 border border-gray-300 rounded-lg outline-none text-sm" />
@@ -4719,6 +4764,7 @@ title="Veli ödevi yaptıysa buraya tıklayın."
   <button onClick={()=>setAcikArac(a=>a==='mufredat'?'':'mufredat')} className={`col-span-2 flex items-center justify-center gap-2 py-2.5 rounded-xl font-black text-[12px] transition border ${acikArac==='mufredat'?'bg-gradient-to-br from-rose-500 to-pink-600 text-white border-transparent shadow-lg':'bg-white/10 text-rose-100 border-rose-400/30 hover:bg-white/20'}`}><i className="fa-solid fa-graduation-cap text-base"></i>📚 Müfredat & Konular (Sınıf → Ders → Konu)</button>
   <button onClick={()=>setAcikArac(a=>a==='pedagoji'?'':'pedagoji')} className={`col-span-2 flex items-center justify-center gap-2 py-2.5 rounded-xl font-black text-[12px] transition border ${acikArac==='pedagoji'?'bg-gradient-to-br from-indigo-500 to-violet-600 text-white border-transparent shadow-lg':'bg-white/10 text-indigo-100 border-indigo-400/30 hover:bg-white/20'}`}><i className="fa-solid fa-brain text-base"></i>🧠 Pedagojik Danışman (her davranışa uzman cevap)</button>
   <button onClick={()=>setAcikArac(a=>a==='checkup'?'':'checkup')} className={`col-span-2 flex items-center justify-center gap-2 py-2.5 rounded-xl font-black text-[12px] transition border ${acikArac==='checkup'?'bg-gradient-to-br from-blue-500 to-cyan-600 text-white border-transparent shadow-lg':'bg-white/10 text-cyan-100 border-cyan-400/30 hover:bg-white/20'}`}><i className="fa-solid fa-dna text-base"></i>🧬 Öğrenme DNA / Gelişim Check-Up (Analiz + Yol Haritası)</button>
+  <button onClick={()=>setAcikArac(a=>a==='akademik'?'':'akademik')} className={`col-span-2 flex items-center justify-center gap-2 py-2.5 rounded-xl font-black text-[12px] transition border ${acikArac==='akademik'?'bg-gradient-to-br from-orange-500 to-amber-600 text-white border-transparent shadow-lg':'bg-white/10 text-amber-100 border-amber-400/30 hover:bg-white/20'}`}><i className="fa-solid fa-graduation-cap text-base"></i>🎓 Akademik Check-Up (sınavsız → hazır prompt)</button>
 </div>
 
 {/* 📚 MÜFREDAT PANELİ — Sınıf → Ders → Konu → (Renkli Konu Anlatımı / İnfografik) */}
@@ -5057,6 +5103,16 @@ title="Veli ödevi yaptıysa buraya tıklayın."
     <span className="text-xs font-black text-emerald-100 uppercase tracking-wide"><i className="fa-solid fa-chart-line mr-1 text-emerald-300"></i> Bireysel Ders Takibi</span>
     <span className="text-[10px] text-emerald-200/70">kaldığın yeri hatırlar</span>
   </div>
+  <div className="flex flex-wrap gap-2 mb-2">
+    <select value={bipKademe} onChange={(e)=>setBipKademe(e.target.value)} className="flex-1 min-w-[130px] px-3 py-2 bg-slate-900/60 border border-emerald-400/30 rounded-lg outline-none text-white text-sm focus:border-emerald-300 font-semibold">
+      <option value="">📚 Sınıf seç (Maarif)</option>
+      {Object.keys(MUFREDAT).map(k=>(<option key={k} value={k}>{k}</option>))}
+    </select>
+    <select value={(bipKademe && MUFREDAT[bipKademe] && MUFREDAT[bipKademe][bipDers]) ? bipDers : ''} onChange={(e)=>{ if(e.target.value) setBipDers(e.target.value); }} disabled={!bipKademe} className="flex-1 min-w-[130px] px-3 py-2 bg-slate-900/60 border border-emerald-400/30 rounded-lg outline-none text-white text-sm focus:border-emerald-300 font-semibold disabled:opacity-50">
+      <option value="">📖 Ders seç</option>
+      {bipKademe && Object.keys(MUFREDAT[bipKademe]||{}).map(d=>(<option key={d} value={d}>{d}</option>))}
+    </select>
+  </div>
   <div className="flex flex-wrap gap-2 items-center mb-2">
     <input value={bipOgrenci} onChange={(e)=>setBipOgrenci(e.target.value)} placeholder="Öğrenci adı" className="flex-1 min-w-[130px] px-3 py-2 bg-slate-900/60 border border-emerald-400/30 rounded-lg outline-none text-white text-sm focus:border-emerald-300" />
     <input value={bipDers} onChange={(e)=>setBipDers(e.target.value)} placeholder="Ders (ör. Matematik)" className="w-[150px] px-3 py-2 bg-slate-900/60 border border-emerald-400/30 rounded-lg outline-none text-white text-sm focus:border-emerald-300" />
@@ -5065,9 +5121,61 @@ title="Veli ödevi yaptıysa buraya tıklayın."
   <div className="flex flex-wrap gap-1.5">
     <button onClick={bipDersUret} className="text-[12px] bg-emerald-400 hover:bg-emerald-300 text-emerald-950 px-3 py-1.5 rounded-md font-black transition"><i className="fa-solid fa-wand-magic-sparkles mr-1"></i>Sıradaki Dersi Üret (Ders {bipDersNo})</button>
     <button onClick={bipGeri} className="text-[11px] bg-white/10 hover:bg-white/20 text-emerald-50 px-2.5 py-1.5 rounded-md font-bold border border-emerald-300/30 transition"><i className="fa-solid fa-backward-step mr-1"></i>Önceki</button>
+    <button onClick={bipIleri} className="text-[11px] bg-white/10 hover:bg-white/20 text-emerald-50 px-2.5 py-1.5 rounded-md font-bold border border-emerald-300/30 transition"><i className="fa-solid fa-forward-step mr-1"></i>İleri (hızlandır)</button>
     <button onClick={bipSifirla} className="text-[11px] bg-white/10 hover:bg-red-500 hover:text-white text-emerald-50 px-2.5 py-1.5 rounded-md font-bold border border-emerald-300/30 transition"><i className="fa-solid fa-rotate-left mr-1"></i>Sıfırla</button>
   </div>
   <p className="text-[10px] text-emerald-100/70 mt-2">Öğrenci + ders yaz → “Sıradaki Dersi Üret” de. Her seferinde bir sonraki dersten devam eder; ders sıralı ve öncekinin üstüne kurulu gelir. Üret kutusuna düşer, istersen düzenleyip “Üret”e basarsın.</p>
+</div>
+
+{/* 🎓 AKADEMİK CHECK-UP (sınavsız → hazır prompt) */}
+<div className={`mb-3 bg-gradient-to-br from-orange-600/25 to-amber-600/20 p-3 rounded-xl border border-amber-400/30 ${acikArac==='akademik'?'':'hidden'}`}>
+  <div className="flex items-center justify-between mb-2">
+    <span className="text-xs font-black text-amber-100 uppercase tracking-wide"><i className="fa-solid fa-graduation-cap mr-1 text-amber-300"></i> Akademik Check-Up (sınavsız)</span>
+    <span className="text-[10px] text-amber-200/70">güçlü/zayıf → hazır prompt</span>
+  </div>
+  <p className="text-[11px] text-amber-100/90 mb-2">Deneme/quiz gerekmez. Öğrencinin <b>ders notları, yaptığı çalışmalar, zorlandığı/başarılı olduğu konuları</b> yaz; sistem güçlü/zayıf alanları çıkarsın ve <b>doküman üret kutusuna yapıştırılacak hazır bir prompt</b> üretsin.</p>
+  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 mb-2">
+    <input value={akOgrenci} onChange={e=>setAkOgrenci(e.target.value)} placeholder="Öğrenci adı (ops.)" className="px-2.5 py-2 bg-white/95 border border-amber-200 rounded-lg outline-none text-sm text-gray-800" />
+    <select value={akKademe} onChange={e=>{ setAkKademe(e.target.value); setAkDers(''); }} className="px-2.5 py-2 bg-white/95 border border-amber-200 rounded-lg outline-none text-sm text-gray-800 font-semibold">
+      <option value="">📚 Sınıf seç (Maarif)</option>
+      {Object.keys(MUFREDAT).map(k=>(<option key={k} value={k}>{k}</option>))}
+    </select>
+  </div>
+  <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5 mb-2">
+    <select value={akDers} onChange={e=>setAkDers(e.target.value)} disabled={!akKademe} className="px-2.5 py-2 bg-white/95 border border-amber-200 rounded-lg outline-none text-sm text-gray-800 font-semibold disabled:opacity-50">
+      <option value="">📖 Ders (ops.)</option>
+      {akKademe && Object.keys(MUFREDAT[akKademe]||{}).map(d=>(<option key={d} value={d}>{d}</option>))}
+    </select>
+    <select value={akTur} onChange={e=>setAkTur(e.target.value)} className="px-2.5 py-2 bg-white/95 border border-amber-200 rounded-lg outline-none text-sm text-gray-800 font-semibold">
+      {['karma (test + konu anlatımı)','test / soru','fasikül (kapsamlı)','konu anlatımı','boşluk doldurma','etkinlik'].map(t=>(<option key={t} value={t}>{t}</option>))}
+    </select>
+    <select value={akZorluk} onChange={e=>setAkZorluk(e.target.value)} className="px-2.5 py-2 bg-white/95 border border-amber-200 rounded-lg outline-none text-sm text-gray-800 font-semibold">
+      {['kolay','orta','zor','kademeli (kolaydan zora)'].map(z=>(<option key={z} value={z}>{z}</option>))}
+    </select>
+  </div>
+  <div className="relative mb-2">
+    <textarea value={akGozlem} onChange={e=>setAkGozlem(e.target.value)} rows={4} placeholder="Örn: Matematikte kesirlerde ve problemde zorlanıyor, çarpma-bölme iyi. Türkçede paragrafta düşük, yazımı iyi. Fen'de kuvvet-hareket eksik…" className="w-full px-3 py-2 pr-8 bg-white/95 border border-amber-200 rounded-lg outline-none text-sm text-gray-800 resize-y" />
+    {akGozlem && <button onClick={()=>setAkGozlem('')} title="Temizle" className="absolute right-2 top-2 w-6 h-6 rounded-full bg-gray-200 hover:bg-red-500 hover:text-white text-gray-500 flex items-center justify-center text-xs font-bold transition">✕</button>}
+  </div>
+  <button onClick={akademikCheckup} disabled={akYukleniyor} className="w-full text-sm bg-gradient-to-r from-orange-500 to-amber-600 hover:opacity-90 text-white px-3 py-2.5 rounded-lg font-black transition disabled:opacity-60">{akYukleniyor ? <span><i className="fa-solid fa-spinner fa-spin mr-1"></i>Analiz + prompt hazırlanıyor…</span> : <span><i className="fa-solid fa-wand-magic-sparkles mr-1"></i>🎓 Check-Up + Hazır Prompt Üret</span>}</button>
+
+  {akSonuc && (
+    <div className="mt-2 bg-white rounded-xl p-3 border border-amber-200">
+      {akSonuc.ozet && <p className="text-[12.5px] text-gray-800 mb-2"><b>Özet:</b> {akSonuc.ozet}</p>}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
+        {akSonuc.guclu && akSonuc.guclu.length>0 && <div className="bg-green-50 border border-green-200 rounded-lg p-2"><div className="text-[11px] font-black text-green-700 mb-1">💪 Güçlü</div><ul className="text-[11.5px] text-green-800 list-disc pl-4 space-y-0.5">{akSonuc.guclu.map((x,i)=>(<li key={i}>{x}</li>))}</ul></div>}
+        {akSonuc.zayif && akSonuc.zayif.length>0 && <div className="bg-rose-50 border border-rose-200 rounded-lg p-2"><div className="text-[11px] font-black text-rose-700 mb-1">🌱 Gelişmeli</div><ul className="text-[11.5px] text-rose-800 list-disc pl-4 space-y-0.5">{akSonuc.zayif.map((x,i)=>(<li key={i}>{x}</li>))}</ul></div>}
+      </div>
+      <div className="text-[10px] font-black text-gray-500 uppercase mb-1">📋 Doküman üret'e yapıştırılacak hazır prompt</div>
+      <textarea readOnly value={akSonuc.prompt} rows={5} className="w-full px-2.5 py-2 bg-gray-50 border border-gray-200 rounded-lg text-[12px] text-gray-800 resize-y" />
+      <div className="flex flex-wrap gap-1.5 mt-2">
+        <button onClick={()=>{ try{ navigator.clipboard.writeText(akSonuc.prompt); showToast('📋 Prompt kopyalandı — üret kutusuna yapıştır.'); }catch(e){ showToast('Kopyalanamadı.'); } }} className="flex-1 text-[11px] bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1.5 rounded-md font-bold transition">📋 Prompt'u kopyala</button>
+        <button onClick={()=>akUretKutusunaGonder(false)} className="flex-1 text-[11px] bg-amber-100 hover:bg-amber-200 text-amber-800 px-2 py-1.5 rounded-md font-bold transition">📥 Üret kutusuna yaz</button>
+        <button onClick={()=>akUretKutusunaGonder(true)} className="flex-1 text-[11px] bg-gradient-to-r from-orange-500 to-amber-600 text-white px-2 py-1.5 rounded-md font-black transition">⚡ Gönder & üret</button>
+      </div>
+    </div>
+  )}
+  <p className="text-[10px] text-amber-200/70 mt-1.5">Not: Sınavsız ön değerlendirmedir; öğretmen gözlemine dayanır. “Gönder & üret” hedef alanlara yönelik materyali doğrudan hazırlar.</p>
 </div>
 
 {/* HAZIR ŞABLON BUTONLARI - TÜM TÜRLER */}
