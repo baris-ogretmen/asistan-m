@@ -1581,6 +1581,7 @@ const [bipOgrenci, setBipOgrenci] = useState('');
 const [bipDers, setBipDers] = useState('Matematik');
 const [bipDersNo, setBipDersNo] = useState(1);
 const [bipKademe, setBipKademe] = useState('');
+const [bipOzelEgitim, setBipOzelEgitim] = useState(false);
 const [isGeneratingMaterial, setIsGeneratingMaterial] = useState(false);
 const [materialProgress, setMaterialProgress] = useState('');
 const [sablonAra, setSablonAra] = useState('');
@@ -1646,6 +1647,18 @@ const [akTur, setAkTur] = useState('karma (test + konu anlatımı)');
 const [akZorluk, setAkZorluk] = useState('orta');
 const [akSonuc, setAkSonuc] = useState(null);
 const [akYukleniyor, setAkYukleniyor] = useState(false);
+// 📊 Deneme Analizi (LGS/TYT/AYT)
+const DENEME_YAPI = {
+  'LGS': [['Türkçe',20],['Matematik',20],['Fen Bilimleri',20],['T.C. İnkılap Tarihi',10],['Din Kültürü',10],['İngilizce',10]],
+  'TYT': [['Türkçe',40],['Sosyal Bilimler',20],['Temel Matematik',40],['Fen Bilimleri',20]],
+  'AYT Sayısal': [['Matematik',40],['Fizik',14],['Kimya',13],['Biyoloji',13]],
+  'AYT Eşit Ağırlık': [['Matematik',40],['Türk Dili ve Edebiyatı',24],['Tarih-1',10],['Coğrafya-1',6]],
+  'AYT Sözel': [['Türk Dili ve Edebiyatı',24],['Tarih-1',10],['Coğrafya-1',6],['Tarih-2',11],['Coğrafya-2',11],['Felsefe Grubu',12],['Din Kültürü',6]]
+};
+const [denemeTur, setDenemeTur] = useState('LGS');
+const [denemeOgrenci, setDenemeOgrenci] = useState('');
+const [denemeVeri, setDenemeVeri] = useState({});
+const [denemeYukleniyor, setDenemeYukleniyor] = useState(false);
 useEffect(() => { const h = () => { setAsistanGizli(false); try{ localStorage.removeItem('zirve_asistan_gizli'); }catch(e){} }; window.addEventListener('zirve-asistan-geri', h); return () => window.removeEventListener('zirve-asistan-geri', h); }, []);
 const [fasikulAcik, setFasikulAcik] = useState(false);
 const [fasikulBolumler, setFasikulBolumler] = useState([]);
@@ -2517,8 +2530,9 @@ const bipDersUret = () => {
     if (!o) { showToast('Önce öğrenci adını yaz.'); return; }
     const no = bipDersNo;
     const istem = o + ' adlı öğrenci için ' + (bipKademe ? (bipKademe + ' (Türkiye Yüzyılı Maarif Modeli) düzeyinde ') : '') + d + ' dersinde SIFIRDAN ilerleyen bireysel bir programın ' + no + '. DERSİNİ hazırla. ' +
-        (no > 1 ? ('Önceki ' + (no - 1) + ' dersin üzerine kur; kısa bir "önceki dersi hatırla" tekrarıyla başla, sonra bu derse geç.') : 'İlk ders olduğu için en temel, en basit seviyeden başla.') +
-        ' Bu derse uygun TEK yeni konu/beceri öğret; renkli anlatım + adım adım örnek + bol alıştırma + kısa değerlendirme olsun. Sade, tekrarlı ve özel eğitime uygun ol. Başlığa "' + d + ' — Ders ' + no + ' (' + o + ')" yaz.';
+        (bipOzelEgitim ? 'ÖZEL EĞİTİM MODU: sınıf seviyesini BASİTLEŞTİR (bir alt düzeye çek), çok küçük adımlar, bol tekrar, kısa-net yönergeler, görsel/somut destek ve cesaretlendirici dil kullan. ' : 'Bu NORMAL gelişim gösteren bir öğrenci içindir; ' + (bipKademe ? bipKademe + ' ' : '') + 'kademe seviyesine tam uygun ilerle. ') +
+        (no > 1 ? ('EN BAŞTA "🔁 Önceki Dersin Özeti (Ders ' + (no - 1) + ')" bölümü koy: geçen derste öğrenileni 3-4 kısa maddeyle hatırlat, sonra bugünkü derse geç. ') : 'İlk ders olduğu için en temel, en basit seviyeden başla; kısa bir hazırlık/tanışma ile aç. ') +
+        'Sonra bu derse uygun TEK yeni konu/beceriyi ÖĞRET: kısa ve renkli anlatım + adım adım 2-3 örnek + bol alıştırma. EN SONDA mutlaka "📝 Ders Sonu Mini Sınav" bölümü ekle: 5 soruluk (çoktan seçmeli ve boşluk doldurma karışık) kısa bir quiz ve hemen altında "✅ Cevap Anahtarı" olsun. Ders sıralı ve öncekinin üstüne kurulu olsun. Başlığa "' + d + ' — Ders ' + no + ' (' + o + ')" yaz.';
     anindaUret(istem, 'Fark Etmez (Yapay Zeka Seçsin)');
     const sonraki = no + 1; bipKaydet(o, d, sonraki); setBipDersNo(sonraki);
     showToast('📈 Ders ' + no + ' kutuya düştü. Kaldığın yer: Ders ' + sonraki);
@@ -3189,6 +3203,38 @@ const akUretKutusunaGonder = (uret) => {
   try { if (typeof setMaterialTopic === 'function') setMaterialTopic(akSonuc.prompt); } catch(e){}
   if (uret) { try { setMaterialError(''); } catch(e){} if (typeof setActiveTab === 'function') { try { setActiveTab('tools'); } catch(e){} } showToast('⚡ Hedef materyal üretiliyor…'); generateMaterial(akSonuc.prompt); }
   else showToast('📥 Prompt üret kutusuna yazıldı (istersen düzenle).');
+};
+// 📊 DENEME ANALİZİ — netleri KOD hesaplar (4 yanlış = 1 doğru), AI gerçekçi yorum yazar
+const denemeSubjects = () => DENEME_YAPI[denemeTur] || [];
+const denemeSet = (subj, alan, val) => setDenemeVeri(p => ({ ...p, [subj]: { ...(p[subj] || {}), [alan]: val } }));
+const denemeNet = (subj, max) => { const v = denemeVeri[subj] || {}; const d = Math.max(0, Math.min(max, Number(v.d) || 0)); const y = Math.max(0, Math.min(max, Number(v.y) || 0)); return Math.round((d - y / 4) * 100) / 100; };
+const denemeAnalizEt = async () => {
+  const subs = denemeSubjects(); let toplamNet = 0, toplamMax = 0, girdiVar = false;
+  const satirlar = subs.map(x => { const subj = x[0], max = x[1]; const v = denemeVeri[subj] || {}; const d = Number(v.d) || 0, y = Number(v.y) || 0; if (d || y) girdiVar = true; const net = denemeNet(subj, max); toplamNet += net; toplamMax += max; return { subj, max, d, y, net }; });
+  if (!girdiVar) { showToast('En az bir derse doğru/yanlış gir.'); return; }
+  toplamNet = Math.round(toplamNet * 100) / 100;
+  const tabloRows = satirlar.map(r => '<tr><td style="padding:7px;border-bottom:1px solid #f1f5f9;font-weight:700;color:#1e293b">' + r.subj + '</td><td style="padding:7px;border-bottom:1px solid #f1f5f9;text-align:center;color:#16a34a;font-weight:700">' + r.d + '</td><td style="padding:7px;border-bottom:1px solid #f1f5f9;text-align:center;color:#dc2626;font-weight:700">' + r.y + '</td><td style="padding:7px;border-bottom:1px solid #f1f5f9;text-align:center;color:#2563eb;font-weight:900">' + r.net + '</td><td style="padding:7px;border-bottom:1px solid #f1f5f9;text-align:center;color:#94a3b8">' + r.max + '</td></tr>').join('');
+  const netTablosu = '<table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="background:#f8fafc"><th style="padding:7px;text-align:left;color:#64748b">Ders</th><th style="padding:7px;color:#16a34a">D</th><th style="padding:7px;color:#dc2626">Y</th><th style="padding:7px;color:#2563eb">Net</th><th style="padding:7px;color:#94a3b8">Soru</th></tr></thead><tbody>' + tabloRows + '<tr style="background:#eff6ff"><td style="padding:8px;font-weight:900;color:#1e3a5f">TOPLAM</td><td></td><td></td><td style="padding:8px;text-align:center;font-weight:900;color:#1d4ed8">' + toplamNet + '</td><td style="padding:8px;text-align:center;color:#94a3b8">' + toplamMax + '</td></tr></tbody></table>';
+  let narrative = '';
+  if (apiKey) {
+    setDenemeYukleniyor(true);
+    let aktifModel = modelName || 'gemini-2.5-flash';
+    try { if (window.ZIRVE && typeof window.ZIRVE.enIyiModel === 'function' && window.ZIRVE.modeller && window.ZIRVE.modeller.length) { const iyi = window.ZIRVE.enIyiModel(window.ZIRVE.modeller); if (iyi) aktifModel = iyi; } else if (window.ZIRVE && window.ZIRVE.model) aktifModel = window.ZIRVE.model; } catch(e){}
+    if (!aktifModel || aktifModel.includes('latest') || aktifModel.includes('lite')) aktifModel = 'gemini-2.5-flash';
+    try {
+      const prompt = denemeTur + ' denemesi analizi. Öğrenci: ' + (denemeOgrenci.trim() || 'öğrenci') + '. Ders bazında doğru/yanlış/net: ' + satirlar.map(r => r.subj + ' D:' + r.d + ' Y:' + r.y + ' Net:' + r.net).join('; ') + '. Toplam net: ' + toplamNet + '/' + toplamMax + '. '
+        + 'GERÇEKÇİ ve TEMKİNLİ bir analiz yaz (yalnızca temiz HTML gövdesi: <h3>,<p>,<ul>,<li>,<b>, renkli <span style="color:..">): (1) güçlü ve zayıf dersler, (2) düşük netli derslerde MUHTEMEL eksik konu başlıkları, (3) net bazlı GERÇEKÇİ ve temkinli bir tahmini puan/sıralama YORUMU — sayı uydurma, aralık/yorum ver ve "denemeler ile katsayılar değişir, kesin değildir" uyarısı ekle, (4) önceliklendirilmiş 1 haftalık çalışma planı, (5) kısa moral cümlesi. Markdown/kod bloğu KULLANMA.';
+      const resp = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + aktifModel + ':generateContent?key=' + apiKey, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.55, maxOutputTokens: 2600, thinkingConfig: { thinkingBudget: 0 } } }) });
+      if (resp.ok) { const data = await resp.json(); let h = (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0] && data.candidates[0].content.parts[0].text) || ''; narrative = h.replace(/```[a-z]*/gi, '').replace(/```/g, '').trim(); }
+      else showToast(resp.status === 429 ? 'Kota doldu; yalnızca net tablosu üretildi.' : 'AI yorumu alınamadı; net tablosu üretildi.');
+    } catch(e) { showToast('AI yorumu alınamadı; net tablosu üretildi.'); }
+    setDenemeYukleniyor(false);
+  }
+  const html = '<div style="font-family:system-ui,-apple-system,sans-serif;color:#1e293b"><div style="text-align:center;border:2px solid #bfdbfe;border-radius:20px;padding:18px;margin-bottom:12px"><div style="display:inline-block;background:#eff6ff;border:1px solid #bfdbfe;border-radius:99px;padding:6px 16px;font-weight:800;color:#1d4ed8;letter-spacing:1px">📊 ' + denemeTur + ' DENEME ANALİZİ</div><h1 style="font-size:24px;font-weight:900;color:#1e3a5f;margin:12px 0 4px">' + (denemeOgrenci.trim() || 'Öğrenci') + '</h1><div style="color:#2563eb;font-weight:800">Toplam Net: ' + toplamNet + ' / ' + toplamMax + ' · ' + new Date().toLocaleDateString('tr-TR') + '</div></div><div style="background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:12px;margin-bottom:12px;overflow-x:auto">' + netTablosu + '</div>' + (narrative ? '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:16px;line-height:1.85">' + narrative + '</div>' : '<div style="font-size:12px;color:#94a3b8;font-style:italic">Ayrıntılı yorum için Ayarlar’dan API anahtarı gir; şimdilik net tablosu hazır.</div>') + '<div style="text-align:center;font-size:11px;color:#94a3b8;font-style:italic;margin-top:8px">Netler 4 yanlış = 1 doğru kuralıyla hesaplanır. Tahminler kesin değildir.</div></div>';
+  const res = { dokuman_basligi: denemeTur + ' Deneme Analizi — ' + (denemeOgrenci.trim() || 'Öğrenci'), alt_baslik: 'Toplam net ' + toplamNet + '/' + toplamMax, icerik_bloklari: [{ blok_tipi: 'zengin_metin', baslik: '', html_icerik: html }] };
+  setMaterialResult(res); try { gecmiseEkle(res); } catch(e){}
+  showToast('📊 Deneme analizi hazır — PDF / Paylaş edebilirsin.');
+  setTimeout(() => { try { document.getElementById('printable-material')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch(e){} }, 150);
 };
 
 const yaklasimOner = async () => {
@@ -4765,6 +4811,7 @@ title="Veli ödevi yaptıysa buraya tıklayın."
   <button onClick={()=>setAcikArac(a=>a==='pedagoji'?'':'pedagoji')} className={`col-span-2 flex items-center justify-center gap-2 py-2.5 rounded-xl font-black text-[12px] transition border ${acikArac==='pedagoji'?'bg-gradient-to-br from-indigo-500 to-violet-600 text-white border-transparent shadow-lg':'bg-white/10 text-indigo-100 border-indigo-400/30 hover:bg-white/20'}`}><i className="fa-solid fa-brain text-base"></i>🧠 Pedagojik Danışman (her davranışa uzman cevap)</button>
   <button onClick={()=>setAcikArac(a=>a==='checkup'?'':'checkup')} className={`col-span-2 flex items-center justify-center gap-2 py-2.5 rounded-xl font-black text-[12px] transition border ${acikArac==='checkup'?'bg-gradient-to-br from-blue-500 to-cyan-600 text-white border-transparent shadow-lg':'bg-white/10 text-cyan-100 border-cyan-400/30 hover:bg-white/20'}`}><i className="fa-solid fa-dna text-base"></i>🧬 Öğrenme DNA / Gelişim Check-Up (Analiz + Yol Haritası)</button>
   <button onClick={()=>setAcikArac(a=>a==='akademik'?'':'akademik')} className={`col-span-2 flex items-center justify-center gap-2 py-2.5 rounded-xl font-black text-[12px] transition border ${acikArac==='akademik'?'bg-gradient-to-br from-orange-500 to-amber-600 text-white border-transparent shadow-lg':'bg-white/10 text-amber-100 border-amber-400/30 hover:bg-white/20'}`}><i className="fa-solid fa-graduation-cap text-base"></i>🎓 Akademik Check-Up (sınavsız → hazır prompt)</button>
+  <button onClick={()=>setAcikArac(a=>a==='deneme'?'':'deneme')} className={`col-span-2 flex items-center justify-center gap-2 py-2.5 rounded-xl font-black text-[12px] transition border ${acikArac==='deneme'?'bg-gradient-to-br from-sky-500 to-blue-600 text-white border-transparent shadow-lg':'bg-white/10 text-sky-100 border-sky-400/30 hover:bg-white/20'}`}><i className="fa-solid fa-chart-column text-base"></i>📊 Deneme Analizi (LGS / TYT / AYT)</button>
 </div>
 
 {/* 📚 MÜFREDAT PANELİ — Sınıf → Ders → Konu → (Renkli Konu Anlatımı / İnfografik) */}
@@ -5122,6 +5169,7 @@ title="Veli ödevi yaptıysa buraya tıklayın."
     <button onClick={bipDersUret} className="text-[12px] bg-emerald-400 hover:bg-emerald-300 text-emerald-950 px-3 py-1.5 rounded-md font-black transition"><i className="fa-solid fa-wand-magic-sparkles mr-1"></i>Sıradaki Dersi Üret (Ders {bipDersNo})</button>
     <button onClick={bipGeri} className="text-[11px] bg-white/10 hover:bg-white/20 text-emerald-50 px-2.5 py-1.5 rounded-md font-bold border border-emerald-300/30 transition"><i className="fa-solid fa-backward-step mr-1"></i>Önceki</button>
     <button onClick={bipIleri} className="text-[11px] bg-white/10 hover:bg-white/20 text-emerald-50 px-2.5 py-1.5 rounded-md font-bold border border-emerald-300/30 transition"><i className="fa-solid fa-forward-step mr-1"></i>İleri (hızlandır)</button>
+    <button onClick={()=>setBipOzelEgitim(v=>!v)} className={`text-[11px] px-2.5 py-1.5 rounded-md font-bold border transition ${bipOzelEgitim?'bg-amber-400 text-amber-950 border-amber-300':'bg-white/10 text-emerald-50 border-emerald-300/30 hover:bg-white/20'}`}><i className="fa-solid fa-puzzle-piece mr-1"></i>Özel Eğitim {bipOzelEgitim?'✓':''}</button>
     <button onClick={bipSifirla} className="text-[11px] bg-white/10 hover:bg-red-500 hover:text-white text-emerald-50 px-2.5 py-1.5 rounded-md font-bold border border-emerald-300/30 transition"><i className="fa-solid fa-rotate-left mr-1"></i>Sıfırla</button>
   </div>
   <p className="text-[10px] text-emerald-100/70 mt-2">Öğrenci + ders yaz → “Sıradaki Dersi Üret” de. Her seferinde bir sonraki dersten devam eder; ders sıralı ve öncekinin üstüne kurulu gelir. Üret kutusuna düşer, istersen düzenleyip “Üret”e basarsın.</p>
@@ -5176,6 +5224,34 @@ title="Veli ödevi yaptıysa buraya tıklayın."
     </div>
   )}
   <p className="text-[10px] text-amber-200/70 mt-1.5">Not: Sınavsız ön değerlendirmedir; öğretmen gözlemine dayanır. “Gönder & üret” hedef alanlara yönelik materyali doğrudan hazırlar.</p>
+</div>
+
+{/* 📊 DENEME ANALİZİ (LGS/TYT/AYT) */}
+<div className={`mb-3 bg-gradient-to-br from-sky-600/25 to-blue-600/20 p-3 rounded-xl border border-sky-400/30 ${acikArac==='deneme'?'':'hidden'}`}>
+  <div className="flex items-center justify-between mb-2">
+    <span className="text-xs font-black text-sky-100 uppercase tracking-wide"><i className="fa-solid fa-chart-column mr-1 text-sky-300"></i> Deneme Analizi</span>
+    <span className="text-[10px] text-sky-200/70">gerçekçi net + analiz</span>
+  </div>
+  <p className="text-[11px] text-sky-100/90 mb-2">Sınav türünü seç, ders bazında <b>doğru</b> ve <b>yanlış</b> sayısını gir. Netler <b>4 yanlış = 1 doğru</b> kuralıyla hesaplanır; güçlü/zayıf dersler, muhtemel eksik konular, temkinli puan yorumu ve çalışma planı çıkar. Çıktı PDF/Paylaş edilebilir.</p>
+  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 mb-2">
+    <select value={denemeTur} onChange={e=>{ setDenemeTur(e.target.value); setDenemeVeri({}); }} className="px-2.5 py-2 bg-white/95 border border-sky-200 rounded-lg outline-none text-sm text-gray-800 font-semibold">
+      {Object.keys(DENEME_YAPI).map(t=>(<option key={t} value={t}>{t}</option>))}
+    </select>
+    <input value={denemeOgrenci} onChange={e=>setDenemeOgrenci(e.target.value)} placeholder="Öğrenci adı (ops.)" className="px-2.5 py-2 bg-white/95 border border-sky-200 rounded-lg outline-none text-sm text-gray-800" />
+  </div>
+  <div className="space-y-1.5 mb-2">
+    <div className="flex items-center gap-1.5 px-1 text-[10px] font-black text-sky-200/80 uppercase"><span className="flex-1">Ders</span><span className="w-16 text-center">Doğru</span><span className="w-16 text-center">Yanlış</span><span className="w-12 text-center">Net</span></div>
+    {denemeSubjects().map(x=>{ const subj=x[0], max=x[1]; const v=denemeVeri[subj]||{}; return (
+      <div key={subj} className="flex items-center gap-1.5 bg-black/10 rounded-lg px-2 py-1">
+        <span className="flex-1 text-[11.5px] text-sky-50 font-semibold truncate">{subj} <span className="text-sky-300/70">/{max}</span></span>
+        <input type="number" min="0" max={max} value={v.d||''} onChange={e=>denemeSet(subj,'d',e.target.value)} className="w-16 px-2 py-1.5 bg-white/95 border border-green-200 rounded-md outline-none text-sm text-center text-gray-800" />
+        <input type="number" min="0" max={max} value={v.y||''} onChange={e=>denemeSet(subj,'y',e.target.value)} className="w-16 px-2 py-1.5 bg-white/95 border border-rose-200 rounded-md outline-none text-sm text-center text-gray-800" />
+        <span className="w-12 text-center text-[12px] font-black text-cyan-200">{denemeNet(subj,max)}</span>
+      </div>
+    ); })}
+  </div>
+  <button onClick={denemeAnalizEt} disabled={denemeYukleniyor} className="w-full text-sm bg-gradient-to-r from-sky-500 to-blue-600 hover:opacity-90 text-white px-3 py-2.5 rounded-lg font-black transition disabled:opacity-60">{denemeYukleniyor ? <span><i className="fa-solid fa-spinner fa-spin mr-1"></i>Analiz hazırlanıyor…</span> : <span><i className="fa-solid fa-chart-line mr-1"></i>📊 Denemeyi Analiz Et</span>}</button>
+  <p className="text-[10px] text-sky-200/70 mt-1.5">Not: Tahmini puan/sıralama yorumları temkinlidir; denemeler ve katsayılar değiştiği için kesin değildir.</p>
 </div>
 
 {/* HAZIR ŞABLON BUTONLARI - TÜM TÜRLER */}
