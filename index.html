@@ -698,6 +698,11 @@ window.fetch = async function(input, init){
 
   const bilgi = urlBilgi(u);
   let model = MODEL || bilgi.model || 'gemini-2.5-flash';
+  // "Ne yazarsak yazalım" kuralı: pro gibi erişilemeyen model yazılıysa, daha ilk denemede otomatik çalışan modele çevir
+  if(/pro/i.test(model) && (!KULLANILABILIR.length || KULLANILABILIR.indexOf(model)===-1)){
+    const iy = enIyiModel(KULLANILABILIR.length?KULLANILABILIR:MODEL_TERCIH) || 'gemini-2.5-flash';
+    if(iy && iy!==model){ model=iy; MODEL=iy; try{ localStorage.setItem(LS.model, iy); }catch(e){} }
+  }
   const denenenModeller = [model];
 
   // Gövde varyantları yalnızca üretim isteklerinde (POST) anlamlı
@@ -791,6 +796,17 @@ window.fetch = async function(input, init){
     }
 
     if(!r.ok){
+      // --- 404 / model bulunamadı-desteklenmiyor → otomatik ÇALIŞAN modele geç ve TEKRAR DENE ---
+      if(r.status===404){
+        const em404 = await googleErr(r);
+        if(modelDegistir()){
+          toast(`🔎 <b>${denenenModeller[denenenModeller.length-2]}</b> bu anahtarla yok/desteklenmiyor → <b>${model}</b> otomatik seçildi, tekrar deneniyor.`);
+          continue;
+        }
+        sonHata = new Error('HTTP 404 · '+em404);
+        toast('⚠️ '+netHatasi(sonHata),'red');
+        return r;
+      }
       const em = await googleErr(r);
       sonHata = new Error('HTTP '+r.status+' · '+em);
       toast('⚠️ '+netHatasi(sonHata),'red');
@@ -1531,7 +1547,16 @@ const [acikArac, setAcikArac] = useState('');
 const [hizliAcik, setHizliAcik] = useState(false);
 const [tanitimAcik, setTanitimAcik] = useState(() => { try { return localStorage.getItem('zirve_tanitim_gosterildi') !== '1'; } catch(e){ return true; } });
 const [apiKey, setApiKey] = useState(localStorage.getItem('gemini_api_key') || '');
-const [modelName, setModelName] = useState(localStorage.getItem('gemini_model_name') || 'gemini-2.5-pro');
+const [modelName, setModelName] = useState(() => { let m = localStorage.getItem('gemini_model_name') || ''; if (/pro/i.test(m)) { m = ''; try { localStorage.setItem('gemini_model_name', ''); } catch(e){} } return m; });
+// ÜRETİMDE KULLANILACAK MODELİ SEÇ: ZİRVE'nin doğruladığı en iyi model; manuel alan boşsa/erişilemezse otomatik flash
+const modelSec = () => {
+  const liste = (window.ZIRVE && window.ZIRVE.modeller) || [];
+  const guvenli = (m) => !!m && !/latest|lite/i.test(m) && (liste.length === 0 ? !/pro/i.test(m) : liste.indexOf(m) !== -1);
+  try { if (window.ZIRVE && typeof window.ZIRVE.enIyiModel === 'function' && liste.length) { const iyi = window.ZIRVE.enIyiModel(liste); if (iyi) return iyi; } } catch(e){}
+  if (guvenli(modelName)) return modelName;
+  if (window.ZIRVE && window.ZIRVE.model && guvenli(window.ZIRVE.model)) return window.ZIRVE.model;
+  return 'gemini-2.5-flash';
+};
 const [testModuCalisiyor, setTestModuCalisiyor] = useState(false);
 const [testSonuclari, setTestSonuclari] = useState(null);
 const [testIlerleme, setTestIlerleme] = useState('');
@@ -1879,7 +1904,7 @@ const verifyAndSaveSettings = async () => {
     if (!apiKey) { showToast("API Anahtarı boş olamaz!"); return; }
     showToast("Bağlantı test ediliyor, lütfen bekleyin...");
     try {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}?key=${apiKey}`);
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
         if (response.ok) {
             setIsApiValid(true);
             localStorage.setItem('gemini_api_key', apiKey);
@@ -2103,7 +2128,7 @@ const dinamikOdevKurali = "DİKKAT: Gözlem notundaki duygu durumuna göre ödev
 const systemInstruction = `Sen ordinaryüs profesör seviyesinde, dünyanın en iyi öğretmeni ve eğitim koçusun. Profesyonel, şefkatli ve vizyoner bir dil kullanırsın.`;
 const userPrompt = `Öğrenci Adı: ${studentName}\n${hitapPrompt}\nTarih: ${date}\nKademe: ${category}\nGözlem: ${observation}\nKurallar:\n1) ${hitapKurali}\n2) Özel eğitimde test boş olmalı.\n3) gelisim_puani 1-10 arası olmalı.\n4) ${dinamikOdevKurali}`;
 try {
-const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
+const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelSec()}:generateContent?key=${apiKey}`, {
 method: 'POST', headers: { 'Content-Type': 'application/json' },
 body: JSON.stringify({
 systemInstruction: { parts: [{ text: systemInstruction }] },
@@ -3574,7 +3599,7 @@ const generateMaterial = async (istekOverride) => {
         const parts = [{ text: prompt + (retry ? `\n\nÖNCEKİ CEVAP GEÇERSİZDİ. ${isTestRequest ? `Kesin olarak ${questionCount} adet standart_soru ve her birinde dört seçenek ver.` : 'Tek, eksiksiz JSON nesnesi ver. Her blokta ilgili alanları MUTLAKA doldur, ASLA boş blok gönderme. cizgi_calismasi istenirse cizim_adimlari dizisine her biri en az 25 kez tekrarlayan desen dizeleri koy.'}` : '') }];
         if (uploadedFileData) parts.push({ inline_data: { mime_type: uploadedFileData.mimeType, data: uploadedFileData.base64 } });
         try {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelSec()}:generateContent?key=${apiKey}`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 systemInstruction: { parts: [{ text: 'Sen dünyanın en iyi eğitim materyali editörü ve uzmanısın; aynı zamanda alanında zirvede bir ÖZEL EĞİTİM uzmanı ve İLK OKUMA-YAZMA öğretmenisin. Ayrıca dünyanın en iyi DİL VE KONUŞMA TERAPİSTİsin (ASHA/uluslararası standartlarda): artikülasyon (yerleşim/dokunsal ipuçları), fonoloji ve sesbilgisel süreçler, akıcılık/kekemelik, alıcı-ifade edici dil, pragmatik, oral-motor ve sesletim hiyerarşisinde (ses→hece→sözcük→cümle→konuşma→genelleme) ustasın; materyallerine ipucu düzeyleri ve veri kaydı ekleyebilirsin. Aynı zamanda akademik olarak ordinaryüs seviyesinde bir EĞİTİM BİLİMCİsin: kazanım/hedef yazımı, ölçme-değerlendirme, rubrik, Bloom taksonomisi, ders planlama ve öğrenme kuramlarında uzmansın; istenirse akademik dil ve doğru terminoloji kullanırsın. Tüm okuma-yazma yöntemlerine hakimsin: Ses Temelli Cümle (güncel MEB), ses/fonetik, harf/alfabe, hece, Ba-Sa-Ra, çözümleme (cümle), sözcük, cümle, öykü/metin, bireşim (sentez), karma/eklektik ve fiş yöntemi. Özel eğitimde ABA/ayrık denemeler, fırsat öğretimi, görsel destek (PECS), beceri analizi, ipucu silme, pekiştirme ve BEP hazırlama konularında uzmansın. Kullanıcı hangi yöntemi istediyse o yöntemin bilimsel aşamalarına SADIK kal, uydurma yöntem karıştırma. Materyali yaş ve düzeye uygun, çok tekrarlı, görsel destekli, cesaretlendirici ve sınıfta doğrudan kullanılabilir hazırla. Kullanıcının isteğini (sınıf, soru sayısı, zorluk) aynen karşıla. ÇOK ÖNEMLİ KURAL: ASLA "test", "demo", "lorem", "xxx" gibi doldurma/placeholder metin yazma ve HİÇBİR kelimeyi/ifadeyi anlamsızca ART ARDA TEKRARLAMA. Kullanıcı "demo", "test", "deneme" gibi anlamsız ya da çok kısa bir konu yazsa bile sen o alanda ANLAMLI, gerçek ve dolu örnek bir çalışma üret; boş/uyduruk metinle doldurma. Her alanı gerçek içerikle bitir, cümleyi yarıda kesme. KÜNYE KURALI (ÇOK ÖNEMLİ): Belgeye ASLA "Ad Soyad", "Adı Soyadı", "Sınıf/No", "Numara", "Tarih" gibi bir öğrenci künyesi/başlık satırı EKLEME; bu künye uygulama tarafından otomatik ekleniyor. Doğrudan çalışma başlığı ve içerikle başla, isim/sınıf/tarih alanı OLUŞTURMA. Sadece geçerli JSON üret.' }] },
@@ -3645,7 +3670,7 @@ const generateMaterial = async (istekOverride) => {
     const serbestSonCare = async () => {
         setMaterialProgress('Alternatif yöntemle hazırlanıyor…');
         const sonPrompt = `Sen bir okul öncesi/ilkokul öğretmenine yardımcı olan uzman bir eğitim materyali hazırlayıcısısın. İstek: "${instruction}". ${targetGroup ? 'Hedef grup: ' + targetGroup + '. ' : ''}Bu istek için sınıfta KULLANILABİLİR, yazdırılabilir, düzenli bir çalışma materyali hazırla. Başlıklar, yönergeler, sorular/etkinlikler ve gerekiyorsa cevap anahtarı içersin. Zengin ve dolu bir içerik yaz; asla boş bırakma. Çıktıyı temiz HTML olarak ver: <h2>, <h3>, <p>, <ul>, <li>, <ol>, <strong>, <table> kullan. Sadece HTML gövdesi döndür, markdown veya kod bloğu kullanma.`;
-        const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
+        const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelSec()}:generateContent?key=${apiKey}`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ contents: [{ parts: [{ text: sonPrompt }] }] })
         });
@@ -3744,7 +3769,7 @@ const generateMaterial = async (istekOverride) => {
     }
 
     try {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelSec()}:generateContent?key=${apiKey}`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
         systemInstruction: { parts: [{ text: "Sen ordinaryüs profesör seviyesinde Eğitsel İçerik Mimarısın. KULLANICI KISA YAZSA DA ZENGİN BİR ÇALIŞMA ÜRET. HAYATİ KURALLAR: 1) Çıktın KESİNLİKLE geçerli bir JSON formatında olmalıdır! JSON kuralları gereği tüm anahtarlar ve değerler KESİNLİKLE ÇİFT TIRNAK (\") ile sarılmalıdır. 2) Metinlerin kendi içinde bir şeyi vurgulaman gerekirse tek tırnak (') kullan. 3) Metinlerin içine asla 'Enter' ile satır atlama, yeni satır için sadece '\\n' kullan." }] },
@@ -3851,7 +3876,7 @@ if (!apiKey || !storyTheme.trim()) { showToast("Tema yazın."); return; }
 setIsGeneratingStory(true);
 let studentContext = matStudentName ? `Hikayenin başrolünde "${matStudentName}" olsun. İlgi alanları: ${matInterests}.` : "Karakter çocuk olsun.";
 try {
-const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
+const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelSec()}:generateContent?key=${apiKey}`, {
 method: 'POST', headers: { 'Content-Type': 'application/json' },
 body: JSON.stringify({
 systemInstruction: { parts: [{ text: "Sen ordinaryüs profesör seviyesinde, dünyanın en iyi öğretmeni ve çocuk psikolojisi uzmanısın." }] },
@@ -3870,7 +3895,7 @@ const generateGameIdeas = async () => {
 if (!apiKey || !gameTopic.trim()) return;
 setIsGeneratingGame(true);
 try {
-const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
+const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelSec()}:generateContent?key=${apiKey}`, {
 method: 'POST', headers: { 'Content-Type': 'application/json' },
 body: JSON.stringify({
 systemInstruction: { parts: [{ text: "Sen ordinaryüs profesör seviyesinde, dünyanın en iyi öğretmeni ve yaratıcı eğitsel oyun tasarımcısısın. Sınıfta materyal olmadan oynanacak oyunlar tasarlarsın." }] },
@@ -3889,7 +3914,7 @@ const generateBehaviorAdvice = async () => {
 if (!apiKey || !behaviorIssue.trim()) return;
 setIsGeneratingBehavior(true);
 try {
-const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
+const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelSec()}:generateContent?key=${apiKey}`, {
 method: 'POST', headers: { 'Content-Type': 'application/json' },
 body: JSON.stringify({
 systemInstruction: { parts: [{ text: "Sen ordinaryüs profesör seviyesinde, dünyanın en iyi öğretmeni ve uzman pedagogusun." }] },
@@ -3907,7 +3932,7 @@ const generateBepGoals = async () => {
 if (!apiKey || !targetSkill.trim() || !studentCurrentLevel.trim()) return;
 setIsGeneratingBep(true);
 try {
-const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
+const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelSec()}:generateContent?key=${apiKey}`, {
 method: 'POST', headers: { 'Content-Type': 'application/json' },
 body: JSON.stringify({
 systemInstruction: { parts: [{ text: "Sen ordinaryüs profesör seviyesinde, dünyanın en iyi özel eğitimcisi ve BEP danışmanısın." }] },
@@ -3925,7 +3950,7 @@ const generateParentReply = async () => {
 if (!apiKey || !parentMessage.trim()) return;
 setIsGeneratingReply(true);
 try {
-const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
+const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelSec()}:generateContent?key=${apiKey}`, {
 method: 'POST', headers: { 'Content-Type': 'application/json' },
 body: JSON.stringify({
 systemInstruction: { parts: [{ text: "Sen ordinaryüs profesör seviyesinde, dünyanın en iyi öğretmeni ve veli iletişim uzmanısın. Şefkatli ve profesyonel yanıtlar yazarsın." }] },
@@ -3943,7 +3968,7 @@ const generateGraderFeedback = async () => {
 if (!apiKey || !graderQuestion.trim() || !graderAnswer.trim()) return;
 setIsGeneratingGrader(true);
 try {
-const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
+const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelSec()}:generateContent?key=${apiKey}`, {
 method: 'POST', headers: { 'Content-Type': 'application/json' },
 body: JSON.stringify({
 systemInstruction: { parts: [{ text: "Sen ordinaryüs profesör seviyesinde, dünyanın en adil ve analitik ölçme değerlendirme uzmanısın." }] },
@@ -3963,7 +3988,7 @@ setIsAnalyzing(true);
 const reports = groupedStudents[selectedStudent].slice(0, 5);
 const studentData = reports.map(r => `Tarih: ${r.date}, Gözlem: ${r.observation}, Puan: ${r.result?.gelisim_puani || '-'}`).join('\n');
 try {
-const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
+const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelSec()}:generateContent?key=${apiKey}`, {
 method: 'POST', headers: { 'Content-Type': 'application/json' },
 body: JSON.stringify({
 systemInstruction: { parts: [{ text: "Sen ordinaryüs profesör seviyesinde, dünyanın en iyi eğitim koçu ve veri analistisin. Gelişim analizi yaparsın." }] },
@@ -3981,7 +4006,7 @@ const generateRubric = async () => {
 if (!apiKey || !rubricTopic.trim()) return;
 setIsGeneratingRubric(true);
 try {
-const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
+const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelSec()}:generateContent?key=${apiKey}`, {
 method: 'POST', headers: { 'Content-Type': 'application/json' },
 body: JSON.stringify({
 systemInstruction: { parts: [{ text: "Sen ordinaryüs profesör seviyesinde, dünyanın en iyi ölçme değerlendirme uzmanısın." }] },
@@ -3999,7 +4024,7 @@ const generateLessonPlan = async () => {
 if (!apiKey || !lessonTopic.trim()) return;
 setIsGeneratingLesson(true);
 try {
-const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
+const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelSec()}:generateContent?key=${apiKey}`, {
 method: 'POST', headers: { 'Content-Type': 'application/json' },
 body: JSON.stringify({
 systemInstruction: { parts: [{ text: "Sen ordinaryüs profesör seviyesinde, dünyanın en iyi ders tasarımcısı ve usta öğreticisisin." }] },
@@ -4017,7 +4042,7 @@ const generateNewsletter = async () => {
 if (!apiKey || !newsletterTopics.trim()) return;
 setIsGeneratingNewsletter(true);
 try {
-const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
+const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelSec()}:generateContent?key=${apiKey}`, {
 method: 'POST', headers: { 'Content-Type': 'application/json' },
 body: JSON.stringify({
 systemInstruction: { parts: [{ text: "Sen ordinaryüs profesör seviyesinde, dünyanın en üretken ve vizyoner öğretmenisin." }] },
@@ -4036,7 +4061,7 @@ const generateCV = async () => {
 if (!apiKey || !cvInfo.trim()) { showToast("CV için bilgi girmelisiniz."); return; }
 setIsGeneratingCV(true);
 try {
-const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
+const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelSec()}:generateContent?key=${apiKey}`, {
 method: 'POST', headers: { 'Content-Type': 'application/json' },
 body: JSON.stringify({
 systemInstruction: { parts: [{ text: "Sen ordinaryüs profesör seviyesinde, dünyanın en iyi Kariyer Danışmanı ve Eğitim İK Uzmanısın. Öğretmenler için çok şık, kurumsal ve etkileyici CV'ler tasarlarsın." }] },
@@ -4064,7 +4089,7 @@ const expandObservation = async () => {
 if (!apiKey || !observation.trim()) return;
 setIsExpanding(true);
 try {
-const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
+const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelSec()}:generateContent?key=${apiKey}`, {
 method: 'POST', headers: { 'Content-Type': 'application/json' },
 body: JSON.stringify({
 systemInstruction: { parts: [{ text: "Sen ordinaryüs profesör seviyesinde uzman eğitimcisin. Notları pedagojik ve profesyonel dille genişlet." }] },
@@ -6866,8 +6891,9 @@ notes.map(n => (
             <input type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-sm" />
         </div>
         <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">Model Seçimi (Manuel)</label>
-            <input type="text" value={modelName} onChange={(e) => setModelName(e.target.value)} className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-sm" />
+            <label className="block text-sm font-bold text-gray-700 mb-2">Model Seçimi (Manuel) — <span className="text-emerald-600 font-semibold">boş bırak = otomatik en iyi model (önerilir)</span></label>
+            <input type="text" value={modelName} onChange={(e) => setModelName(e.target.value)} placeholder="Otomatik (önerilir) — istersen: gemini-2.5-flash" className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-sm" />
+            <p className="text-[11px] text-gray-500 mt-1">Not: Ücretsiz anahtarlar genelde <b>gemini-2.5-pro</b>'ya erişemez (404 verir). Boş bırakırsan sistem otomatik olarak çalışan en iyi modeli (ör. <b>gemini-2.5-flash</b>) kullanır.</p>
         </div>
 
         <div className="bg-slate-50 border-2 border-dashed border-slate-300 rounded-2xl p-4">
